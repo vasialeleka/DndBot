@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Generated character sheets
+out/
+*.pdf
+
+# Офіційні бланки WotC (копірайт) не комітимо у публічне репо.
+# Mini App їх не використовує (PDF малюється власним бланком у браузері);
+# боту вони теж не обов'язкові — він має власний рендер як запасний.
+templates/
+
+# OS
+.DS_Store

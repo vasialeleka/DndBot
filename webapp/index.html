@@ -1,0 +1,2694 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>D&D 5e — Створення персонажа</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Клієнтська генерація PDF (той самий origin, надійно вантажиться в Mini App) -->
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/fonts.js"></script>
+<script src="pdf.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #17171b);
+    --text: var(--tg-theme-text-color, #f0ede6);
+    --hint: var(--tg-theme-hint-color, #9a958c);
+    --card: var(--tg-theme-secondary-bg-color, #22222a);
+    --btn: var(--tg-theme-button-color, #7b1e1e);
+    --btn-text: var(--tg-theme-button-text-color, #fff);
+    --accent: #b6412f;
+    --line: rgba(150,140,120,.28);
+    --warn: #d98324;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:0 14px 100px; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-size:15px; line-height:1.4; }
+  h1 { font-size:20px; margin:14px 0 4px; }
+  h2 { font-size:14px; margin:16px 0 8px; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+  h2:first-child { margin-top:2px; }
+  .sub { color:var(--hint); font-size:13px; margin:2px 0 10px; }
+  .muted { color:var(--hint); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+
+  label.field { display:block; margin:10px 0 4px; font-size:13px; color:var(--hint); }
+  input, select, textarea { width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--text); font-size:15px; font-family:inherit; -webkit-appearance:none; appearance:none; }
+  select { background-image:linear-gradient(45deg,transparent 50%,var(--hint) 50%),linear-gradient(135deg,var(--hint) 50%,transparent 50%);
+    background-position:right 14px center,right 9px center; background-size:5px 5px,5px 5px; background-repeat:no-repeat; padding-right:30px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .hidden { display:none !important; }
+
+  /* топ-бар з кнопкою назад */
+  .topbar { display:flex; align-items:center; gap:10px; margin:10px 0 12px; }
+  .back { width:40px; height:40px; border-radius:11px; border:1px solid var(--line); background:var(--card);
+    color:var(--text); font-size:20px; cursor:pointer; flex:none; }
+  .topbar-title { font-weight:700; font-size:15px; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+
+  /* списки-плитки */
+  .tile-list { display:flex; flex-direction:column; gap:10px; }
+  .tile { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:10px 12px; cursor:pointer; }
+  .tile:active { border-color:var(--accent); }
+  .tile.sel { border-color:var(--accent); background:rgba(182,65,47,.08); }
+  .tile .thumb { width:54px; height:54px; border-radius:12px; overflow:hidden; flex:none; }
+  .tile .thumb svg { width:100%; height:100%; display:block; }
+  .tile .ticon { width:54px; height:54px; border-radius:12px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-size:26px; background:var(--bg); }
+  .tile .tinfo { flex:1; min-width:0; }
+  .tile .tname { font-weight:700; font-size:16px; }
+  .tile .ttag { font-size:12px; color:var(--hint); margin-top:2px; }
+  .tile .chev { color:var(--hint); font-size:22px; margin-left:6px; }
+
+  /* деталь */
+  .hero { display:flex; gap:14px; align-items:center; margin-bottom:8px; }
+  .hero-banner { padding:4px 2px 8px; margin-bottom:12px; background:transparent; }
+  .hero-banner .hero-art { box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  .hero-banner .hero-name { color:#fff; }
+  .hero-banner .hero-name .en { color:rgba(255,255,255,.6); }
+  .hero-banner .hero-tag { color:rgba(255,255,255,.8); }
+  .hero-banner .hero-tag .en { color:rgba(255,255,255,.6); }
+  .hero-art { width:96px; height:96px; border-radius:16px; overflow:hidden; flex:none; }
+  .hero-art svg { width:100%; height:100%; display:block; }
+  .hero-name { font-size:22px; font-weight:800; }
+  .hero-tag { color:var(--hint); font-size:13px; margin-top:3px; }
+  .detail-desc { font-size:14px; margin:2px 0 10px; }
+  .recommend { background:rgba(182,65,47,.10); border:1px solid rgba(182,65,47,.3); border-radius:10px;
+    padding:9px 11px; margin:0 0 12px; font-size:13px; }
+  .recommend b { color:var(--accent); } .recommend p { margin:4px 0 0; }
+  .recommend:empty { display:none; }
+  .bonus { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .bonus:last-child { border-bottom:none; }
+  .bonus .bk { color:var(--hint); flex:none; }
+  .bonus .bv { text-align:right; }
+  .trait { padding:7px 0; border-bottom:1px solid var(--line); }
+  .trait:last-child { border-bottom:none; }
+  .trait b { display:block; font-size:14px; }
+  .trait p { margin:2px 0 0; color:var(--hint); font-size:13px; }
+
+  .opt { border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+  .opt.sel { border-color:var(--accent); background:rgba(182,65,47,.10); }
+  .opt .on { font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .opt .obonus { color:var(--accent); font-size:12px; font-weight:600; margin-top:2px; }
+  .opt .od { font-size:12px; color:var(--hint); margin-top:4px; }
+
+  .hp-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .hp-cell { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 2px; text-align:center; font-size:11px; color:var(--hint); }
+  .hp-cell b { display:block; font-size:14px; color:var(--text); }
+  .hp-single { background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center; }
+  .hp-single b { font-size:30px; color:var(--accent); }
+  .hp-single span { display:block; font-size:12px; color:var(--hint); margin-top:4px; }
+
+  /* чарник — бейджі раси/класу */
+  .summary { display:flex; flex-direction:column; gap:8px; }
+  .badge { display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:8px 10px; }
+  .badge .bthumb { width:42px; height:42px; border-radius:10px; overflow:hidden; flex:none; }
+  .badge .bthumb svg { width:100%; height:100%; display:block; }
+  .badge .binfo { flex:1; } .badge .bt { font-weight:700; } .badge .bs { font-size:12px; color:var(--hint); }
+  .badge .change { color:var(--accent); font-size:13px; background:none; border:none; cursor:pointer; padding:6px; }
+
+  .modes { display:flex; gap:8px; margin:0 0 12px; }
+  .mode-btn { flex:1; padding:11px; text-align:center; border-radius:12px; border:1.5px solid var(--line);
+    background:var(--card); color:var(--text); font-weight:600; cursor:pointer; font-size:14px; }
+  .mode-btn.active { border-color:var(--accent); background:rgba(182,65,47,.14); color:var(--accent); }
+  .mode-btn small { display:block; font-weight:400; color:var(--hint); font-size:11px; margin-top:2px; }
+
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { border:1.5px solid var(--line); border-radius:10px; padding:8px 12px; font-size:13px; cursor:pointer; background:var(--bg); }
+  .chip.sel { border-color:var(--accent); color:var(--accent); background:rgba(182,65,47,.10); }
+
+  .info-btn { flex:none; width:26px; height:26px; border-radius:50%; border:1px solid var(--line);
+    background:var(--bg); color:var(--accent); font-size:13px; font-weight:700; cursor:pointer; padding:0; line-height:1; }
+  .info-btn.ii { width:28px; height:28px; font-size:15px; vertical-align:middle; margin-left:4px; display:inline-flex;
+    align-items:center; justify-content:center; }
+  .pick-head { display:flex; justify-content:space-between; align-items:center; }
+  .desc-line { font-size:13px; color:var(--hint); margin:6px 0 2px; }
+
+  /* характеристики */
+  .abilrow { display:grid; grid-template-columns:1.4fr 1fr 50px 46px; gap:8px; align-items:center;
+    padding:7px 0; border-bottom:1px solid var(--line); }
+  .abilrow:last-child { border-bottom:none; }
+  .abilrow .nm { font-weight:600; font-size:14px; }
+  .abilrow .nm small { display:block; color:var(--hint); font-weight:400; font-size:11px; }
+  .stepper { display:flex; align-items:center; gap:4px; }
+  .stepper button { width:30px; height:32px; border-radius:8px; border:1px solid var(--line); background:var(--bg);
+    color:var(--text); font-size:18px; cursor:pointer; padding:0; }
+  .stepper input { text-align:center; padding:8px 2px; }
+  .final { text-align:center; font-weight:700; font-size:16px; }
+  .mod { text-align:center; font-weight:700; color:var(--accent); background:rgba(182,65,47,.12); border-radius:8px; padding:6px 0; }
+  .method-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .method-tabs button { flex:1; min-width:70px; padding:8px 4px; border-radius:9px; border:1px solid var(--line);
+    background:var(--bg); color:var(--text); font-size:12px; cursor:pointer; }
+  .method-tabs button.active { border-color:var(--accent); color:var(--accent); background:rgba(182,65,47,.12); }
+
+  .asi-block { border:1px solid var(--line); border-radius:12px; padding:10px; margin-top:10px; }
+  .asi-head { font-weight:600; font-size:13px; margin-bottom:8px; }
+  .seg { display:flex; gap:6px; margin-bottom:8px; }
+  .seg-btn { flex:1; padding:8px; border-radius:9px; border:1px solid var(--line); background:var(--bg);
+    color:var(--text); font-size:13px; cursor:pointer; }
+  .seg-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(182,65,47,.12); }
+  .feat-row { display:flex; gap:8px; align-items:center; }
+  .feat-row .feat-select { flex:1; }
+  .feat-ab { margin-top:8px; }
+  .feat-desc { font-size:12px; color:var(--hint); margin:8px 0 0; }
+
+  .skill-group-head { display:flex; justify-content:space-between; align-items:center; font-size:12px;
+    font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; margin:12px 0 4px; }
+  .skill-group-head:first-child { margin-top:0; }
+  .counter { font-size:11px; color:var(--hint); font-weight:400; text-transform:none; }
+  .counter.warn { color:var(--warn); font-weight:700; }
+  .skill { display:flex; align-items:center; gap:9px; padding:7px 6px; font-size:14px; border-radius:8px; }
+  .skill input { width:20px; height:20px; flex:none; -webkit-appearance:auto; appearance:auto; accent-color:var(--accent); cursor:pointer; }
+  input[type=checkbox] { -webkit-appearance:auto; appearance:auto; accent-color:var(--accent); }
+  .skill.locked { opacity:.7; }
+  .skill.conflict { background:rgba(217,131,36,.16); }
+  .ab-tag { color:var(--hint); font-size:11px; }
+  .dup { color:var(--warn); font-weight:700; font-size:11px; }
+  .conflict-note { background:rgba(217,131,36,.14); border:1px solid rgba(217,131,36,.4); border-radius:10px;
+    padding:9px 11px; font-size:12px; margin-top:10px; }
+  .saves-info { font-size:13px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+
+  .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:6px 0 12px; }
+  .stat { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 6px; text-align:center; }
+  .stat .v { font-size:19px; font-weight:700; }
+  .stat .k { font-size:10px; color:var(--hint); text-transform:uppercase; letter-spacing:.03em; }
+  .kv { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .kv:last-child { border-bottom:none; } .kv .k { color:var(--hint); }
+  .list-inline { font-size:13px; }
+
+  .modal-back { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
+  .modal-card { background:var(--card); width:100%; max-width:560px; max-height:82vh; overflow-y:auto;
+    border-radius:18px 18px 0 0; padding:16px 16px 24px; border-top:2px solid var(--accent); }
+  .modal-card h3 { margin:0 0 10px; font-size:17px; color:var(--accent); }
+  .modal-close { position:sticky; top:0; float:right; width:30px; height:30px; border-radius:50%; border:none; background:var(--bg); color:var(--text); font-size:18px; cursor:pointer; }
+  .modal-item { padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .modal-item:last-child { border-bottom:none; }
+  .modal-item b { display:block; } .modal-item p { margin:2px 0 0; color:var(--hint); font-size:13px; }
+
+  .err-bar { position:fixed; left:14px; right:14px; bottom:78px; background:var(--accent); color:#fff;
+    padding:10px 12px; border-radius:10px; font-size:13px; z-index:60; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  .footer { position:fixed; left:0; right:0; bottom:0; padding:10px 14px;
+    background:linear-gradient(to top,var(--bg) 72%,transparent); display:flex; gap:10px; }
+  .btn { flex:1; padding:15px; border-radius:12px; border:none; font-size:16px; font-weight:700; cursor:pointer; }
+  .btn-primary { background:var(--btn); color:var(--btn-text); }
+
+  /* особливості по рівнях */
+  .lvl-row { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .lvl-row:last-child { border-bottom:none; }
+  .lvl-row.cur { background:rgba(182,65,47,.08); border-radius:10px; padding:8px; margin:0 -4px; }
+  .lvl-num { width:34px; height:34px; flex:none; border-radius:9px; background:var(--bg); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--accent); font-size:14px; }
+  .lvl-row.cur .lvl-num { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .lvl-body { flex:1; }
+  .lvl-feat { font-size:13px; margin:2px 0; }
+  .lvl-empty { color:var(--hint); font-size:13px; }
+  .lvl-res { margin-top:7px; padding:7px 9px; border-radius:9px; background:rgba(182,65,47,.10);
+    border:1px solid rgba(182,65,47,.25); font-size:12px; }
+  .lvl-res .res-l { color:var(--accent); font-weight:700; }
+  .lvl-res b { color:var(--text); }
+  .lvl-res .res-h { display:block; color:var(--hint); margin-top:2px; }
+  .res-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+  .res-tile { background:rgba(182,65,47,.10); border:1px solid rgba(182,65,47,.28); border-radius:11px; padding:10px 11px; }
+  .res-tile .rt-l { font-size:11px; color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+  .res-tile .rt-v { font-size:17px; font-weight:700; color:var(--text); margin-top:3px; }
+  .res-tile .rt-h { font-size:11px; color:var(--hint); margin-top:4px; line-height:1.35; }
+  .feat-list { max-height:44vh; overflow-y:auto; margin-top:6px; }
+  .modal-nav { display:flex; gap:10px; margin-top:16px; }
+  .modal-nav .btn { padding:13px; }
+  .btn-ghost2 { background:var(--bg); border:1px solid var(--line); color:var(--text); }
+  .en { color:var(--hint); font-weight:400; font-size:.72em; }
+  .opt-toggle { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:11px 13px; margin:0 0 12px; font-size:14px; cursor:pointer; }
+  .opt-toggle input { width:20px; height:20px; flex:none; -webkit-appearance:auto; appearance:auto; accent-color:var(--accent); }
+  .filter-row { display:flex; gap:7px; overflow-x:auto; padding-bottom:8px; margin-bottom:8px; -webkit-overflow-scrolling:touch; }
+  .filter-chip { flex:none; padding:7px 12px; border-radius:20px; border:1px solid var(--line); background:var(--card);
+    color:var(--hint); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .filter-chip.on { border-color:var(--accent); color:var(--accent); background:rgba(182,65,47,.12); }
+  .tile .src { flex:none; font-size:10px; font-weight:700; border:1px solid currentColor;
+    border-radius:6px; padding:1px 5px; opacity:.95; }
+  .src-tag { display:inline-block; font-size:10px; font-weight:700; color:var(--accent);
+    border:1px solid var(--accent); border-radius:6px; padding:1px 5px; margin-left:6px; vertical-align:middle; }
+  .opt .on .src-tag { color:var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ============ КРОК 1: СПИСОК РАС ============ -->
+<div id="view-race-list" class="view">
+  <h1>🐉 Створення персонажа</h1>
+  <p class="sub">D&D 5e · Крок 1 — обери расу (тапни, щоб прочитати)</p>
+  <label class="opt-toggle"><input type="checkbox" id="optToggle" checked onchange="S.optionalFeats=this.checked">
+    <span>Додавати опційні вміння класів (Tasha) у чарник</span></label>
+  <div class="filter-row" id="raceFilter"></div>
+  <div class="tile-list" id="raceList"></div>
+</div>
+
+<!-- ============ ДЕТАЛЬ РАСИ ============ -->
+<div id="view-race-detail" class="view hidden">
+  <div class="topbar"><button class="back" onclick="showView('race-list')">←</button>
+    <span class="topbar-title">Раса</span></div>
+  <div class="hero hero-banner" id="rdHero"><div class="hero-art" id="rdArt"></div>
+    <div><div class="hero-name" id="rdName"></div><div class="hero-tag" id="rdTag"></div></div></div>
+  <p class="detail-desc" id="rdDesc"></p>
+  <div class="recommend" id="rdRecommend"></div>
+  <div class="card"><h2>Бонуси раси</h2><div id="rdBonuses"></div></div>
+  <div class="card"><h2>Особливості</h2><div id="rdTraits"></div></div>
+  <div class="card" id="rdSubraceCard"><h2 id="rdSubLabel">Підраса</h2>
+    <p class="sub">Обери підрасу — вона змінює бонуси й додає особливості.</p>
+    <div id="rdSubraces"></div>
+    <p class="sub" id="rdSubHint" style="margin-bottom:0"></p></div>
+  <div class="card hidden" id="rdFeatCard"><h2>Стартова черта</h2>
+    <p class="sub">Варіант людини одразу отримує одну черту.</p>
+    <div id="rdFeats"></div></div>
+  <div class="footer"><button class="btn btn-primary" onclick="chooseRace()">Обрати расу →</button></div>
+</div>
+
+<!-- ============ КРОК 2: СПИСОК КЛАСІВ ============ -->
+<div id="view-class-list" class="view hidden">
+  <div class="topbar"><button class="back" onclick="showView('race-list')">←</button>
+    <span class="topbar-title">Крок 2 — Клас</span></div>
+  <p class="sub">Обери клас (тапни, щоб прочитати опис і HP по рівнях)</p>
+  <div class="tile-list" id="classList"></div>
+</div>
+
+<!-- ============ ДЕТАЛЬ КЛАСУ ============ -->
+<div id="view-class-detail" class="view hidden">
+  <div class="topbar"><button class="back" onclick="showView('class-list')">←</button>
+    <span class="topbar-title">Клас</span></div>
+  <div class="hero hero-banner" id="cdHero"><div class="hero-art ticon" id="cdIcon" style="display:flex;align-items:center;justify-content:center;font-size:44px;background:var(--card)"></div>
+    <div><div class="hero-name" id="cdName"></div><div class="hero-tag" id="cdTag"></div></div></div>
+  <p class="detail-desc" id="cdDesc"></p>
+  <div class="card">
+    <label class="field">Рівень персонажа</label>
+    <select id="cdLevel" onchange="onClassLevelChange()"></select>
+    <p class="sub" style="margin-bottom:0">З цим рівнем підемо далі у чарник.</p>
+  </div>
+  <div class="card"><h2>Здоров'я</h2>
+    <p class="sub" id="cdHpNote"></p>
+    <div id="cdHp"></div></div>
+  <div class="card hidden" id="cdResCard"><h2 id="cdResTitle">Ресурси рівня</h2>
+    <p class="sub">Ось що змінюється з рівнем — комірки заклять, лють, Ці тощо.</p>
+    <div class="res-grid" id="cdRes"></div></div>
+  <div class="card"><h2>Основне</h2><div id="cdBasics"></div></div>
+  <div class="card"><h2>Що отримуєш по рівнях</h2>
+    <p class="sub">Виділено твій рівень. Тут — вибір підкласу та ресурси (комірки заклять, Ці тощо).</p>
+    <div id="cdLevels"></div></div>
+  <div class="footer"><button class="btn btn-primary" onclick="chooseClass()">Обрати клас →</button></div>
+</div>
+
+<!-- ============ КРОК 3: ПОВНИЙ ЧАРНИК ============ -->
+<div id="view-sheet" class="view hidden">
+  <div class="topbar"><button class="back" onclick="showView('class-list')">←</button>
+    <span class="topbar-title">Крок 3 — Чарник</span></div>
+
+  <div class="card"><div class="summary">
+    <div class="badge"><div class="bthumb" id="sumRaceArt"></div>
+      <div class="binfo"><div class="bt" id="sumRaceName"></div><div class="bs" id="sumRaceSub"></div></div>
+      <button class="change" onclick="showView('race-list')">змінити</button></div>
+    <div class="badge"><div class="bthumb ticon" id="sumClassIcon" style="display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+      <div class="binfo"><div class="bt" id="sumClassName"></div><div class="bs" id="sumClassSub"></div></div>
+      <button class="change" onclick="showView('class-list')">змінити</button></div>
+  </div></div>
+
+  <div class="card">
+    <label class="field">Ім'я персонажа</label>
+    <input id="name" placeholder="напр. Тордек Камінь" />
+    <div class="pick-head"><label class="field">Передісторія</label>
+      <button class="info-btn" onclick="bgInfo()">ⓘ</button></div>
+    <select id="background" onchange="onBackgroundChange()"></select>
+    <div class="desc-line" id="bgDesc"></div>
+    <label class="field">Світогляд</label>
+    <select id="alignment"></select>
+  </div>
+
+  <div class="card hidden" id="asiSummaryCard">
+    <div class="pick-head"><h2 style="margin:0">Підвищення / черти</h2>
+      <button class="change" onclick="editAsi()">налаштувати</button></div>
+    <div id="asiSummary"></div>
+  </div>
+
+  <div class="card hidden" id="raceChoicesCard">
+    <h2>Бонуси раси на вибір</h2>
+    <div id="raceChoices"></div>
+  </div>
+
+  <div class="modes" style="margin-top:2px">
+    <div class="mode-btn active" data-mode="full" onclick="setMode('full')">Вручну<small>сам обираю цифри</small></div>
+    <div class="mode-btn" data-mode="quick" onclick="setMode('quick')">Автоматично<small>підбереться саме</small></div>
+  </div>
+
+  <div class="card full-only">
+    <h2>Характеристики</h2>
+    <div class="method-tabs" id="methodTabs">
+      <button data-m="array" class="active" onclick="setMethod('array')">Стандарт</button>
+      <button data-m="pointbuy" onclick="setMethod('pointbuy')">Point buy</button>
+      <button data-m="roll" onclick="setMethod('roll')">Кидки 4d6</button>
+      <button data-m="manual" onclick="setMethod('manual')">Вручну</button>
+    </div>
+    <p class="sub" id="methodHint"></p>
+    <div id="rollControls" class="hidden" style="margin-bottom:10px">
+      <button class="mode-btn" style="width:100%" onclick="rollDice()">🎲 Перекинути кубики</button>
+    </div>
+    <div id="abilities"></div>
+  </div>
+
+  <div class="card full-only">
+    <h2>Навички</h2>
+    <div id="skills"></div>
+    <div class="conflict-note hidden" id="skillConflict"></div>
+    <div class="saves-info" id="savesInfo"></div>
+  </div>
+
+  <div class="footer"><button class="btn btn-primary" onclick="showReview()">Переглянути →</button></div>
+</div>
+
+<!-- ============ ОГЛЯД ============ -->
+<div id="view-review" class="view hidden">
+  <div class="topbar"><button class="back" onclick="showView('sheet')">←</button>
+    <span class="topbar-title">Перевірка</span></div>
+  <p class="sub">Переконайся, що все правильно, і тисни «Готово».</p>
+  <div class="card"><div style="font-size:19px;font-weight:700" id="r-name"></div>
+    <div class="muted" id="r-line"></div></div>
+  <div class="card"><h2>Бойові показники</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="v" id="r-ac"></div><div class="k">Броня</div></div>
+      <div class="stat"><div class="v" id="r-hp"></div><div class="k">Макс. HP</div></div>
+      <div class="stat"><div class="v" id="r-init"></div><div class="k">Ініціатива</div></div>
+      <div class="stat"><div class="v" id="r-speed"></div><div class="k">Швидкість</div></div>
+      <div class="stat"><div class="v" id="r-pb"></div><div class="k">Майстерн.</div></div>
+      <div class="stat"><div class="v" id="r-pp"></div><div class="k">Пас. уваж.</div></div>
+    </div></div>
+  <div class="card"><h2>Характеристики</h2><div class="stat-grid" id="r-abilities"></div></div>
+  <div class="card"><h2>Рятівні кидки</h2><div id="r-saves"></div></div>
+  <div class="card"><h2>Навички (володіння)</h2><div class="list-inline" id="r-skills"></div></div>
+  <div class="card" id="r-spell-card"><h2>Магія</h2><div id="r-spell"></div></div>
+  <div class="card"><h2>Риси, здібності та черти</h2><div class="list-inline" id="r-features"></div></div>
+  <div class="footer"><button class="btn btn-primary" onclick="finish()">✅ Готово — зберегти PDF</button></div>
+</div>
+
+<!-- модалка -->
+<div id="modal" class="modal-back hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal-card"><button class="modal-close" onclick="closeModal()">✕</button>
+    <h3 id="modalTitle"></h3><div id="modalBody"></div></div>
+</div>
+
+<div id="formErr" class="err-bar hidden"></div>
+<script>
+/* ============================================================================
+   ДАНІ D&D 5e (редакція 2014) — раси, класи, передісторії, черти, навички.
+   Уся ігрова логіка живе на клієнті; бот лише малює PDF за отриманим JSON.
+   ========================================================================== */
+
+const ABILS = ["str", "dex", "con", "int", "wis", "cha"];
+const ABIL_UA = { str:"Сила", dex:"Спритність", con:"Статура",
+                  int:"Інтелект", wis:"Мудрість", cha:"Харизма" };
+const ABIL_SHORT = { str:"СИЛ", dex:"СПР", con:"СТА", int:"ІНТ", wis:"МУД", cha:"ХАР" };
+
+const SKILLS = {
+  "Акробатика":"dex", "Поводження з тваринами":"wis", "Магія":"int", "Атлетика":"str",
+  "Обман":"cha", "Історія":"int", "Прозорливість":"wis", "Залякування":"cha",
+  "Дослідження":"int", "Медицина":"wis", "Природа":"int", "Сприйняття":"wis",
+  "Виступ":"cha", "Переконання":"cha", "Релігія":"int", "Спритність рук":"dex",
+  "Непомітність":"dex", "Виживання":"wis"
+};
+const ALL_SKILLS = Object.keys(SKILLS);
+
+const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+const POINT_COST = {8:0, 9:1, 10:2, 11:3, 12:4, 13:5, 14:7, 15:9};
+const ASI_LEVELS = [4, 8, 12, 16, 19]; // рівні підвищення характеристик/черти
+
+const ALIGNMENTS = ["Законно-добрий","Нейтрально-добрий","Хаотично-добрий",
+  "Законно-нейтральний","Істинно нейтральний","Хаотично-нейтральний",
+  "Законно-злий","Нейтрально-злий","Хаотично-злий"];
+
+/* ============================ SVG-ІЛЮСТРАЦІЇ РАС ============================
+   Оригінальні стилізовані портрети (flat), генеруються параметрично.
+   viewBox 0 0 100 100. */
+const RACE_ART_DEF = { skin:"#e8b98f", bg:["#3a4a6b","#1b2436"], hair:"#5a3b21", ear:"round" };
+const RACE_ART = {
+    // --- базові (гуманоїдні) ---
+    "Людина":        { skin:"#e8b98f", bg:["#3a4a6b","#1b2436"], hair:"#5a3b21", ear:"round" },
+    "Ельф":          { skin:"#edc7a3", bg:["#2c5a3e","#152e1f"], hair:"#e6d59a", ear:"long" },
+    "Дворф":         { skin:"#e0a878", bg:["#5e3c22","#2a1a10"], hair:"#8a5a2b", ear:"round", beard:true },
+    "Піврослик":     { skin:"#edc39a", bg:["#4d6626","#22300f"], hair:"#6b4a2a", ear:"round", curly:true, small:true },
+    "Драконороджений":{ skin:"#b6534e", bg:["#4a1c1a","#220c0c"], ear:"none", snout:true, frills:true, scale:"#8f3a36" },
+    "Гном":          { skin:"#eec1a2", bg:["#345a72","#152530"], hair:"#b06a3a", ear:"point", bignose:true, small:true },
+    "Напівельф":     { skin:"#e8bd94", bg:["#356048","#182219"], hair:"#6a4326", ear:"mid" },
+    "Напіворк":      { skin:"#84a55c", bg:["#45581f","#1c2410"], hair:"#242424", ear:"point", tusks:true },
+    "Тіфлінг":       { skin:"#b0567a", bg:["#4a2a68","#20112f"], hair:"#2a1030", ear:"point", horns:true },
+    // --- нові гуманоїдні ---
+    "Голіаф":        { skin:"#9aa0a0", bg:["#454b52","#20242a"], hair:"#33332f", ear:"round" },
+    "Орк":           { skin:"#7fa04f", bg:["#45581f","#1c2410"], hair:"#20200f", ear:"point", tusks:true },
+    "Гоблін":        { skin:"#7bab52", bg:["#33461f","#161f0c"], hair:"#2a1a0a", ear:"point", small:true },
+    "Хобгоблін":     { skin:"#c46a3a", bg:["#5a2a1a","#2a1208"], hair:"#2a1508", ear:"point" },
+    "Аасимар":       { skin:"#f0d9be", bg:["#6a5a2a","#2e2810"], hair:"#eed890", ear:"round", halo:true },
+    "Фірболг":       { skin:"#8fae9a", bg:["#2c4a3a","#152820"], hair:"#5a7060", ear:"long", beard:true },
+    "Тритон":        { skin:"#4fa0a0", bg:["#1c4a52","#0c2428"], hair:"#2a6a6a", ear:"fin" },
+    "Фейрі":         { skin:"#f0c9d0", bg:["#5a2a68","#2a1030"], hair:"#c86aa8", ear:"point", small:true, wings:true },
+    "Сатир":         { skin:"#d9a86a", bg:["#4a5a22","#22300f"], hair:"#3a2a12", ear:"point", ramhorns:true },
+    "Кентавр":       { skin:"#c98a5a", bg:["#3a4a22","#1a2410"], hair:"#3a2410", ear:"round" },
+    "Гіт":           { skin:"#c9b25a", bg:["#3a2a4a","#1a1228"], hair:"#3a2a12", ear:"long" },
+    "Харенгон":      { skin:"#d9b48a", bg:["#4a5a26","#20300f"], hair:"#8a6a44", ear:"long" },
+    "Калаштар":      { skin:"#e8d8c8", bg:["#3a3a6a","#16162e"], hair:"#c8c8d0", ear:"round" },
+    "Чейнджлінг":    { skin:"#d6d0ca", bg:["#4a4658","#201e28"], ear:"round" },
+    "Генасі":        { skin:"#6a90c8", bg:["#2a4a6a","#0f2030"], hair:"#3a5a80", ear:"point" },
+    "Ведалкен":      { skin:"#6a9ac8", bg:["#3a4652","#1a2028"], hair:"#2a3a4a", ear:"round" },
+    "Гібрид Сіміків":{ skin:"#5aa0a0", bg:["#2a5060","#0f2530"], hair:"#2a5a5a", ear:"point" },
+    "Кендер":        { skin:"#e8c096", bg:["#4a5a26","#20300f"], hair:"#c88a3a", curly:true, small:true },
+    "Вердан":        { skin:"#8aae5a", bg:["#3a4030","#1a1e14"], hair:"#3a3020", ear:"point", small:true },
+    "Гіфф":          { skin:"#7a8a9a", bg:["#2a3550","#101828"], hair:"#33333a", ear:"round" },
+    "Хадозі":        { skin:"#9a6a44", bg:["#2a2540","#12101e"], hair:"#5a3a22", ear:"round" },
+    "Автогном":      { skin:"#b2b2ba", bg:["#3a3a48","#16161e"], hair:"#7a7a44", ear:"round" },
+    "Астральний ельф":{ skin:"#e2d6e8", bg:["#3a2a5a","#160f2a"], hair:"#f0eaf5", ear:"long" },
+    "Шифтер":        { skin:"#b0895f", bg:["#3a3020","#1a160e"], hair:"#5a3a1f", ear:"point" },
+    // --- спец-типи (тварини/істоти) ---
+    "Табаксі":       { type:"cat", skin:"#d8a860", bg:["#4a3a1a","#221a0c"] },
+    "Леонін":        { type:"cat", skin:"#d9b46a", mane:"#a8792f", bg:["#5a4218","#2a1e0a"] },
+    "Кенку":         { type:"bird", skin:"#2f3a55", crest:"#1a2030", bg:["#2a3550","#101828"] },
+    "Оулін":         { type:"bird", skin:"#8a6a44", crest:"#6a4a2a", owl:true, bg:["#2a2a4a","#101024"] },
+    "Ааракокра":     { type:"bird", skin:"#c14a34", crest:"#e8722e", crest2:"#f0a83a", eagle:true, bg:["#3f6392","#15243a"] },
+    "Людоящер":      { type:"lizard", skin:"#6a9a4a", scale:"#3a6a2a", bg:["#2a4020","#12200c"] },
+    "Кобольд":       { type:"lizard", skin:"#b34a3a", scale:"#7a2a20", small:true, bg:["#4a2018","#20100a"] },
+    "Грунг":         { type:"lizard", skin:"#6aba48", scale:"#3a8a28", small:true, bg:["#2a4a20","#12220c"] },
+    "Локсодон":      { type:"elephant", skin:"#9aa2a6", bg:["#3a4248","#181c20"] },
+    "Тортл":         { type:"turtle", skin:"#5a9a6a", shell:"#7a5a30", bg:["#2a4030","#12200f"] },
+    "Мінотавр":      { type:"minotaur", skin:"#8a5a3a", hair:"#2a1a0e", bg:["#4a2a18","#20120a"] },
+    "Локата":        { type:"fish", skin:"#6a9a9a", scale:"#3a7070", bg:["#1c4a52","#0c2428"] },
+    "Плазмоїд":      { type:"blob", skin:"#8ab0d8", bg:["#2a3a52","#101a2a"] },
+    "Три-крин":      { type:"insect", skin:"#c8a86a", bg:["#3a3020","#1a160e"] }
+};
+function racePalette(key){ return RACE_ART[key] || RACE_ART_DEF; }
+function raceArtSVG(key) {
+  const P = racePalette(key);
+
+  const cy = P.small ? 54 : 50, hr = P.small ? 20 : 23;
+  const g = `g_${key.replace(/[^a-zа-яїієґ0-9]/gi,"")}`;
+  const bg = `<defs><radialGradient id="${g}" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="${P.bg[0]}"/><stop offset="100%" stop-color="${P.bg[1]}"/></radialGradient></defs>
+    <rect width="100" height="100" rx="16" fill="url(#${g})"/>`;
+  const neck = `<rect x="42" y="${cy+hr-4}" width="16" height="18" rx="6" fill="${P.skin}"/>`;
+  const wrap = (inner) => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${bg}${inner}</svg>`;
+  const eyes = (ey=cy) => `<circle cx="43" cy="${ey}" r="2" fill="#2a2320"/><circle cx="57" cy="${ey}" r="2" fill="#2a2320"/>`;
+
+  // ===== спец-типи =====
+  if (P.type === "cat") {
+    const mane = P.mane ? `<circle cx="50" cy="${cy}" r="${hr+9}" fill="${P.mane}"/>` : "";
+    return wrap(`${neck}${mane}
+      <path d="M${50-hr+3} ${cy-hr+2} l -5 -13 l 12 6 Z" fill="${P.skin}"/>
+      <path d="M${50+hr-3} ${cy-hr+2} l 5 -13 l -12 6 Z" fill="${P.skin}"/>
+      <ellipse cx="50" cy="${cy}" rx="${hr}" ry="${hr}" fill="${P.skin}"/>
+      ${eyes(cy-1)}
+      <path d="M47 ${cy+6} l 3 3 l 3 -3 Z" fill="#6a3a2a"/>
+      <path d="M28 ${cy+4} l 15 3 M28 ${cy+9} l 15 1" stroke="#00000030" stroke-width="1"/>
+      <path d="M72 ${cy+4} l -15 3 M72 ${cy+9} l -15 1" stroke="#00000030" stroke-width="1"/>`);
+  }
+  if (P.type === "bird") {
+    const tufts = P.owl ? `<path d="M${50-14} ${cy-hr+2} l -3 -10 l 8 6 Z" fill="${P.crest}"/><path d="M${50+14} ${cy-hr+2} l 3 -10 l -8 6 Z" fill="${P.crest}"/>` : "";
+    // ааракокра — орлина голова: барвистий пір'яний гребінь + гачкуватий дзьоб
+    const crest = P.eagle ? `
+      <path d="M${50-13} ${cy-hr+6} q -9 -14 -1 -23 q 4 9 9 15 Z" fill="${P.crest}"/>
+      <path d="M50 ${cy-hr+1} q -4 -20 6 -26 q 3 12 0 23 Z" fill="${P.crest2||P.crest}"/>
+      <path d="M${50+13} ${cy-hr+6} q 11 -12 15 -18 q -2 12 -7 18 Z" fill="${P.crest}"/>` : "";
+    const beak = P.eagle
+      ? `<path d="M${50+hr-5} ${cy-3} l 16 3 q 4 4 -1 8 q -6 5 -10 -2 Z" fill="#e8b23a"/>
+         <path d="M${50+hr+10} ${cy+1} q 3 5 -4 9" stroke="#b9801c" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
+      : `<path d="M${50+hr-3} ${cy-1} l 15 4 l -15 6 Z" fill="#e0a83a"/>`;
+    const brow = P.eagle ? `<path d="M39 ${cy-6} q 8 -4 15 1" stroke="#00000033" stroke-width="2" fill="none" stroke-linecap="round"/>` : "";
+    return wrap(`${neck}${crest}${tufts}
+      <ellipse cx="49" cy="${cy}" rx="${hr}" ry="${hr}" fill="${P.skin}"/>
+      ${beak}${brow}
+      <circle cx="45" cy="${cy-1}" r="6" fill="#f0e8d8"/><circle cx="45" cy="${cy-1}" r="2.6" fill="#141414"/>
+      <circle cx="58" cy="${cy-1}" r="5" fill="#f0e8d8"/><circle cx="58" cy="${cy-1}" r="2.2" fill="#141414"/>`);
+  }
+  if (P.type === "lizard") {
+    return wrap(`${neck}
+      <ellipse cx="46" cy="${cy}" rx="${hr}" ry="${hr-2}" fill="${P.skin}"/>
+      <path d="M${50-hr+3} ${cy-hr+3} q 5 -6 9 0 q 5 -6 9 0 q 5 -6 9 0" stroke="${P.scale}" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="62" cy="${cy+4} " rx="15" ry="8" fill="${P.skin}"/>
+      <ellipse cx="45" cy="${cy-3}" rx="3.6" ry="4.4" fill="#dccb44"/><path d="M45 ${cy-6} v6" stroke="#141414" stroke-width="1.5"/>
+      <circle cx="73" cy="${cy+2}" r="1.2" fill="#141414"/><circle cx="73" cy="${cy+7}" r="1.2" fill="#141414"/>`);
+  }
+  if (P.type === "elephant") {
+    return wrap(`${neck}
+      <ellipse cx="28" cy="${cy}" rx="13" ry="17" fill="${P.skin}"/><ellipse cx="72" cy="${cy}" rx="13" ry="17" fill="${P.skin}"/>
+      <ellipse cx="50" cy="${cy-1}" rx="${hr-2}" ry="${hr}" fill="${P.skin}"/>
+      <path d="M50 ${cy+4} q 5 20 -3 26 q -7 4 -2 -3 q 6 -5 1 -21 Z" fill="${P.skin}"/>
+      ${eyes(cy-3)}
+      <path d="M44 ${cy+18} l -3 8" stroke="#efe8d6" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M56 ${cy+18} l 3 8" stroke="#efe8d6" stroke-width="2.6" stroke-linecap="round"/>`);
+  }
+  if (P.type === "turtle") {
+    return wrap(`<path d="M18 ${cy+22} q 32 -46 64 0 Z" fill="${P.shell}"/>
+      <path d="M30 ${cy+15} q 20 -18 40 0" stroke="#00000022" stroke-width="2" fill="none"/>
+      ${neck}
+      <ellipse cx="50" cy="${cy}" rx="${hr-2}" ry="${hr-3}" fill="${P.skin}"/>
+      <path d="M${50+hr-5} ${cy+2} l 11 1 l -11 5 Z" fill="#caa860"/>
+      ${eyes(cy-1)}`);
+  }
+  if (P.type === "minotaur") {
+    return wrap(`${neck}
+      <path d="M${50-hr+1} ${cy-hr+5} q -20 -3 -24 8 q 9 3 11 -2 q 6 6 13 1 Z" fill="#e8e0d0"/>
+      <path d="M${50+hr-1} ${cy-hr+5} q 20 -3 24 8 q -9 3 -11 -2 q -6 6 -13 1 Z" fill="#e8e0d0"/>
+      <ellipse cx="50" cy="${cy}" rx="${hr}" ry="${hr+1}" fill="${P.skin}"/>
+      <path d="M${50-hr+1} ${cy-6} q -3 -12 8 -13 q -6 6 -2 13 Z" fill="${P.hair}"/>
+      <ellipse cx="50" cy="${cy+9}" rx="10" ry="7" fill="${P.skin}" stroke="#00000020"/>
+      <circle cx="46" cy="${cy+9}" r="1.4" fill="#141414"/><circle cx="54" cy="${cy+9}" r="1.4" fill="#141414"/>
+      ${eyes(cy-2)}`);
+  }
+  if (P.type === "fish") {
+    return wrap(`${neck}
+      <path d="M${50-hr} ${cy-3} q -15 -3 -17 9 q 11 0 17 -3 Z" fill="${P.scale}" opacity=".9"/>
+      <path d="M${50+hr} ${cy-3} q 15 -3 17 9 q -11 0 -17 -3 Z" fill="${P.scale}" opacity=".9"/>
+      <path d="M50 ${cy-hr} q -5 -12 0 -16 q 5 4 0 16 Z" fill="${P.scale}"/>
+      <ellipse cx="50" cy="${cy}" rx="${hr}" ry="${hr+1}" fill="${P.skin}"/>
+      ${eyes(cy-1)}<path d="M44 ${cy+9} q 6 4 12 0" stroke="#00000030" stroke-width="1.5" fill="none"/>`);
+  }
+  if (P.type === "blob") {
+    return wrap(`<path d="M28 ${cy+22} q -8 -34 22 -38 q 28 -3 24 28 q 3 15 -15 15 q -24 5 -31 -5 Z" fill="${P.skin}" opacity=".92"/>
+      <ellipse cx="44" cy="${cy}" rx="9" ry="12" fill="#ffffff22"/>
+      <circle cx="44" cy="${cy}" r="3.2" fill="#eef6ff"/><circle cx="44" cy="${cy}" r="1.6" fill="#1a2a3a"/>
+      <circle cx="58" cy="${cy}" r="3.2" fill="#eef6ff"/><circle cx="58" cy="${cy}" r="1.6" fill="#1a2a3a"/>`);
+  }
+  if (P.type === "insect") {
+    return wrap(`${neck}
+      <path d="M44 ${cy-hr+2} q -5 -14 -9 -17" stroke="${P.skin}" stroke-width="2" fill="none"/>
+      <path d="M56 ${cy-hr+2} q 5 -14 9 -17" stroke="${P.skin}" stroke-width="2" fill="none"/>
+      <ellipse cx="50" cy="${cy}" rx="${hr-2}" ry="${hr}" fill="${P.skin}"/>
+      <ellipse cx="43" cy="${cy-2}" rx="4.5" ry="5.5" fill="#3a2a18"/><ellipse cx="57" cy="${cy-2}" rx="4.5" ry="5.5" fill="#3a2a18"/>
+      <path d="M45 ${cy+10} l -5 6 M55 ${cy+10} l 5 6" stroke="#3a2a18" stroke-width="2" stroke-linecap="round"/>`);
+  }
+
+  // ===== гуманоїдний шлях =====
+  let ears = "";
+  if (P.ear === "long")
+    ears = `<path d="M${50-hr} ${cy} L${50-hr-14} ${cy-18} L${50-hr+3} ${cy-4} Z" fill="${P.skin}"/>
+            <path d="M${50+hr} ${cy} L${50+hr+14} ${cy-18} L${50+hr-3} ${cy-4} Z" fill="${P.skin}"/>`;
+  else if (P.ear === "mid")
+    ears = `<path d="M${50-hr} ${cy} L${50-hr-9} ${cy-11} L${50-hr+2} ${cy-2} Z" fill="${P.skin}"/>
+            <path d="M${50+hr} ${cy} L${50+hr+9} ${cy-11} L${50+hr-2} ${cy-2} Z" fill="${P.skin}"/>`;
+  else if (P.ear === "point")
+    ears = `<path d="M${50-hr+1} ${cy-2} L${50-hr-7} ${cy-9} L${50-hr+3} ${cy+3} Z" fill="${P.skin}"/>
+            <path d="M${50+hr-1} ${cy-2} L${50+hr+7} ${cy-9} L${50+hr-3} ${cy+3} Z" fill="${P.skin}"/>`;
+  else if (P.ear === "round")
+    ears = `<circle cx="${50-hr+1}" cy="${cy+2}" r="5" fill="${P.skin}"/>
+            <circle cx="${50+hr-1}" cy="${cy+2}" r="5" fill="${P.skin}"/>`;
+  else if (P.ear === "fin")
+    ears = `<path d="M${50-hr} ${cy-2} q -15 -3 -17 9 q 11 0 17 -3 Z" fill="${P.skin}" opacity=".9"/>
+            <path d="M${50+hr} ${cy-2} q 15 -3 17 9 q -11 0 -17 -3 Z" fill="${P.skin}" opacity=".9"/>`;
+
+  const wings = P.wings ? `<path d="M${50-hr-2} ${cy} q -24 -14 -26 5 q 15 2 26 6 Z" fill="#ffffff3a"/>
+            <path d="M${50+hr+2} ${cy} q 24 -14 26 5 q -15 2 -26 6 Z" fill="#ffffff3a"/>` : "";
+  const halo = P.halo ? `<ellipse cx="50" cy="${cy-hr-7}" rx="15" ry="4.5" fill="none" stroke="#f5e08a" stroke-width="2.5" opacity=".9"/>` : "";
+
+  let head;
+  if (P.snout) {
+    head = `<ellipse cx="50" cy="${cy}" rx="${hr}" ry="${hr+1}" fill="${P.skin}"/>
+            <path d="M50 ${cy-2} q ${hr+6} 4 0 16 q -${hr+6} -4 0 -16 Z" fill="${P.scale||P.skin}" opacity=".55"/>
+            <ellipse cx="58" cy="${cy+7}" rx="12" ry="8" fill="${P.skin}"/>
+            <circle cx="66" cy="${cy+5}" r="1.4" fill="#3a1c1a"/><circle cx="66" cy="${cy+9}" r="1.4" fill="#3a1c1a"/>`;
+  } else {
+    head = `<ellipse cx="50" cy="${cy}" rx="${hr}" ry="${hr+2}" fill="${P.skin}"/>`;
+  }
+
+  let hair = "";
+  if (!P.snout && P.hair) {
+    if (P.curly)
+      hair = `<g fill="${P.hair}"><circle cx="38" cy="${cy-hr+3}" r="7"/><circle cx="50" cy="${cy-hr-1}" r="8"/>
+        <circle cx="62" cy="${cy-hr+3}" r="7"/><circle cx="32" cy="${cy-6}" r="5"/><circle cx="68" cy="${cy-6}" r="5"/></g>`;
+    else
+      hair = `<path d="M${50-hr-1} ${cy-2} q 2 -${hr+6} ${hr+1} -${hr+3} q ${hr-1} -3 ${hr+1} ${hr+3}
+                q -6 -6 -${hr+1} -5 q -${hr-4} -1 -${hr+1} 8 Z" fill="${P.hair}"/>`;
+  }
+
+  let horns = "";
+  if (P.horns)
+    horns = `<path d="M${50-12} ${cy-hr+2} q -10 -14 2 -20 q -3 10 4 16 Z" fill="#d9c7b0"/>
+             <path d="M${50+12} ${cy-hr+2} q 10 -14 -2 -20 q 3 10 -4 16 Z" fill="#d9c7b0"/>`;
+  if (P.ramhorns)
+    horns = `<path d="M${50-hr+2} ${cy-hr+5} q -14 1 -13 11 q 8 1 8 -5 q 0 -4 5 -3 Z" fill="#c9b78a"/>
+             <path d="M${50+hr-2} ${cy-hr+5} q 14 1 13 11 q -8 1 -8 -5 q 0 -4 -5 -3 Z" fill="#c9b78a"/>`;
+  if (P.frills)
+    horns = `<path d="M${50-hr+2} ${cy-6} l -10 -6 l 8 -1 l -6 -8 l 9 3 Z" fill="${P.scale}"/>
+             <path d="M${50+hr-2} ${cy-6} l 10 -6 l -8 -1 l 6 -8 l -9 3 Z" fill="${P.scale}"/>`;
+
+  let beard = "";
+  if (P.beard)
+    beard = `<path d="M${50-hr+2} ${cy+4} q 0 ${hr+8} ${hr-2} ${hr+6} q ${hr-2} 2 ${hr-2} -${hr+6}
+              q -6 8 -${hr-2} 8 q -${hr-4} 0 -${hr-2} -8 Z" fill="${P.hair}"/>`;
+
+  let face = "";
+  if (!P.snout) {
+    face = eyes(cy);
+    if (P.bignose) face += `<ellipse cx="50" cy="${cy+7}" rx="4" ry="5" fill="${P.skin}" stroke="#00000022"/>`;
+  }
+  let tusks = "";
+  if (P.tusks)
+    tusks = `<path d="M45 ${cy+11} l -1 6 l 3 -2 Z" fill="#f2efe4"/><path d="M55 ${cy+11} l 1 6 l -3 -2 Z" fill="#f2efe4"/>`;
+
+  return wrap(`${neck}${wings}${ears}${horns}${halo}${head}${hair}${beard}${face}${tusks}`);
+}
+
+/* ================================ РАСИ ================================
+   asiFixed — фіксований бонус; asiChoice — вибір N характеристик +amount;
+   skillFixed — надана навичка; skillChoice — вибір навичок;
+   featChoice — раса дає стартову черту (варіант людини);
+   subraces — підраси (можуть перевизначати speed, додавати traits, special). */
+const RACES = {
+  "Людина": {
+    speed:30, langs:["Спільна","+1 на вибір"],
+    desc:"Найпоширеніша й найрізноманітніша раса. Гнучкі, амбітні, здатні досягти успіху в будь-якому класі.",
+    recommend:"Будь-який клас — +1 до всіх характеристик згладжує будь-яку збірку. Варіант людини бере черту вже на 1-му рівні, тож ідеальний для класів, яким потрібен ранній буст (Воїн з «Майстром великої зброї», Чаклун з «Бойовим чаклуном»).",
+    baseTraits:[{name:"Універсальність", desc:"Люди не мають вроджених слабкостей і легко опановують різні шляхи."}],
+    subraces:{
+      "Стандартна": { asiFixed:{str:1,dex:1,con:1,int:1,wis:1,cha:1},
+        traits:[{name:"+1 до всіх характеристик", desc:"Кожна з шести характеристик зростає на 1."}] },
+      "Варіант": { asiChoice:{count:2, amount:1}, skillChoice:{count:1, from:"any"}, featChoice:true,
+        traits:[] }
+    }
+  },
+  "Ельф": {
+    speed:30, langs:["Спільна","Ельфійська"], skillFixed:["Сприйняття"],
+    desc:"Витончений довговічний народ, пов'язаний із магією та природою. Граційні й спостережливі.",
+    recommend:"Бонус Спритності любить Пройдисвіт, Слідопит і Монах. Високий ельф (+Інт) — чудовий Чарівник; Лісовий (+Мдр, швидкість 35) — Друїд/Слідопит; Дроу (+Хар) — Чаклун/Чорнокнижник.",
+    baseTraits:[
+      {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
+      {name:"Фейське походження", desc:"Перевага на порятунок від зачарування; магія не може тебе приспати."},
+      {name:"Загострені чуття", desc:"Володіння навичкою Сприйняття."},
+      {name:"Транс", desc:"Не спиш — медитуєш 4 години замість 8 годин сну."}],
+    subraces:{
+      "Високий": { asiFixed:{dex:2,int:1}, traits:[
+        {name:"Замовляння високих ельфів", desc:"Знаєш один замовляння чарівника (базова — Інтелект)."},
+        {name:"Додаткова мова", desc:"Опановуєш ще одну мову на вибір."}] },
+      "Лісовий": { asiFixed:{dex:2,wis:1}, speed:35, traits:[
+        {name:"Швидкі ноги", desc:"Твоя швидкість — 35 футів."},
+        {name:"Маскування в дикій природі", desc:"Можеш ховатися навіть за легкої природної завади."}] },
+      "Дроу": { asiFixed:{dex:2,cha:1}, traits:[
+        {name:"Покращене темнобачення", desc:"Темнобачення на 120 футів."},
+        {name:"Сонячна чутливість", desc:"Перешкода на атаки та Сприйняття зором під прямим сонцем."},
+        {name:"Магія дроу", desc:"Знаєш замовляння «Танцюючі вогники» (базова — Харизма)."}] },
+      "Еладрин": { asiFixed:{dex:2,cha:1}, src:"MToF", traits:[
+        {name:"Крок фей", desc:"Бонусною дією телепортуєшся на 30 футів (1/перепочинок)."},
+        {name:"Сезони", desc:"Обираєш сезон, що додає ефект до Кроку фей."}] },
+      "Морський ельф": { asiFixed:{dex:2,con:1}, src:"MToF", traits:[
+        {name:"Дитя моря", desc:"Швидкість плавання 30 фт; дихаєш повітрям і водою."},
+        {name:"Друг моря", desc:"Спілкуєшся з водними звірами простими поняттями."}] },
+      "Шадар-кай": { asiFixed:{dex:2,int:1}, src:"MToF", traits:[
+        {name:"Благословення Королеви Воронів", desc:"Бонусною дією телепорт 30 фт + спротив усій шкоді до наступного ходу (1/перепочинок)."}] }
+    }
+  },
+  "Дворф": {
+    speed:25, langs:["Спільна","Дворфська"],
+    desc:"Кремезний витривалий народ гір і підземель. Цінують честь, рід і майстерність.",
+    recommend:"Бонус Статури й стійкість роблять дворфа живучим фронтлайнером. Пагорбовий (+Мдр, +HP) — чудовий Клірик/Друїд; Гірський (+Сил, броня) — Воїн/Паладин.",
+    baseTraits:[
+      {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
+      {name:"Дворфська стійкість", desc:"Перевага на порятунок від отрути; спротив шкоді отрутою."},
+      {name:"Знання каменю", desc:"Подвоєний бонус майстерності на перевірки Історії щодо каменю."},
+      {name:"Володіння інструментами", desc:"Обери: інструменти коваля, пивовара або муляра."}],
+    subraces:{
+      "Пагорбовий": { asiFixed:{con:2,wis:1}, special:["hpPerLevel1"], traits:[
+        {name:"Витривалість дворфа", desc:"Максимум здоров'я зростає на 1 за кожен рівень."}] },
+      "Гірський": { asiFixed:{con:2,str:2}, traits:[
+        {name:"Володіння бронею дворфів", desc:"Володіння легкою та середньою бронею."}] },
+      "Дуергар": { asiFixed:{con:2,str:1}, src:"MToF", traits:[
+        {name:"Покращене темнобачення", desc:"Темнобачення на 120 футів."},
+        {name:"Дуергарська магія", desc:"З рівнем: Збільшення на собі та Невидимість."},
+        {name:"Сонячна чутливість", desc:"Перешкода на атаки та Сприйняття зором під сонцем."}] }
+    }
+  },
+  "Піврослик": {
+    speed:25, langs:["Спільна","Півросликова"],
+    desc:"Маленький, доброзичливий і навдивовижу хоробрий народ. Уникають небезпек, але не бракує відваги.",
+    recommend:"Спритність + риса «Щасливчик» (перекид одиниць) чудові для Пройдисвіта й Слідопита. Легконогий (+Хар) — Бард/Чаклун; Кремезний (+Ста) — витриваліший боєць.",
+    baseTraits:[
+      {name:"Щасливчик", desc:"Якщо на d20 випало 1 (атака, перевірка, порятунок) — перекидаєш, береш новий результат."},
+      {name:"Хоробрість", desc:"Перевага на порятунок від страху."},
+      {name:"Спритність півросликів", desc:"Можеш проходити крізь простір істот, більших за тебе."}],
+    subraces:{
+      "Легконогий": { asiFixed:{dex:2,cha:1}, traits:[
+        {name:"Природна прихованість", desc:"Можеш ховатися за істотою, більшою за тебе."}] },
+      "Кремезний": { asiFixed:{dex:2,con:1}, traits:[
+        {name:"Стійкість до отрути", desc:"Перевага проти отрути; спротив шкоді отрутою."}] },
+      "Примарний": { asiFixed:{dex:2,wis:1}, src:"SCAG", traits:[
+        {name:"Тиха мова", desc:"Телепатично передаєш прості думки істоті в 30 футів."}] },
+      "Лотосден": { asiFixed:{dex:2,wis:1}, src:"EGW", traits:[
+        {name:"Дитя природи", desc:"Знаєш замовляння друїда та з рівнем — закляття природи."}] }
+    }
+  },
+  "Драконороджений": {
+    speed:30, langs:["Спільна","Драконяча"], asiFixed:{str:2,cha:1},
+    desc:"Гордий народ, нащадки драконів. Мають луску, дихання стихією і сильне почуття честі.",
+    recommend:"+Сила та +Харизма ідеальні для Паладина (найкраща синергія) і Воїна. Харизма також живить Чаклуна/Барда, якщо хочеш мага в обладунку.",
+    baseTraits:[
+      {name:"Зброя дихання", desc:"Видих завдає шкоди (2d6, зростає з рівнем) у конусі/лінії; ціль робить порятунок."},
+      {name:"Спротив стихії", desc:"Спротив типу шкоди твоєї драконячої спадщини."}],
+    subLabel:"Драконяча спадщина",
+    subraces:{
+      "Червоний (вогонь)":  { traits:[{name:"Спадщина: вогонь", desc:"Дихання й спротив — вогонь."}] },
+      "Синій (блискавка)":  { traits:[{name:"Спадщина: блискавка", desc:"Дихання й спротив — блискавка."}] },
+      "Зелений (отрута)":   { traits:[{name:"Спадщина: отрута", desc:"Дихання й спротив — отрута."}] },
+      "Білий (холод)":      { traits:[{name:"Спадщина: холод", desc:"Дихання й спротив — холод."}] },
+      "Чорний (кислота)":   { traits:[{name:"Спадщина: кислота", desc:"Дихання й спротив — кислота."}] },
+      "Золотий (вогонь)":   { traits:[{name:"Спадщина: вогонь", desc:"Дихання й спротив — вогонь."}] }
+    }
+  },
+  "Гном": {
+    speed:25, langs:["Спільна","Гномська"],
+    desc:"Маленькі винахідливі створіння, сповнені енергії та цікавості. Обожнюють механізми й магію.",
+    recommend:"+Інтелект і перевага на ментальні порятунки роблять гнома топовим Чарівником. Скельний (+Ста) — витриваліший маг; Лісовий (+Спр) — краще ховається.",
+    baseTraits:[
+      {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
+      {name:"Гномська хитрість", desc:"Перевага на порятунки Інтелекту, Мудрості й Харизми проти магії."}],
+    subraces:{
+      "Скельний": { asiFixed:{int:2,con:1}, traits:[
+        {name:"Ремісничі знання", desc:"Подвоєний бонус на Історію щодо магічних/технічних пристроїв."},
+        {name:"Майстрування", desc:"Створюєш дрібні механічні пристрої."}] },
+      "Лісовий": { asiFixed:{int:2,dex:1}, traits:[
+        {name:"Природна ілюзія", desc:"Знаєш замовляння «Мала ілюзія» (базова — Інтелект)."},
+        {name:"Мова звірів", desc:"Спілкуєшся з дрібними звірами."}] },
+      "Свірфнеблін": { asiFixed:{int:2,dex:1}, src:"SCAG", traits:[
+        {name:"Покращене темнобачення", desc:"Темнобачення на 120 футів."},
+        {name:"Камуфляж у камені", desc:"Перевага на перевірки Непомітності серед скель і каменю."}] }
+    }
+  },
+  "Напівельф": {
+    speed:30, langs:["Спільна","Ельфійська","+1 на вибір"],
+    asiFixed:{cha:2}, asiChoice:{count:2, amount:1, exclude:["cha"]}, skillChoice:{count:2, from:"any"},
+    desc:"Нащадки людей і ельфів, свої серед обох світів і водночас чужі. Харизматичні й універсальні.",
+    recommend:"+2 Харизми, +1 до двох на вибір і дві навички — найкраща раса для Барда, Паладина, Чаклуна й Чорнокнижника. Гнучкість дозволяє підлаштувати під будь-який клас.",
+    baseTraits:[
+      {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
+      {name:"Фейське походження", desc:"Перевага на порятунок від зачарування; магія не може тебе приспати."},
+      {name:"+2 Харизма, +1 до двох на вибір", desc:"Фіксований бонус Харизми та вибір двох інших характеристик."},
+      {name:"Універсальність навичок", desc:"Володіння двома навичками на твій вибір."}]
+  },
+  "Напіворк": {
+    speed:30, langs:["Спільна","Оркська"], asiFixed:{str:2,con:1}, skillFixed:["Залякування"],
+    desc:"Сильні й витривалі, поєднують людську рішучість і оркську лють. Незламні в бою.",
+    recommend:"+Сила, живучість (лишаєшся на 1 HP) і посилені криті — ідеально для Варвара (найкраща синергія), Воїна й Паладина.",
+    baseTraits:[
+      {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
+      {name:"Загрозливий", desc:"Володіння навичкою Залякування."},
+      {name:"Невблаганна витривалість", desc:"Раз на день, падаючи до 0 HP, замість цього лишаєшся на 1 HP."},
+      {name:"Дикі атаки", desc:"При критичному влучанні додаєш ще одну кістку шкоди зброї."}]
+  },
+  "Тіфлінг": {
+    speed:30, langs:["Спільна","Інфернальна"], asiFixed:{cha:2,int:1},
+    desc:"Нащадки пекельної крові — з рогами, хвостом і магією в жилах. Часто відсторонені, але вольові.",
+    recommend:"+Харизма, +Інтелект, вбудована магія та спротив вогню — чудові для Чаклуна, Чорнокнижника, Барда й Паладина.",
+    baseTraits:[
+      {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
+      {name:"Пекельний спротив", desc:"Спротив шкоді вогнем."},
+      {name:"Пекельна спадщина", desc:"Знаєш «Тавматургію»; згодом «Пекельний докір» і «Темрява» (базова — Харизма)."}]
+  },
+
+  "Аасимар": { speed:30, langs:["Спільна","Небесна"], asiFixed:{cha:2},
+    desc:"Смертні з іскрою небесної сили, вісники добра (або занепалі).",
+    recommend:"+Харизма — Паладин, Чаклун, Бард, Клірик.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Небесний спротив",desc:"Спротив некротичній і промінистій шкоді."},{name:"Руки зцілення",desc:"Дотиком лікуєш HP = рівень."},{name:"Носій світла",desc:"Знаєш замовляння «Світло»."}],
+    subLabel:"Тип", subraces:{
+      "Захисник": { asiFixed:{wis:1}, traits:[{name:"Промениста душа",desc:"З 3-го рівня — крила та промениста шкода."}] },
+      "Кара": { asiFixed:{con:1}, traits:[{name:"Промениста кара",desc:"Вибух промінистої шкоди навколо."}] },
+      "Загиблий": { asiFixed:{str:1}, traits:[{name:"Некротична тінь",desc:"Примарні крила та страх ворогам."}] } } },
+  "Ааракокра": { speed:25, langs:["Спільна","Аукан","Ааракокра"], asiFixed:{dex:2,wis:1},
+    desc:"Крилатий пташиний народ з Елементного плану повітря.",
+    recommend:"Політ + Спритність — Слідопит, Монах, будь-який дальнобійний.",
+    baseTraits:[{name:"Політ 50 фт",desc:"Літаєш, але не у важкій броні."},{name:"Пазури",desc:"Природна зброя 1d4."}] },
+  "Голіаф": { speed:30, langs:["Спільна","Велетенська"], asiFixed:{str:2,con:1},
+    desc:"Велетенський гірський народ, загартований висотою й холодом.",
+    recommend:"+Сила, витривалість — Варвар, Воїн, Паладин.",
+    baseTraits:[{name:"Витривалість каменю",desc:"Реакцією зменшуєш шкоду 1d12+Ста."},{name:"Могутня статура",desc:"Рахуєшся більшим для перенесення."},{name:"Гірський народжений",desc:"Стійкий до холоду й висоти."}] },
+  "Табаксі": { speed:30, langs:["Спільна","+1"], asiFixed:{dex:2,cha:1},
+    desc:"Котоподібні мандрівники, гнані цікавістю.",
+    recommend:"+Спритність, +Харизма — Пройдисвіт, Монах, Бард.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Котяча спритність",desc:"Подвоюєш швидкість на хід (1/раз)."},{name:"Котячі кігті",desc:"Пазури 1d4 та лазіння."}] },
+  "Тритон": { speed:30, langs:["Спільна","Первомова"], asiFixed:{str:1,con:1,cha:1},
+    desc:"Горді захисники морських глибин.",
+    recommend:"Рівномірні бонуси — Паладин, Воїн.",
+    baseTraits:[{name:"Амфібія",desc:"Дихаєш повітрям і водою."},{name:"Швидкість плавання 30",desc:"Вправно плаваєш."},{name:"Володар моря",desc:"Спілкуєшся з водними звірами; згодом магія води."}] },
+  "Фірболг": { speed:30, langs:["Спільна","Ельфійська","Велетенська"], asiFixed:{wis:2,str:1},
+    desc:"Лагідні лісові велетні-відлюдники.",
+    recommend:"+Мудрість — Друїд, Клірик, Слідопит.",
+    baseTraits:[{name:"Фірболгова магія",desc:"Знаєш «Виявлення магії» та «Маскування»."},{name:"Прихований крок",desc:"Бонусною дією стаєш невидимим на хід."},{name:"Могутня статура",desc:"Рахуєшся більшим."}] },
+  "Гоблін": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{dex:2,con:1},
+    desc:"Маленькі хитрі створіння, спритні й винахідливі.",
+    recommend:"+Спритність — Пройдисвіт, Слідопит.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Лють малих",desc:"Бонусна шкода більшим ворогам (1/хід)."},{name:"Спритна втеча",desc:"Бонусною дією Ривок або Схованка щоходу."}] },
+  "Хобгоблін": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{con:2,int:1},
+    desc:"Дисципліновані вояки з жорсткою ієрархією.",
+    recommend:"+Статура, +Інтелект — Воїн, Лицар-маг, Чарівник.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Збереження обличчя",desc:"Бонус до провалу, якщо поруч союзники."},{name:"Військова підготовка",desc:"Володіння зброєю та легкою бронею."}] },
+  "Багбір": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{str:2,dex:1},
+    desc:"Волохаті гобліноїди-засідники з довгими руками.",
+    recommend:"+Сила, засідки — Варвар, Воїн, Пройдисвіт.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Довгі кінцівки",desc:"+5 фт досяжність у ближньому бою."},{name:"Раптова атака",desc:"+2d6 шкоди при засідці."}] },
+  "Кенку": { speed:30, langs:["Спільна","Ауран"], asiFixed:{dex:2,wis:1},
+    desc:"Безкрилі птахолюди, що спілкуються звуконаслідуванням.",
+    recommend:"+Спритність — Пройдисвіт, Слідопит.",
+    baseTraits:[{name:"Наслідування",desc:"Копіюєш будь-які почуті звуки й голоси."},{name:"Майстер підробок",desc:"Перевага на підробку письма/предметів."},{name:"Зграйна допомога",desc:"Легко допомагаєш союзнику."}] },
+  "Кобольд": { speed:30, langs:["Спільна","Драконяча"], asiFixed:{dex:2},
+    desc:"Дрібні лускаті нащадки драконів, сильні у зграї.",
+    recommend:"+Спритність — Пройдисвіт, будь-який дальній.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Зграйна тактика",desc:"Перевага на атаку, якщо союзник поруч із ціллю."},{name:"Сонячна чутливість",desc:"Перешкода на атаки під сонцем."}] },
+  "Людоящер": { speed:30, langs:["Спільна","Драконяча"], asiFixed:{con:2,wis:1},
+    desc:"Холоднокровні рептилоїди з чужою логікою виживання.",
+    recommend:"+Статура — Варвар, Друїд, Слідопит.",
+    baseTraits:[{name:"Природна броня",desc:"КБ = 13 + Спритність без броні."},{name:"Укус",desc:"Природна зброя 1d6."},{name:"Голодні щелепи",desc:"Бонусний укус із тимчасовим HP."}] },
+  "Орк": { speed:30, langs:["Спільна","Оркська"], asiFixed:{str:2,con:1},
+    desc:"Сильні витривалі воїни з невгамовною завзятістю.",
+    recommend:"+Сила — Варвар, Воїн, Паладин.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Агресивний",desc:"Бонусною дією мчиш до ворога."},{name:"Могутня статура",desc:"Рахуєшся більшим для перенесення."}] },
+  "Кентавр": { speed:40, langs:["Спільна","Сільванська"], asiFixed:{str:2,wis:1},
+    desc:"Напівлюди-напівконі, діти дикої природи.",
+    recommend:"Швидкість 40 + Сила — Варвар, Паладин.",
+    baseTraits:[{name:"Ривок",desc:"Атака копитами після руху."},{name:"Копита",desc:"Природна зброя 1d4."},{name:"Кінська статура",desc:"Рахуєшся більшим; не лазиш."}] },
+  "Мінотавр": { speed:30, langs:["Спільна","Мінотаврська"], asiFixed:{str:2,con:1},
+    desc:"Рогаті бики-воїни з чутливим нюхом.",
+    recommend:"+Сила — Варвар, Воїн, Паладин.",
+    baseTraits:[{name:"Роги",desc:"Природна зброя 1d6."},{name:"Таранний ривок",desc:"Після руху штовхаєш ворога рогами."},{name:"Могутня статура",desc:"Рахуєшся більшим."}] },
+  "Локсодон": { speed:30, langs:["Спільна","Локсодон"], asiFixed:{con:2,wis:1},
+    desc:"Спокійні слоноподібні мудреці.",
+    recommend:"+Статура, +Мудрість — Клірик, Друїд, Паладин.",
+    baseTraits:[{name:"Природна броня",desc:"КБ = 12 + Статура без броні."},{name:"Хобот",desc:"Хапаєш і піднімаєш предмети, чуття запахів."},{name:"Спокій локсодона",desc:"Перевага проти зачарування й страху."}] },
+  "Сатир": { speed:35, langs:["Спільна","Сільванська"], asiFixed:{cha:2,dex:1},
+    desc:"Веселі фейські гуляки з козлячими ногами.",
+    recommend:"+Харизма, швидкість 35 — Бард, Чаклун, Паладин.",
+    baseTraits:[{name:"Опір магії",desc:"Перевага на порятунки проти заклять."},{name:"Роги/Таран",desc:"Природна зброя 1d4."},{name:"Веселі стрибки",desc:"Далі стрибаєш."}] },
+  "Леонін": { speed:35, langs:["Спільна","Леонін"], asiFixed:{str:2,con:1},
+    desc:"Горді левоподібні захисники.",
+    recommend:"+Сила, швидкість 35 — Варвар, Воїн, Паладин.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Пазури",desc:"Природна зброя 1d4."},{name:"Грізний рик",desc:"Лякаєш ворогів навколо."}] },
+  "Тортл": { speed:30, langs:["Спільна","Акван"], asiFixed:{str:2,wis:1},
+    desc:"Черепахоподібні мандрівники з міцним панциром.",
+    recommend:"Природна броня КБ 17 — Друїд, Клірик, Монах, Воїн.",
+    baseTraits:[{name:"Природна броня",desc:"КБ 17 (не працює з бронею)."},{name:"Захист у панцирі",desc:"Ховаєшся в панцир: +4 КБ, але дій нема."},{name:"Затримка дихання",desc:"До 1 години під водою."}] },
+  "Кований": { speed:30, langs:["Спільна","+1"], asiFixed:{con:2}, asiChoice:{count:1,amount:1,exclude:["con"]},
+    desc:"Розумні конструкти, створені для війни.",
+    recommend:"+Статура й гнучкий +1 — будь-який клас (танк).",
+    baseTraits:[{name:"Вбудований захист",desc:"+1 КБ; броню не можна зняти проти волі."},{name:"Витривалість конструкта",desc:"Перевага проти отрути; не потребуєш їжі/сну (лише 6 год спокою)."}] },
+  "Калаштар": { speed:30, langs:["Спільна","Квор","+1"], asiFixed:{wis:1}, asiChoice:{count:2,amount:1,exclude:["wis"]},
+    desc:"Люди, злиті з духами далекого плану снів.",
+    recommend:"+Мудрість і гнучкість — Монах, Клірик, Чаклун.",
+    baseTraits:[{name:"Ментальна дисципліна",desc:"Перевага проти зачарування; не читаються думки."},{name:"Ментальний зв'язок",desc:"Телепатично говориш із тими, кого бачив."}] },
+  "Чейнджлінг": { speed:30, langs:["Спільна","+2"], asiFixed:{cha:2}, asiChoice:{count:1,amount:1,exclude:["cha"]},
+    desc:"Перевертні, що змінюють подобу за бажанням.",
+    recommend:"+Харизма — Бард, Пройдисвіт, Чаклун.",
+    baseTraits:[{name:"Перевтілення",desc:"Дією змінюєш зовнішність на будь-яку гуманоїдну."},{name:"Інстинкти обману",desc:"Володіння двома соц. навичками."}] },
+  "Генасі": { speed:30, langs:["Спільна","Первомова"], asiFixed:{con:2},
+    desc:"Смертні, у чиїх жилах — сила елементних планів.",
+    recommend:"Залежить від стихії; +Статура для живучості.",
+    baseTraits:[{name:"Елементна спадщина",desc:"Здібності залежать від обраної стихії."}],
+    subLabel:"Стихія", subraces:{
+      "Вогонь": { asiFixed:{int:1}, traits:[{name:"Вогняний спротив",desc:"Спротив вогню; знаєш «Вогняні бризки»."},{name:"Темнобачення",desc:"60 фт."}] },
+      "Вода": { asiFixed:{wis:1}, traits:[{name:"Дитя води",desc:"Швидкість плавання; знаєш «Формування води»."},{name:"Амфібія",desc:"Дихаєш під водою."}] },
+      "Земля": { asiFixed:{str:1}, traits:[{name:"Прохід по землі",desc:"Важкий рельєф зі скель тебе не сповільнює."},{name:"Магія землі",desc:"Знаєш «Формування каменю» згодом."}] },
+      "Повітря": { asiFixed:{dex:1}, traits:[{name:"Дитя вітру",desc:"Знаєш «Левітацію» згодом."},{name:"Затримка дихання",desc:"Довго не дихаєш."}] } } },
+  "Гіт": { speed:30, langs:["Спільна","Гіт"],
+    desc:"Народ, що вирвався з рабства ілітидів; дві ворожі гілки.",
+    recommend:"Обидві гілки мають вроджену магію.",
+    baseTraits:[{name:"Спадщина гітів",desc:"Здібності залежать від гілки."}],
+    subLabel:"Гілка", subraces:{
+      "Гітіанки": { asiFixed:{str:2,int:1}, traits:[{name:"Військова спадщина",desc:"Володіння зброєю; знаєш «Стрибок», згодом телепатію/телекінез."}] },
+      "Гітзераї": { asiFixed:{wis:2,int:1}, traits:[{name:"Психічний захист",desc:"Знаєш «Щит»; згодом «Виявлення думок»."}] } } },
+  "Харенгон": { speed:30, langs:["Спільна","Сільванська"], asiFixed:{dex:2,wis:1},
+    desc:"Спритні кролеподібні фейські мандрівники.",
+    recommend:"+Спритність, ініціатива — Монах, Пройдисвіт, Слідопит.",
+    baseTraits:[{name:"Спритні ноги",desc:"Бонус майстерності до ініціативи."},{name:"Щасливий крок",desc:"Реакцією стрибаєш геть від небезпеки."},{name:"Довгі стрибки",desc:"Стрибаєш значно далі."}] },
+  "Оулін": { speed:30, langs:["Спільна","+1"], asiFixed:{dex:2,wis:1},
+    desc:"Совоподібні крилаті вчені-нічники.",
+    recommend:"Політ + Спритність — Слідопит, Чарівник, Пройдисвіт.",
+    baseTraits:[{name:"Темнобачення 120 фт",desc:"Чудово бачиш у темряві."},{name:"Тихий політ",desc:"Політ 30 фт; майже безшумний."}] },
+  "Юань-ті": { speed:30, langs:["Спільна","Аб'їссальна","Драконяча"], asiFixed:{cha:2,int:1},
+    desc:"Змієлюди з холодним розумом і вродженою магією.",
+    recommend:"+Харизма, опір магії — Чаклун, Чорнокнижник, Бард.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Опір магії",desc:"Перевага на порятунки проти заклять."},{name:"Імунітет до отрути",desc:"Отрута тобі не шкодить."},{name:"Вроджена магія",desc:"Знаєш «Отруйні бризки», «Дружба з тваринами» (змії)."}] },
+
+  "Автогном": { speed:30, langs:["Спільна","Гномська"], asiChoice:{count:3,amount:1},
+    desc:"Механічні гноми-конструкти зі світів Спелджаммера.",
+    recommend:"Гнучкі бонуси — будь-який клас; живучий, як конструкт.",
+    baseTraits:[{name:"Гнучкі бонуси",desc:"+1 до трьох характеристик (або +2/+1 за правилами Tasha)."},{name:"Вбудований захист",desc:"+1 КБ."},{name:"Стійкість машини",desc:"Спротив отруті, перевага проти хвороб; не потребуєш їжі/сну."},{name:"Вбудований інструмент",desc:"Володіння одним ремісничим інструментом."}] },
+  "Астральний ельф": { speed:30, langs:["Спільна","Ельфійська"], asiChoice:{count:3,amount:1},
+    desc:"Ельфи, що століттями живуть на Астральному плані біля богів.",
+    recommend:"Гнучкі бонуси — універсал; чудові чуття й магія.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Фейське походження",desc:"Перевага проти зачарування; магія не присипляє."},{name:"Астральний вогонь",desc:"Знаєш одне замовляння (Інт/Мдр/Хар на вибір)."},{name:"Астральний стрибок",desc:"Бонусною дією телепорт до 30 фт (за майстерністю)."}] },
+  "Ведалкен": { speed:30, langs:["Спільна","+2"], asiFixed:{int:2,wis:1},
+    desc:"Синьошкірі перфекціоністи-науковці з Равніки.",
+    recommend:"+Інтелект — Чарівник, Лицар-маг.",
+    baseTraits:[{name:"Ведалкенська кмітливість",desc:"Перевага на перевірку Інт/Мдр/Хар (1/відпочинок)."},{name:"Затримка дихання",desc:"До 1 години під водою."},{name:"Партизанська освіта",desc:"Володіння однією навичкою та інструментом."}] },
+  "Вердан": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{con:1,cha:1},
+    desc:"Мінливий народ, що досі еволюціонує під впливом дивної сили.",
+    recommend:"+Харизма/Статура — Бард, Чаклун.",
+    baseTraits:[{name:"Живучість",desc:"Максимум HP трохи вищий."},{name:"Обмежена телепатія",desc:"Передаєш прості думки істоті поруч."},{name:"Мінливість",desc:"На 1-му рівні можеш перевизначити свою характеристику."}] },
+  "Гібрид Сіміків": { speed:30, langs:["Спільна","+1"], asiFixed:{con:2}, asiChoice:{count:1,amount:1,exclude:["con"]},
+    desc:"Створіння лабораторій Сіміків, поєднані з тваринними рисами.",
+    recommend:"+Статура + мутації — універсал-виживач.",
+    baseTraits:[{name:"Тваринне пристосування",desc:"Обираєш мутації: кігті, зябра, лазіння, стрибучість тощо."},{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."}] },
+  "Гіфф": { speed:30, langs:["Спільна","+1"], asiChoice:{count:3,amount:1},
+    desc:"Бегемотоподібні найманці-космоплавці, залюблені у вогнепальну зброю.",
+    recommend:"Гнучкі бонуси, могутня статура — Воїн, Варвар.",
+    baseTraits:[{name:"Гнучкі бонуси",desc:"+1 до трьох характеристик."},{name:"Могутня статура",desc:"Рахуєшся більшим для перенесення."},{name:"Вогнепальна вправність",desc:"Володіння вогнепальною зброєю."},{name:"Головою вперед",desc:"Раз на хід таранний ривок."}] },
+  "Грунг": { speed:25, langs:["Спільна","Грунг"], asiFixed:{dex:2,con:1},
+    desc:"Отруйні деревні жаболюди з жорсткою кастовою системою.",
+    recommend:"+Спритність — Пройдисвіт, Монах.",
+    baseTraits:[{name:"Амфібія",desc:"Дихаєш повітрям і водою."},{name:"Отруйна шкіра",desc:"Дотик до тебе може отруїти."},{name:"Standing Leap",desc:"Стрибаєш далеко з місця."},{name:"Потреба вологи",desc:"Маєш занурюватись у воду щодня."}] },
+  "Кендер": { speed:30, langs:["Спільна","Кендерська"], asiChoice:{count:3,amount:1},
+    desc:"Маленькі безстрашні непосиди зі світу Драконлансу.",
+    recommend:"Гнучкі бонуси — Пройдисвіт, Бард.",
+    baseTraits:[{name:"Безстрашний кендер",desc:"Перевага на порятунки від страху."},{name:"Спритні пальці",desc:"Володіння Спритністю рук."},{name:"Провокація",desc:"Бонусною дією глузуєш, даючи союзнику перевагу."}] },
+  "Локата": { speed:30, langs:["Спільна","Акван"], asiFixed:{str:2,dex:1},
+    desc:"Рибоподібний народ мілин, вигнаний із рідних вод.",
+    recommend:"+Сила, водна стихія — Воїн, Варвар.",
+    baseTraits:[{name:"Обмежена амфібія",desc:"Дихаєш під водою, але маєш зволожуватись."},{name:"Швидкість плавання 30",desc:"Вправно плаваєш."},{name:"Природна броня",desc:"КБ = 12 + Спритність без броні."}] },
+  "Плазмоїд": { speed:30, langs:["Спільна","+1"], asiChoice:{count:3,amount:1},
+    desc:"Аморфні желеподібні мандрівники з космічних безодень.",
+    recommend:"Гнучкі бонуси, аморфність — Пройдисвіт, Монах.",
+    baseTraits:[{name:"Аморфний",desc:"Просочуєшся крізь щілини завширшки 1 дюйм."},{name:"Псевдоподія",desc:"Відрощуєш кінцівку для маніпуляцій."},{name:"Природна стійкість",desc:"Спротив кислоті й отруті; затримка дихання."}] },
+  "Три-крин": { speed:30, langs:["Спільна","Три-крин"], asiChoice:{count:3,amount:1},
+    desc:"Комахоподібні кочівники пустель із чотирма руками.",
+    recommend:"Гнучкі бонуси, зайві руки — Воїн, Монах, Пройдисвіт.",
+    baseTraits:[{name:"Хітиновий панцир",desc:"КБ = 13 + Спритність без броні."},{name:"Додаткові кінцівки",desc:"Дві менші руки для маніпуляцій."},{name:"Хамелеон",desc:"Змінюєш колір — бонус до Непомітності."},{name:"Стрибучість",desc:"Стрибаєш далі."}] },
+  "Фейрі": { speed:30, langs:["Спільна","Сільванська"], asiChoice:{count:3,amount:1},
+    desc:"Крихітні феї зі світу дикого чарівного лісу.",
+    recommend:"Політ + гнучкі бонуси — Бард, Чаклун, Чарівник.",
+    baseTraits:[{name:"Політ 30 фт",desc:"Літаєш, поки не у важкій броні."},{name:"Фейська магія",desc:"Знаєш «Мала ілюзія»; згодом «Заплутування», «Втеча»."},{name:"Фейське походження",desc:"Перевага проти зачарування."}] },
+  "Хадозі": { speed:30, langs:["Спільна","+1"], asiChoice:{count:3,amount:1},
+    desc:"Мавпоподібні космоплавці-планеристи зі Спелджаммера.",
+    recommend:"Гнучкі бонуси, планування — Пройдисвіт, Слідопит.",
+    baseTraits:[{name:"Ковзання",desc:"Реакцією планеруєш, не зазнаючи шкоди від падіння."},{name:"Чіпкі лапи",desc:"Швидкість лазіння; вправно хапаєшся."},{name:"Спритне ухилення",desc:"Реакцією зменшуєш шкоду від атаки/ефекту."}] },
+  "Шифтер": { speed:30, langs:["Спільна"], asiFixed:{dex:1}, asiChoice:{count:1,amount:1,exclude:["dex"]},
+    desc:"Нащадки лікантропів, здатні на мить прикликати звірину натуру.",
+    recommend:"Спритність + перевтілення — Слідопит, Пройдисвіт, Друїд.",
+    baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Перевтілення (Shifting)",desc:"Бонусною дією прикликаєш звірину форму: тимч. HP та бонус (за типом шифтера)."}] }
+};
+
+/* ================================ КЛАСИ ================================
+   subLevel — рівень вибору підкласу; subs — підкласи з описами. */
+const CLASSES = {
+  "Варвар": { hd:12, saves:["str","con"], skillCount:2, spell:null,
+    skills:["Поводження з тваринами","Атлетика","Залякування","Природа","Сприйняття","Виживання"],
+    desc:"Лютий воїн, що чорпає силу з первісного гніву. Величезний запас HP і нищівні атаки.",
+    features:["Захист без броні","Лють"],
+    prof:["Легка та середня броня, щити","Проста та військова зброя"],
+    equip:["Великий бойовий сокира","2 ручні сокири","4 списи","Набір мандрівника"],
+    priority:["str","con","dex","wis","cha","int"], extraASI:[],
+    subLabel:"Первісний шлях", subLevel:3, subs:[
+      {name:"Шлях берсерка", desc:"Чиста лють: додаткова атака у нестямі, страх ворогам.",
+        feats:{
+          3:["Нестяма — у люті бонусною дією робиш одну додаткову атаку в ближньому бою (після люті — рівень виснаження)"],
+          6:["Несамовитий гнів — поки лютуєш, маєш імунітет до причарування та переляку"],
+          10:["Грізна присутність — дією лякаєш істоту в межах 30 фт (порятунок Мудрості)"],
+          14:["Відплата — реакцією на шкоду від істоти в межах 5 фт робиш атаку в ближньому бою у відповідь"]}},
+      {name:"Шлях тотемного воїна", desc:"Духовні тотеми (ведмідь, орел, вовк) дають захист і бонуси.",
+        feats:{
+          3:["Тотемний дух — обираєш тотем: Ведмідь (у люті спротив усій шкоді, крім психічної), Орел (перевага на ухилення) або Вовк (союзники мають перевагу на атаки поруч із твоєю ціллю)"],
+          6:["Аспект звіра — постійний дар тотема (напр. Ведмідь — подвійна вантажність; Вовк — вправне вистежування)"],
+          10:["Провидець духів — можеш чаклувати «Розмова з природою» як ритуал"],
+          14:["Тотемна прихильність — потужний бойовий ефект (напр. Ведмідь — вороги поруч мають перешкоду на атаки по всіх, крім тебе)"]}},
+      {name:"Шлях фанатика", desc:"Фанатична лють: додаткова свята/некротична шкода, важче вбити.", src:"XGE",
+        feats:{
+          3:["Божественна лють — у люті раз за хід атака завдає додатково 1d6 + ½ рівня некротичної або сяйливої шкоди; воскресіння тебе не потребує матеріальних компонентів"],
+          6:["Фанатичний фокус — раз за лють можеш перекинути провалений порятунок"],
+          10:["Заклик до битви — бонусною дією союзники в межах 60 фт додають d6 до однієї атаки чи порятунку до твого наступного ходу"],
+          14:["Лють за гранню смерті — поки лютуєш, не непритомнієш і не гинеш при 0 HP (порятунки від смерті не потрібні до кінця люті)"]}}] },
+  "Бард": { hd:8, saves:["dex","cha"], skillCount:3, spell:"cha",
+    skills:ALL_SKILLS,
+    desc:"Універсал-чарівник, що надихає союзників музикою й володіє широким спектром заклять.",
+    features:["Натхнення барда","Замовляння"],
+    prof:["Легка броня","Прості зброї, ручні арбалети, мечі, рапіри","Три муз. інструменти"],
+    equip:["Рапіра","Дипломатичний набір","Лютня","Шкіряний обладунок","Кинджал"],
+    priority:["cha","dex","con","wis","int","str"], extraASI:[],
+    subLabel:"Колегія", subLevel:3, subs:[
+      {name:"Колегія знання", desc:"Майстер навичок і секретів; краде закляття інших класів.",
+        feats:{
+          3:["Бонусні володіння — три навички на вибір; Гострі слова — реакцією витрачаєш кістку Натхнення, щоб зняти її значення з кидка атаки/шкоди/перевірки ворога"],
+          6:["Додаткові магічні секрети — вивчаєш 2 закляття з будь-якого класу"],
+          14:["Незрівнянний талант — витрачаєш кістку Натхнення, щоб додати її до будь-якої перевірки характеристики"]}},
+      {name:"Колегія доблесті", desc:"Бойовий бард: броня, зброя, натхнення в бою.",
+        prof:["Середня броня","Щити","Військова зброя"],
+        feats:{
+          3:["Бойове натхнення — істота з кісткою Натхнення може додати її до кидка шкоди зброї або до свого КБ проти атаки"],
+          6:["Додаткова атака — дві атаки за одну дію атаки"],
+          14:["Бойова магія — коли дією чаклуєш закляття, бонусною дією робиш одну атаку зброєю"]}},
+      {name:"Колегія шепоту", desc:"Таємний убивця й маніпулятор під маскою барда.", src:"XGE",
+        feats:{
+          3:["Психічні клинки — витрачаєш кістку Натхнення, щоб завдати влученням додатково 2d6+ психічної шкоди; Слова жаху — розмовою на 1 хв лякаєш істоту"],
+          6:["Мантія шепоту — реакцією, коли істота поруч гине, переймаєш її подобу й поверхневі спогади на годину"],
+          14:["Тінь таємниць — дією нашіптуєш істоті в межах 30 фт жахливу таємницю: вона причарована й кориться до 8 годин (порятунок Мудрості)"]}}] },
+  "Клірик": { hd:8, saves:["wis","cha"], skillCount:2, spell:"wis",
+    skills:["Історія","Прозорливість","Медицина","Переконання","Релігія"],
+    desc:"Провідник божественної сили. Лікує, підтримує союзників і карає ворогів магією віри.",
+    features:["Божественний домен","Замовляння"],
+    prof:["Легка та середня броня, щити","Проста зброя"],
+    equip:["Булава","Кольчужна сорочка","Щит","Символ віри","Набір священника"],
+    priority:["wis","con","str","dex","cha","int"], extraASI:[],
+    subLabel:"Божественний домен", subLevel:1, subs:[
+      {name:"Домен життя", desc:"Найкращий цілитель: посилене лікування, важка броня.",
+        prof:["Важка броня"],
+        feats:{
+          1:["Учень життя — коли чаклуєш закляття 1-го рівня чи вище, що відновлює HP, ціль додатково відновлює 2 + рівень закляття HP"],
+          2:["Божественний канал: Збереження життя — відновлюєш HP = 5 × рівень клірика й розподіляєш між істотами в межах 30 фт (кожній не більше половини її макс. HP)"],
+          6:["Благословенний цілитель — коли твоє закляття лікує іншу істоту, ти сам відновлюєш 2 + рівень закляття HP"],
+          8:["Божественний удар — 1/хід атака зброєю завдає +1d8 сяйливої шкоди (на 14-му рівні +2d8)"],
+          17:["Вершина зцілення — кубики лікування твоїх заклять завжди дають максимум замість кидка"]}},
+      {name:"Домен світла", desc:"Вогонь і сяйво: атакувальні закляття, спалах світла.",
+        feats:{
+          1:["Заговір «Світло» та Осяйна спалах — реакцією, коли істота в межах 30 фт атакує тебе, накладаєш перешкоду на її кидок атаки (разів/перепочинок = модиф. Мудрості)"],
+          2:["Божественний канал: Сяйво світанку — розганяєш магічну темряву; вороги в межах 30 фт отримують 2d10 + рівень клірика сяйливої шкоди (порятунок Статури — половина)"],
+          6:["Покращена осяйна спалах — можеш використовувати Осяйну спалах, щоб захистити іншу істоту в межах 30 фт"],
+          8:["Могутнє чаклунство — додаєш модиф. Мудрості до шкоди заговорів клірика"],
+          17:["Корона світла — дією створюєш ауру світла; вороги в ній мають перешкоду на порятунки проти твоїх заклять вогню та сяйва"]}},
+      {name:"Домен війни", desc:"Бойовий жрець: бонусні атаки, важка броня, зброя.",
+        prof:["Важка броня","Військова зброя"],
+        feats:{
+          1:["Жрець війни — бонусною дією робиш додаткову атаку зброєю (разів/перепочинок = модиф. Мудрості, мінімум 1)"],
+          2:["Божественний канал: Скерований удар — після свого кидка атаки додаєш до нього +10 (до того, як відомо, чи влучив)"],
+          6:["Божественний канал: Благословення бога війни — реакцією даєш +10 до кидка атаки істоти в межах 30 фт"],
+          8:["Божественний удар — 1/хід атака зброєю завдає +1d8 шкоди (на 14-му рівні +2d8)"],
+          17:["Аватар битви — спротив дробильній, колючій і рубальній шкоді від немагічної зброї"]}},
+      {name:"Домен обману", desc:"Ілюзії, прихованість, підступ.",
+        feats:{
+          1:["Благословення шахрая — дією торкаєшся істоти: вона отримує перевагу на перевірки Спритності (Непомітність) на 1 годину"],
+          2:["Божественний канал: Викликати двійника — створюєш ілюзорну копію себе на 1 хв (перевага на атаки, коли ви обоє поруч із ціллю)"],
+          6:["Плащ тіней — дією стаєш невидимим до кінця свого наступного ходу"],
+          8:["Божественний удар — 1/хід атака зброєю завдає +1d8 отруйної шкоди (на 14-му рівні +2d8)"],
+          17:["Покращений двійник — Викликати двійника створює до чотирьох копій"]}},
+      {name:"Домен могили", desc:"Межа життя і смерті: рятуєш при 0 HP, караєш нежить.", src:"XGE",
+        feats:{
+          1:["Коло смертності — знаєш заговір «Стабілізація» (діє на 30 фт бонусною дією), а зцілення істоти на 0 HP дає максимум за кубиками. Очі могили — дією виявляєш нежить у межах 60 фт"],
+          2:["Божественний канал: Шлях до могили — прокльон на істоту: наступна атака по ній має вразливість до всіх типів шкоди цього удару"],
+          6:["Страж біля порогу смерті — реакцією перетворюєш критичне влучання по істоті в межах 30 фт на звичайне (разів/перепочинок = модиф. Мудрості)"],
+          8:["Могутнє чаклунство — додаєш модиф. Мудрості до шкоди заговорів клірика"],
+          17:["Хранитель душ — коли ворог гине поруч, обрана істота в межах 60 фт відновлює HP"]}}] },
+  "Друїд": { hd:8, saves:["int","wis"], skillCount:2, spell:"wis",
+    skills:["Магія","Поводження з тваринами","Прозорливість","Медицина","Природа","Сприйняття","Релігія","Виживання"],
+    desc:"Захисник природи, здатний обертатися на звірів і черпати магію з дикого світу.",
+    features:["Друїдська мова","Замовляння"],
+    prof:["Легка та середня броня (не метал), щити","Дрючки, кинджали, серпи, пращі тощо"],
+    equip:["Дерев'яний щит","Серп","Шкіряний обладунок","Друїдичний фокус","Набір дослідника"],
+    priority:["wis","con","dex","int","cha","str"], extraASI:[],
+    subLabel:"Коло", subLevel:2, subs:[
+      {name:"Коло землі", desc:"Могутній заклинач: додаткові закляття, відновлення магії.",
+        feats:{
+          2:["Бонусний заговір; Закляття кола — додаткові підготовані закляття за типом місцевості; Природне відновлення — у короткий перепочинок відновлюєш комірки заклять (сумарно = ½ рівня друїда)"],
+          6:["Хода землею — рухаєшся крізь немагічну складну місцевість без витрат; перевага на порятунки проти рослин, що сповільнюють"],
+          10:["Дар природи — імунітет до отрути й хвороб; феї та елементалі не можуть тебе причарувати чи налякати"],
+          14:["Святилище природи — звірі й рослини мусять пройти порятунок Мудрості, щоб атакувати тебе"]}},
+      {name:"Коло місяця", desc:"Майстер перевтілення: бойові форми звірів.",
+        feats:{
+          2:["Бойова дика подоба — приймаєш Дику подобу бонусною дією; форми звірів до CR 1 (КБ = 13 + модиф. Мудрості); у формі витрачаєш комірку, щоб відновити HP"],
+          6:["Первісний удар — атаки у звіриній формі рахуються магічними; доступні форми до CR 2"],
+          10:["Стихійна дика подоба — витрачаєш 2 використання Дикої подоби, щоб обернутися на стихійного елементаля"],
+          14:["Тисяча подоб — необмежено чаклуєш «Зміна себе» (Alter Self)"]}},
+      {name:"Коло мрій", desc:"Магія Фейвайлду: зцілення й короткий телепорт.", src:"XGE",
+        feats:{
+          2:["Бальзам Літнього двору — маєш запас кубиків d6 (= рівень друїда); бонусною дією роздаєш зцілення й тимчасові HP"],
+          6:["Вогнище місячного світла й тіні — ритуалом створюєш сферу 30 фт: перевага на Непомітність/Сприйняття всередині, повне укриття від чужих чуттів"],
+          10:["Приховані шляхи — бонусною дією телепортуєшся до 60 фт, або торкнувшись, телепортуєш іншу істоту"],
+          14:["Мандрівник у снах — після короткого перепочинку раз безкоштовно чаклуєш «Сон», «Віщування» або «Коло телепортації»"]}}] },
+  "Воїн": { hd:10, saves:["str","con"], skillCount:2, spell:null,
+    skills:["Акробатика","Поводження з тваринами","Атлетика","Історія","Прозорливість","Залякування","Сприйняття","Виживання"],
+    desc:"Майстер зброї та обладунків. Найбільше атак, бойові стилі та неймовірна витривалість.",
+    features:["Бойовий стиль","Другий подих"],
+    prof:["Уся броня, щити","Уся зброя"],
+    equip:["Кольчуга","Щит","Бойова сокира","Ручний арбалет","Похідний набір"],
+    priority:["str","con","dex","wis","cha","int"], extraASI:[6,14],
+    subLabel:"Архетип", subLevel:3, subs:[
+      {name:"Чемпіон", desc:"Простий і надійний: частіші криті удари, атлетизм.",
+        feats:{
+          3:["Покращений критичний удар — критуєш при 19–20 на кубику атаки"],
+          7:["Дивовижний атлет — додаєш ½ бонусу майстерності до перевірок Сили/Спритності/Статури без володіння; далі стрибаєш"],
+          10:["Додатковий бойовий стиль — обираєш ще один бойовий стиль"],
+          15:["Вищий критичний удар — критуєш при 18–20"],
+          18:["Невтомний — наприкінці ходу з <½ HP відновлюєш 5 + модиф. Статури; поза боєм HP поволі відновлюється"]}},
+      {name:"Майстер бою", desc:"Тактик: бойові маневри та кубики переваги.",
+        feats:{
+          3:["Бойова майстерність — знаєш 3 маневри й маєш 4 кубики переваги (d8): збити з ніг, вибити зброю, скерувати союзника тощо; Учень війни — володіння одним ремісничим інструментом"],
+          7:["Знай ворога — вивчивши істоту, дізнаєшся, чи переважає вона тебе (Сила, Спритність, Статура, КБ, рівні класу тощо)"],
+          10:["Покращена бойова майстерність — кубики переваги стають d10"],
+          15:["Невблаганний — на початку бою, якщо не лишилось кубиків переваги, отримуєш один"],
+          18:["Досконала бойова майстерність — кубики переваги стають d12"]}},
+      {name:"Лицар-маг", desc:"Поєднує бій із магією чарівника.",
+        feats:{
+          3:["Замовляння — чаклуєш закляття чарівника (переважно Ограждення й Викликання, база Інтелект); Зв'язок зі зброєю — прикликаєш прив'язану зброю бонусною дією"],
+          7:["Бойова магія — коли дією чаклуєш заговір, бонусною дією робиш одну атаку зброєю"],
+          10:["Тайний удар — влучивши зброєю, ціль має перешкоду на наступний порятунок проти твого закляття (до кінця твого наступного ходу)"],
+          15:["Тайний ривок — використовуючи Сплеск дії, телепортуєшся на 30 фт"],
+          18:["Покращена бойова магія — коли дією чаклуєш будь-яке закляття, бонусною дією робиш одну атаку зброєю"]}},
+      {name:"Самурай", desc:"Незламна рішучість: тимчасова перевага й стійкість у бою.", src:"XGE",
+        feats:{
+          3:["Бойовий дух — бонусною дією отримуєш перевагу на атаки цей хід і тимчасові HP (кількість/тривалий відпочинок за рівнем); Бонусне володіння — навичка або мова"],
+          7:["Витончений придворний — володіння порятунками Мудрості; додаєш модиф. Мудрості до перевірок Переконання"],
+          10:["Невтомний дух — відновлюєш використання Бойового духу в короткий перепочинок"],
+          15:["Стрімкий удар — маючи перевагу на атаку, можеш відмовитись від неї, щоб зробити ще одну атаку зброєю"],
+          18:["Сила перед смертю — впавши до 0 HP (але не вбитий), реакцією робиш повний хід атак, перш ніж впасти"]}}] },
+  "Монах": { hd:8, saves:["str","dex"], skillCount:2, spell:null,
+    skills:["Акробатика","Атлетика","Історія","Прозорливість","Релігія","Непомітність"],
+    desc:"Майстер бойових мистецтв, що керує енергією Ці. Швидкий, рухливий, б'ється без зброї.",
+    features:["Захист без броні","Бойові мистецтва"],
+    prof:["Проста зброя, короткі мечі","Один ремісничий або муз. інструмент"],
+    equip:["Короткий меч","10 дротиків","Набір дослідника підземель"],
+    priority:["dex","wis","con","str","int","cha"], extraASI:[],
+    subLabel:"Традиція", subLevel:3, subs:[
+      {name:"Відкрита долоня", desc:"Класичний монах: відкидання, приголомшення, зцілення.",
+        feats:{
+          3:["Техніка відкритої долоні — влучивши Шквалом ударів, накладаєш ефект: збиваєш з ніг, відкидаєш на 15 фт або позбавляєш реакції"],
+          6:["Дар цілительства — дією витрачаєш очко Ці, щоб відновити собі HP (= 3 × рівень монаха)"],
+          11:["Спокій — між перепочинками на тебе діє ефект «Притулок»: вороги мусять пройти порятунок, щоб атакувати тебе"],
+          17:["Тремтливий дотик — торкнувшись і витративши 3 очки Ці, згодом можеш завдати істоті смертельної вібрації"]}},
+      {name:"Шлях тіні", desc:"Прихованість і телепортація крізь тіні.",
+        feats:{
+          3:["Мистецтво тіней — знаєш заговір «Мала ілюзія»; за 2 очки Ці чаклуєш Темряву, Темнобачення, Тишу або Крок без сліду"],
+          6:["Крок тіні — з тьмяного світла/темряви бонусною дією телепортуєшся до 60 фт в іншу тінь; далі маєш перевагу на першу атаку в ближньому бою"],
+          11:["Плащ тіней — у тьмяному світлі/темряві дією стаєш невидимим, поки не атакуєш, не чаклуєш чи не вийдеш на світло"],
+          17:["Опортуніст — коли істота в межах 5 фт від тебе отримує влучання від когось іншого, реакцією робиш по ній атаку в ближньому бою"]}},
+      {name:"Шлях чотирьох стихій", desc:"Магія стихій через Ці.",
+        feats:{
+          3:["Учень стихій — знаєш стихійні дисципліни (напр. Подих дракона, Кулак нестримного вітру); чаклуєш їх за очки Ці"],
+          6:["Нова дисципліна — вивчаєш ще одну стихійну дисципліну; доступні сильніші стихійні ефекти"],
+          11:["Нова дисципліна — ще одна дисципліна; закляття вищих рівнів через Ці"],
+          17:["Опанування стихій — доступні найпотужніші стихійні дисципліни"]}},
+      {name:"Шлях кенсея", desc:"Майстер обраної зброї: точні, швидкі й далекі удари.", src:"XGE",
+        feats:{
+          3:["Шлях кенсея — обираєш зброю кенсея; бонусною дією посилюєш її атаку або отримуєш +2 КБ; володіння одним ремеслом чи каліграфією"],
+          6:["Спритний удар — раз за хід витрачаєш 1 очко Ці, щоб додати +1d8 шкоди атаці зброєю кенсея; ця зброя рахується магічною"],
+          11:["Загострити клинок — бонусною дією витрачаєш до 3 очок Ці, даючи зброї кенсея +1..+3 до влучання й шкоди на 1 хв"],
+          17:["Безпомильна точність — раз за хід перекидаєш промах атаки зброєю кенсея"]}}] },
+  "Паладин": { hd:10, saves:["wis","cha"], skillCount:2, spell:"cha",
+    skills:["Атлетика","Прозорливість","Залякування","Медицина","Переконання","Релігія"],
+    desc:"Святий воїн, зв'язаний клятвою. Поєднує броню, зброю, лікування й божественну кару.",
+    features:["Божественне чуття","Накладання рук"],
+    prof:["Уся броня, щити","Уся зброя"],
+    equip:["Бойовий молот","Щит","5 списів","Кольчуга","Символ віри","Набір священника"],
+    priority:["str","cha","con","wis","dex","int"], extraASI:[],
+    subLabel:"Священна клятва", subLevel:3, subs:[
+      {name:"Клятва відданості", desc:"Класичний паладин честі: захист, зцілення, кара зла.",
+        feats:{
+          3:["Закляття клятви; Божественний канал: Священна зброя (додаєш модиф. Харизми до влучань зброєю, вона світиться) або Вигнати нечестивця (лякаєш нежить і дияволів)"],
+          7:["Аура відданості — ти й союзники в межах 10 фт не можуть бути причаровані (на 18-му — 30 фт)"],
+          15:["Очищувальний дотик — дією знімаєш закляття з себе чи істоти, якої торкаєшся (разів = модиф. Харизми)"],
+          20:["Свята постать — дією на 1 хв випромінюєш світло: перевага на атаки, аура завдає ворогам сяйливої шкоди"]}},
+      {name:"Клятва прадавніх", desc:"Захисник світла й природи, стійкість до магії.",
+        feats:{
+          3:["Закляття клятви; Божественний канал: Гнів природи (лозами зв'язуєш ворога) або Вигнати невірних (лякаєш фей і нечисть)"],
+          7:["Аура захисту — ти й союзники в межах 10 фт маєте спротив шкоді від заклять (на 18-му — 30 фт)"],
+          15:["Невмирущий вартовий — впавши до 0 HP (не вбитий), лишаєшся на 1 HP (раз/тривалий відпочинок); не старієш магічно"],
+          20:["Прадавній чемпіон — на 1 хв: щоходу відновлюєш 10 HP, чаклаєш закляття паладина бонусною дією, вороги в межах 10 фт мають перешкоду на порятунки проти них"]}},
+      {name:"Клятва помсти", desc:"Невблаганний месник, що переслідує ворогів.",
+        feats:{
+          3:["Закляття клятви; Божественний канал: Присуд ворогу (перевага на атаки проти обраної цілі) або Вигнати невірних"],
+          7:["Невблаганний месник — влучивши атакою навздогін, можеш одразу рухнутись до половини швидкості, не провокуючи атак"],
+          15:["Душа помсти — під час Присуду ворогу робиш атаку навздогін проти цілі щоразу, коли вона рухається чи атакує"],
+          20:["Месник-янгол — дією на 1 хв відрощуєш крила (політ 60 фт) і випромінюєш для ворогів ауру жаху"]}},
+      {name:"Клятва завоювання", desc:"Страх і панування: скеровуєш ворогів жахом.", src:"XGE",
+        feats:{
+          3:["Закляття клятви; Божественний канал: Присутність завойовника (лякаєш істот у межах 30 фт) або Скерований удар (+10 до свого кидка атаки)"],
+          7:["Аура завоювання — налякані вороги в межах 10 фт мають швидкість 0 і отримують психічну шкоду (на 18-му — 30 фт)"],
+          15:["Зневажлива відсіч — коли істота влучає по тобі, вона отримує психічну шкоду = модиф. Харизми (поки ти при тямі)"],
+          20:["Непереможний завойовник — дією на 1 хв: спротив усій шкоді, додаткова атака за дію, критуєш при 19–20"]}}] },
+  "Слідопит": { hd:10, saves:["str","dex"], skillCount:3, spell:"wis",
+    skills:["Поводження з тваринами","Атлетика","Прозорливість","Дослідження","Природа","Сприйняття","Непомітність","Виживання"],
+    desc:"Воїн дикої природи, вправний стрілець і слідопит. Полює на ворогів, знає землі.",
+    features:["Улюблений ворог","Природний дослідник"],
+    prof:["Легка та середня броня, щити","Проста та військова зброя"],
+    equip:["Лускатий обладунок","2 короткі мечі","Довгий лук + 20 стріл","Набір дослідника"],
+    priority:["dex","wis","con","str","int","cha"], extraASI:[],
+    subLabel:"Архетип", subLevel:3, subs:[
+      {name:"Мисливець", desc:"Спеціаліст із полювання: бонуси проти груп і великих ворогів.",
+        feats:{
+          3:["Здобич мисливця — обираєш бонус: Убивця колосів (+1d8 по пораненому), Нищитель орд (атака по сусідній цілі) або Руйнівник велетів (шкода по великих ворогах)"],
+          7:["Оборонна тактика — на вибір: захист від засідок, від багатьох атак чи від страху"],
+          11:["Множинні атаки — Град стріл (атака по всіх у зоні 10 фт) або Вихор клинків (по всіх поруч)"],
+          15:["Вища оборона мисливця — на вибір: Ухилення, Незбагненне ухилення (реакцією ½ шкоди) або Проти течії (перенаправляєш промах ворога на іншу ціль)"]}},
+      {name:"Хазяїн звірів", desc:"Бойовий супутник-звір, що діє з тобою.",
+        feats:{
+          3:["Первісний супутник — прикликаєш звіра-компаньйона (CR ≤ ¼), що ділить твою ініціативу й діє за командою"],
+          7:["Винятковий вишкіл — звір може діяти Ухиленням/Відступом/Ривком; його атаки рахуються магічними"],
+          11:["Звіряча лють — твій звір робить дві атаки за свою дію атаки"],
+          15:["Спільні закляття — коли чаклуєш закляття на себе, воно діє й на твого звіра в межах 30 фт"]}},
+      {name:"Похмурий переслідувач", desc:"Майстер засідок у темряві, надзвичайна ініціатива.", src:"XGE",
+        feats:{
+          3:["Закляття архетипу; Жах засідки — у перший хід бою +10 фт швидкості й додаткова атака (+1d8); +модиф. Мудрості до ініціативи; Умбральний зір — невидимий у темряві для істот із темнобаченням"],
+          7:["Залізний розум — володіння порятунками Мудрості (або Інтелекту чи Харизми, якщо вже маєш Мудрість)"],
+          11:["Град переслідувача — раз за хід при промаху атакою можеш одразу атакувати ще раз"],
+          15:["Тіньове ухилення — реакцією, коли істота атакує тебе (і ти дієздатний), накладаєш перешкоду на її кидок атаки"]}}] },
+  "Пройдисвіт": { hd:8, saves:["dex","int"], skillCount:4, spell:null,
+    skills:["Акробатика","Атлетика","Обман","Прозорливість","Залякування","Дослідження","Сприйняття","Виступ","Переконання","Спритність рук","Непомітність"],
+    desc:"Майстер прихованості, точності та хитрощів. Величезна підступна шкода та експертиза навичок.",
+    features:["Експертиза","Підступна атака","Злодійський жаргон"],
+    prof:["Легка броня","Прості зброї, ручні арбалети, мечі, рапіри","Злодійські інструменти"],
+    equip:["Рапіра","Короткий лук + 20 стріл","Шкіряний обладунок","2 кинджали","Злодійські інструменти","Набір грабіжника"],
+    priority:["dex","con","int","wis","cha","str"], extraASI:[10],
+    subLabel:"Архетип", subLevel:3, subs:[
+      {name:"Штукар", desc:"Класичний злодій: спритність рук, лазіння, використання предметів.",
+        feats:{
+          3:["Спритні руки — бонусною дією використовуєш предмет, злодійські інструменти чи Спритність рук; Другий поверх — лазіння без зайвих витрат, далі стрибаєш"],
+          9:["Верховна прихованість — маєш перевагу на Непомітність, якщо цього ходу рухаєшся не більш ніж на пів швидкості"],
+          13:["Використання магічних приладів — ігноруєш вимоги класу, раси й рівня для магічних предметів"],
+          17:["Рефлекс злодія — у першому раунді бою робиш два ходи (додатковий хід із власною ініціативою)"]}},
+      {name:"Вбивця", desc:"Смертоносний з засідки, майстер маскування.",
+        prof:["Набір отруйника","Набір для маскування"],
+        feats:{
+          3:["Убивство — перевага на атаки проти тих, хто ще не ходив у бою; влучання по здивованій істоті — завжди критичне"],
+          9:["Експертиза проникнення — витративши час і кошти, створюєш достовірну підроблену особу"],
+          13:["Самозванець — бездоганно імітуєш мову, почерк і поведінку іншої особи"],
+          17:["Смертельний удар — влучивши по здивованій істоті, змушуєш її пройти порятунок Статури або отримати подвійну шкоду"]}},
+      {name:"Таємний трюкач", desc:"Додає магію ілюзій і чарів чарівника.",
+        feats:{
+          3:["Замовляння — чаклуєш закляття чарівника (переважно чари й ілюзії, база Інтелект); Рука мага-фокусника — невидима Рука мага з додатковими трюками (красти, злодійські інструменти на відстані)"],
+          9:["Магічна засідка — якщо ти прихований, коли чаклуєш на істоту, вона має перешкоду на порятунок проти цього закляття"],
+          13:["Універсальний трюкач — бонусною дією скеровуєш Руку мага на істоту, щоб мати перевагу на атаки проти неї цей хід"],
+          17:["Викрадач заклять — реакцією викрадаєш закляття, спрямоване на тебе, і можеш використати його сам (1/тривалий відпочинок)"]}},
+      {name:"Дуелянт", desc:"Елегантний фехтувальник: мобільність і підступ у дуелі один-на-один.", src:"XGE",
+        feats:{
+          3:["Хвацький випад — після атаки в ближньому бою вільно відходиш від цілі; Зухвалість — підступна атака не потребує переваги в дуелі один-на-один; +модиф. Харизми до ініціативи"],
+          9:["Шарм — перевіркою Переконання проти Прозорливості зачаровуєш істоту або дражниш її (мусить нападати на тебе)"],
+          13:["Витончений маневр — бонусною дією отримуєш перевагу на наступну перевірку Акробатики чи Атлетики цей хід"],
+          17:["Майстер дуелі — промахнувшись атакою, перекидаєш її з перевагою (1/короткий перепочинок)"]}}] },
+  "Чаклун": { hd:6, saves:["con","cha"], skillCount:2, spell:"cha",
+    skills:["Магія","Обман","Прозорливість","Залякування","Переконання","Релігія"],
+    desc:"Природжений маг, чия сила тече з крові. Гнучка магія та метамагія.",
+    features:["Джерело магії","Замовляння"],
+    prof:["Кинджали, дротики, пращі, дрючки, легкі арбалети"],
+    equip:["Легкий арбалет + 20 болтів","Магічний фокус","2 кинджали","Набір дослідника"],
+    priority:["cha","con","dex","wis","int","str"], extraASI:[],
+    subLabel:"Походження магії", subLevel:1, subs:[
+      {name:"Драконяча кров", desc:"Спадок драконів: міцніше здоров'я, стихійна магія.",
+        feats:{
+          1:["Драконячий предок — обираєш дракона (тип шкоди); Стійкість дракона — макс. HP +рівень чаклуна, а без броні базовий КБ = 13 + модиф. Спритності"],
+          6:["Спорідненість зі стихією — додаєш модиф. Харизми до шкоди свого стихійного типу; маєш спротив цій шкоді"],
+          14:["Драконячі крила — бонусною дією відрощуєш крила (політ = швидкість), поки не прибереш їх"],
+          18:["Драконяча присутність — дією витрачаєш 5 очок чаклунства, створюючи ауру 60 фт жаху або зачарування"]}},
+      {name:"Дика магія", desc:"Непередбачувані сплески магії та удача.",
+        feats:{
+          1:["Сплеск дикої магії — після закляття 1-го рівня+ можлива випадкова магічна подія (за таблицею); Хвиля хаосу — 1/тривалий відпочинок перекидаєш кидок атаки/перевірки/порятунку"],
+          6:["Схиляння ймовірностей — витрачаєш 2 очки чаклунства, щоб додати чи відняти 2d4 від чужого кидка атаки чи порятунку"],
+          14:["Контрольований хаос — коли зривається Сплеск дикої магії, перекидаєш d100 і обираєш кращий з двох результатів"],
+          18:["Магічне бомбардування — раз за хід, коли на кубику шкоди випадає максимум, кидаєш цей кубик ще раз і додаєш"]}},
+      {name:"Божественна душа", desc:"Небесне джерело: доступ до заклять клірика, згодом крила.", src:"XGE",
+        feats:{
+          1:["Божественна магія — обираєш прихильність (додаткове закляття); можеш вивчати закляття зі списку клірика як чаклунські"],
+          6:["Посилене зцілення — витрачаєш очко чаклунства, щоб перекинути кубики лікування свого закляття (для себе чи істоти поруч)"],
+          14:["Янгольська подоба — бонусною дією відрощуєш примарні крила (політ 30 фт)"],
+          18:["Незламне життя — на початку ходу з ≤½ HP відновлюєш HP = 5 + модиф. Харизми (1/тривалий відпочинок)"]}}] },
+  "Чорнокнижник": { hd:8, saves:["wis","cha"], skillCount:2, spell:"cha",
+    skills:["Магія","Обман","Історія","Залякування","Дослідження","Природа","Релігія"],
+    desc:"Уклав пакт із потойбічною силою. Потужні закляття пакту та містичні здібності.",
+    features:["Потойбічний покровитель","Тайна магія"],
+    prof:["Легка броня","Проста зброя"],
+    equip:["Легкий арбалет + 20 болтів","Магічний фокус","Шкіряний обладунок","2 кинджали","Набір науковця"],
+    priority:["cha","con","dex","wis","int","str"], extraASI:[],
+    subLabel:"Покровитель", subLevel:1, subs:[
+      {name:"Архіфея", desc:"Магія чарів та ілюзій зі світу фей.",
+        feats:{
+          1:["Чарівна присутність — дією зачаровуєш або лякаєш істот у межах 10 фт (порятунок Мудрості; 1/перепочинок)"],
+          6:["Мандрівна імла — бонусною дією стаєш невидимим і телепортуєшся до 60 фт (1/перепочинок)"],
+          10:["Оманливий захист — імунітет до причарування; істоту, що намагається тебе причарувати, можеш зачарувати у відповідь"],
+          14:["Темне марення — дією занурюєш істоту в межах 60 фт в ілюзорний світ: вона причарована або налякана на 1 хв (порятунок Мудрості)"]}},
+      {name:"Ісчадіє", desc:"Пекельна сила: тимчасове HP, вогняна магія.",
+        feats:{
+          1:["Дар темного — щоразу, коли вбиваєш ворога, отримуєш тимчасові HP (= рівень чаклуна + модиф. Харизми)"],
+          6:["Удача темного — 1/перепочинок додаєш d10 до своєї перевірки характеристики чи порятунку (після кидка)"],
+          10:["Пекельна стійкість — обираєш тип шкоди й отримуєш до нього спротив, поки не зміниш вибір"],
+          14:["Кидок у пекло — влучивши атакою, змушуєш ціль пройти порятунок Харизми або зникнути в пеклі й отримати 10d10 психічної шкоди (1/тривалий відпочинок)"]}},
+      {name:"Древній", desc:"Космічний жах: телепатія, магія розуму.",
+        feats:{
+          1:["Пробуджений розум — телепатично спілкуєшся з будь-якою істотою в межах 30 фт (спільної мови не потрібно)"],
+          6:["Ентропійний щит — реакцією накладаєш перешкоду на атаку по тобі; якщо вона промахується, маєш перевагу на свою наступну атаку (1/перепочинок)"],
+          10:["Щит думок — спротив психічній шкоді; істота, що читає твої думки чи завдає психічної шкоди, сама отримує ефект"],
+          14:["Створення поплічника — торкаєшся недієздатної істоти й зачаровуєш її; вона кориться тобі телепатично, доки чари не знято"]}},
+      {name:"Клинок Хекса", desc:"Пакт зі зброєю: б'єшся Харизмою, проклинаєш ворогів.", src:"XGE",
+        feats:{
+          1:["Прокляття Хекса — бонусною дією проклинаєш істоту: +шкода по ній, частіші криті, лікуєшся при її смерті; Воїн-Хекс — б'єшся Харизмою й можеш зачаклувати одну зброю"],
+          6:["Проклятий привид — убивши гуманоїда, бонусною дією піднімаєш його як привида-союзника до тривалого відпочинку"],
+          10:["Броня прокльонів — коли проклята тобою ціль атакує тебе, кинь d6: на 4+ атака промахується"],
+          14:["Володар Хекса — коли проклята ціль гине, можеш перенести Прокляття Хекса на нову істоту без витрат"]}}] },
+  "Чарівник": { hd:6, saves:["int","wis"], skillCount:2, spell:"int",
+    skills:["Магія","Історія","Прозорливість","Дослідження","Медицина","Релігія"],
+    desc:"Учений маг із книгою заклять. Найширший спектр магії та потужні ритуали.",
+    features:["Замовляння","Магічне відновлення"],
+    prof:["Кинджали, дротики, пращі, дрючки, легкі арбалети"],
+    equip:["Книга заклять","Магічний фокус","Кинджал","Набір науковця"],
+    priority:["int","con","dex","wis","cha","str"], extraASI:[],
+    subLabel:"Школа магії", subLevel:2, subs:[
+      {name:"Викликання", desc:"Руйнівні закляття: захист союзників від власних вибухів.",
+        feats:{
+          2:["Ліплення заклять — обираєш до (1 + рівень закляття) істот, які автоматично проходять порятунок і не отримують шкоди від твого закляття Викликання"],
+          6:["Потужний заговір — цілі, що успішно проходять порятунок проти твого заговору, все одно отримують половину шкоди"],
+          10:["Посилене викликання — раз за хід додаєш модиф. Інтелекту до шкоди одного кубика закляття Викликання"],
+          14:["Перевантаження — витрачаєш дію, щоб гарантовано максимізувати шкоду закляття (комірки ≤ 5-го рівня; далі — з відкатом шкоди по собі)"]}},
+      {name:"Прорицання", desc:"Бачення майбутнього: заміна кидків ворогів.",
+        feats:{
+          2:["Передбачення — після тривалого відпочинку кидаєш 2d20 і зберігаєш; будь-яким із них заміняєш чужий або власний кидок"],
+          6:["Досвідчене передбачення — відновлюєш використану комірку заклять, чаклуючи закляття прорицання 2-го рівня чи вище"],
+          10:["Третє око — дією отримуєш темнобачення 60 фт, більшу пасивну проникливість, бачення невидимого чи читання будь-яких мов"],
+          14:["Вища передбачуваність — для Передбачення кидаєш три d20 замість двох"]}},
+      {name:"Ілюзія", desc:"Обман відчуттів, гнучкі ілюзії.",
+        feats:{
+          2:["Покращена мала ілюзія — заговір «Мала ілюзія» створює водночас і звук, і образ"],
+          6:["Гнучка ілюзія — можеш змінювати вже створену ілюзію на ходу, не чаклуючи заново"],
+          10:["Ілюзорна подоба — реакцією при атаці по тобі підставляєш ілюзорну копію, і атака промахується (1/короткий перепочинок)"],
+          14:["Ілюзорна реальність — робиш один неживий елемент своєї ілюзії справжнім на 1 хв"]}},
+      {name:"Некромантія", desc:"Магія життя й смерті, підняття нежиті.",
+        feats:{
+          2:["Похмура жнива — раз за хід, убиваючи закляттям, відновлюєш HP (= 2 × рівень закляття, або 3 × проти нежиті)"],
+          6:["Немертві слуги — підняті тобою нежиті мають +HP і додають модиф. Інтелекту до шкоди"],
+          10:["Незламність до нежиті — маєш спротив некротичній шкоді; твій максимум HP не можна знизити"],
+          14:["Командування нежиттю — дією підкоряєш собі чужу нежить (порятунок Харизми з перешкодою, якщо її Інтелект низький)"]}},
+      {name:"Бойова магія", desc:"Стійкий бойовий маг: захист концентрації, контратака.", src:"XGE",
+        feats:{
+          2:["Тактичний розум — додаєш модиф. Інтелекту до ініціативи; Арканний захист — реакцією отримуєш +2 КБ проти атаки або +4 до порятунку"],
+          6:["Сплеск сили — накопичуєш заряди (розвіявши закляття чи в перепочинок); раз за хід додаєш до шкоди закляття = ½ рівня чарівника"],
+          10:["Витривала магія — поки зосереджений на закляття, маєш +2 до КБ і до всіх порятунків"],
+          14:["Відбивна завіса — коли використовуєш Арканний захист, енергія вражає до 3 істот поруч (шкода = ½ рівня чарівника)"]}}] }
+};
+
+/* ===================== ПРОГРЕСІЯ КЛАСІВ ПО РІВНЯХ =====================
+   caster: тип магії; subFeat: рівні, де підклас дає здібність. */
+const CLASS_EXTRA = {
+  "Варвар":{caster:null,subFeat:[3,6,10,14]},
+  "Бард":{caster:"full",subFeat:[3,6,14]},
+  "Клірик":{caster:"full",subFeat:[1,2,6,8,17]},
+  "Друїд":{caster:"full",subFeat:[2,6,10,14]},
+  "Воїн":{caster:null,subFeat:[3,7,10,15,18]},
+  "Монах":{caster:null,subFeat:[3,6,11,17]},
+  "Паладин":{caster:"half",subFeat:[3,7,15,20]},
+  "Слідопит":{caster:"half",subFeat:[3,7,11,15]},
+  "Пройдисвіт":{caster:null,subFeat:[3,9,13,17]},
+  "Чаклун":{caster:"full",subFeat:[1,6,14,18]},
+  "Чорнокнижник":{caster:"pact",subFeat:[1,6,10,14]},
+  "Чарівник":{caster:"full",subFeat:[2,6,10,14]}
+};
+// Комірки заклять повного заклинача (за рівнем персонажа): [1р,2р,...]
+const FULL_SLOTS = {1:[2],2:[3],3:[4,2],4:[4,3],5:[4,3,2],6:[4,3,3],7:[4,3,3,1],8:[4,3,3,2],
+  9:[4,3,3,3,1],10:[4,3,3,3,2],11:[4,3,3,3,2,1],12:[4,3,3,3,2,1],13:[4,3,3,3,2,1,1],14:[4,3,3,3,2,1,1],
+  15:[4,3,3,3,2,1,1,1],16:[4,3,3,3,2,1,1,1],17:[4,3,3,3,2,1,1,1,1],18:[4,3,3,3,3,1,1,1,1],
+  19:[4,3,3,3,3,2,1,1,1],20:[4,3,3,3,3,2,2,1,1]};
+// Напівзаклинач (Паладин/Слідопит): магія з 2-го рівня
+const HALF_SLOTS = {1:[],2:[2],3:[3],4:[3],5:[4,2],6:[4,2],7:[4,3],8:[4,3],9:[4,3,2],10:[4,3,2],
+  11:[4,3,3],12:[4,3,3],13:[4,3,3,1],14:[4,3,3,1],15:[4,3,3,2],16:[4,3,3,2],17:[4,3,3,3,1],18:[4,3,3,3,1],
+  19:[4,3,3,3,2],20:[4,3,3,3,2]};
+// Чорнокнижник (пакт-магія): [кількість комірок, рівень комірок]
+const WARLOCK_SLOTS = {1:[1,1],2:[2,1],3:[2,2],4:[2,2],5:[2,3],6:[2,3],7:[2,4],8:[2,4],9:[2,5],10:[2,5],
+  11:[3,5],12:[3,5],13:[3,5],14:[3,5],15:[3,5],16:[3,5],17:[4,5],18:[4,5],19:[4,5],20:[4,5]};
+
+// Заговори (cantrips): базова кількість + по одному на 4-му та 10-му рівнях
+const CANTRIP_BASE = { "Бард":2, "Клірик":3, "Друїд":2, "Чаклун":4, "Чорнокнижник":2, "Чарівник":3 };
+function cantripsKnown(name,L){ const b=CANTRIP_BASE[name]; if(b==null) return 0; return b+(L>=4?1:0)+(L>=10?1:0); }
+// Закляття, які клас ЗНАЄ (фіксований список), індекс = рівень персонажа 1..20
+const SPELLS_KNOWN = {
+  "Бард":       [0,4,5,6,7,8,9,10,11,12,14,15,15,16,18,19,19,20,22,22,22],
+  "Чаклун":     [0,2,3,4,5,6,7,8,9,10,11,12,12,13,13,14,14,15,15,15,15],
+  "Чорнокнижник":[0,2,3,4,5,6,7,8,9,10,10,11,11,12,12,13,13,14,14,15,15],
+  "Слідопит":   [0,0,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11]
+};
+// Класи, які ГОТУЮТЬ закляття щодня: кількість = модиф. базової хар. + рівень (паладин — ½ рівня)
+const PREP_CASTER = {
+  "Клірик":{abil:"wis",half:false}, "Друїд":{abil:"wis",half:false},
+  "Чарівник":{abil:"int",half:false}, "Паладин":{abil:"cha",half:true}
+};
+// Рядки «скільки заклять знаєш/готуєш» для рівня L
+function spellCountLines(name,L){
+  const lines=[];
+  const cc=cantripsKnown(name,L);
+  if(cc>0) lines.push({label:"Заговори", value:`${cc}`,
+    hint:"закляття 0-го рівня, які знаєш напам'ять — чаклуються без витрати комірок"});
+  const sk=SPELLS_KNOWN[name];
+  if(sk){
+    const n=sk[L];
+    if(n>0) lines.push({label:"Відомі закляття", value:`${n}`,
+      hint:"скільки заклять зі списку класу ти знаєш; при підвищенні рівня заміняєш по одному"});
+  } else if(PREP_CASTER[name]){
+    const p=PREP_CASTER[name];
+    if(!(p.half && L<2)){
+      const lvlPart=p.half?`½ рівня (${Math.floor(L/2)})`:`рівень (${L})`;
+      lines.push({label:"Готуєш заклять", value:`модиф. ${ABIL_UA[p.abil]} + ${lvlPart}`,
+        hint:"щодня готуєш стільки заклять зі списку класу (мінімум 1); заговори сюди не входять"});
+      if(name==="Чарівник") lines.push({label:"У книзі заклять", value:`${6+(L-1)*2}`,
+        hint:"6 на 1-му рівні, +2 за кожен новий рівень; готуєш закляття саме з книги"});
+    }
+  }
+  return lines;
+}
+// Найвищий рівень заклять, доступний класу на рівні L (0 — не заклинач)
+function maxSpellLevel(name,L){
+  const ex=CLASS_EXTRA[name]||{};
+  if(ex.caster==="full"){ const a=FULL_SLOTS[L]; return a?a.length:0; }
+  if(ex.caster==="half"){ const a=HALF_SLOTS[L]; return a?a.length:0; }
+  if(ex.caster==="pact"){ const a=WARLOCK_SLOTS[L]; return a?a[1]:0; }
+  return 0;
+}
+// Рядки «магія» для екрана-перевірки (характеристики вже відомі → конкретні числа)
+function spellSummaryRows(ch){
+  const name=ch.class, L=ch.level, rows=[];
+  const cc=cantripsKnown(name,L);
+  if(cc>0) rows.push({k:"Заговори (відомі)", v:`${cc}`});
+  const sk=SPELLS_KNOWN[name];
+  if(sk){ if(sk[L]>0) rows.push({k:"Відомі закляття", v:`${sk[L]}`}); }
+  else if(PREP_CASTER[name]){
+    const p=PREP_CASTER[name];
+    if(!(p.half && L<2)){
+      const n=Math.max(1, ch.modifiers[p.abil] + (p.half?Math.floor(L/2):L));
+      rows.push({k:"Готуєш заклять/день", v:`${n}`});
+      if(name==="Чарівник") rows.push({k:"У книзі заклять", v:`${6+(L-1)*2}`});
+    }
+  }
+  const mx=maxSpellLevel(name,L);
+  if(mx>0) rows.push({k:"Макс. рівень заклять", v:`${mx}-й`});
+  return rows;
+}
+
+// Базові здібності по рівнях (без ASI та підкласу — їх додає рендер)
+const CLASS_PROG = {
+  "Варвар":{
+    1:["Лють — бонусною дією: перевага на перевірки/кидки Сили, додаткова шкода в ближньому бою, спротив дробильній/колючій/рубальній шкоді","Захист без броні — без броні КБ = 10 + модиф. Спритності + модиф. Статури"],
+    2:["Безрозсудна атака — перевага на атаки Силою цей хід, але й вороги мають перевагу проти тебе","Небезпечне чуття — перевага на порятунки Спритності проти ефектів, які ти бачиш (пастки, закляття)"],
+    5:["Додаткова атака — дві атаки за одну дію атаки","Швидкий рух — +10 фт швидкості, поки без важкої броні"],
+    7:["Чуття небезпеки — перевага на ініціативу"],
+    9:["Жорстокий крит — +1 кістка шкоди зброї при критичному влучанні","Лють — тепер +3 шкоди"],
+    11:["Невблаганна лють — впавши до 0 HP в люті, порятунком Статури лишаєшся на 1 HP"],
+    13:["Жорстокий крит — +2 кістки при криті"],
+    15:["Незламна лють — лють не спадає, доки є вороги поруч"],
+    16:["Лють — тепер +4 шкоди"],
+    17:["Жорстокий крит — +3 кістки при криті"],
+    18:["Незламна міць — мінімум за перевірки/порятунки/кидки Сили = 10 + модиф."],
+    20:["Первісний захисник — Сила й Статура +4 (макс 24)"]},
+  "Бард":{
+    1:["Замовляння — чаклуєш закляття барда (базова Харизма), зокрема ритуали","Натхнення барда — бонусною дією даєш союзнику кістку d6 до кидка атаки/перевірки/порятунку"],
+    2:["Джек усіх ремесел — +½ бонусу майстерності до перевірок без володіння","Пісня відпочинку — у перепочинок союзники додатково лікуються d6"],
+    3:["Експертиза — подвоєний бонус майстерності для 2 навичок"],
+    5:["Джерело натхнення — натхнення відновлюється в короткий перепочинок","Натхнення — кістка d8"],
+    6:["Контрчари — реакцією знижуєш або скасовуєш ефект ворожого закляття"],
+    10:["Магічні секрети — вивчаєш 2 закляття з будь-якого класу","Експертиза — ще 2 навички","Натхнення — d10"],
+    14:["Магічні секрети — ще 2 закляття з будь-якого класу"],
+    15:["Натхнення — d12"],
+    18:["Магічні секрети — ще 2 закляття"],
+    20:["Найвище натхнення — відновлюєш усі кістки натхнення за ініціативу"]},
+  "Клірик":{
+    1:["Замовляння — готуєш закляття клірика (базова Мудрість), зокрема ритуали"],
+    2:["Божественний канал — 1 заряд/перепочинок: Вигнання нежиті або ефект домену","Вигнання нежиті — дією змушуєш нежить поруч тікати"],
+    5:["Знищення нежиті — слабка нежить (CR ≤ ½) одразу гине при вигнанні"],
+    6:["Божественний канал — 2 заряди/перепочинок"],
+    10:["Божественне втручання — молиш бога про пряму допомогу (шанс = рівень)"],
+    18:["Божественний канал — 3 заряди/перепочинок"],
+    20:["Гарантоване втручання — Божественне втручання спрацьовує автоматично"]},
+  "Друїд":{
+    1:["Замовляння — готуєш закляття друїда (базова Мудрість), зокрема ритуали","Друїдська мова — таємна мова друїдів"],
+    2:["Дикий образ — 2/перепочинок перетворюєшся на звіра (CR ≤ ¼, без швидкостей плавання/польоту)"],
+    4:["Дикий образ — тепер CR ≤ ½ (можна плавати)"],
+    8:["Дикий образ — тепер CR ≤ 1 (можна літати)"],
+    18:["Часомір — не старієш магічно","Звірина магія — можеш чаклувати у формі звіра"],
+    20:["Архідруїд — необмежений дикий образ"]},
+  "Воїн":{
+    1:["Бойовий стиль — постійний бонус на вибір (напр. +2 дальні атаки, +1 КБ в обороні)","Другий подих — бонусною дією лікуєшся 1d10 + рівень (1/перепочинок)"],
+    2:["Сплеск дій — 1/перепочинок додаткова дія в свій хід"],
+    5:["Додаткова атака — дві атаки за дію"],
+    9:["Незламність — 1/день перекидаєш провалений порятунок"],
+    11:["Додаткова атака (2) — три атаки за дію"],
+    13:["Незламність — 2/день"],
+    17:["Сплеск дій (2) — 2/перепочинок","Незламність — 3/день"],
+    20:["Додаткова атака (3) — чотири атаки за дію"]},
+  "Монах":{
+    1:["Бойові мистецтва — б'єшся беззбройно за Спритністю; бонусна беззбройна атака","Захист без броні — КБ = 10 + модиф. Спритності + модиф. Мудрості"],
+    2:["Рух без броні — +10 фт швидкості; можеш бігти по вертикалі та воді"],
+    3:["Відхилення снарядів — реакцією зменшуєш шкоду від дальньої атаки (можеш кинути назад)"],
+    4:["Повільне падіння — реакцією зменшуєш шкоду від падіння на 5×рівень"],
+    5:["Додаткова атака","Приголомшливий удар — за 1 Ці приголомшуєш ціль (порятунок Статури)","Бойові мистецтва — кістка d6"],
+    6:["Ці-удари — беззбройні атаки вважаються магічними"],
+    7:["Ухилення — при порятунку Спритності половина або нуль шкоди","Незворушність розуму — дією скидаєш зачарування чи страх"],
+    10:["Чистота тіла — імунітет до хвороб і отрути"],
+    11:["Бойові мистецтва — кістка d8"],
+    13:["Мова сонця й місяця — розумієш будь-яку мову"],
+    14:["Діамантова душа — володіння всіма рятівними; за 1 Ці перекидаєш порятунок"],
+    15:["Часомір — не старієш магічно"],
+    17:["Бойові мистецтва — кістка d10"],
+    18:["Порожнє тіло — за Ці стаєш невидимим; можеш астрально проєктуватися"],
+    20:["Досконале Я — отримуєш 4 Ці за ініціативу, якщо не лишилось"]},
+  "Паладин":{
+    1:["Божественне чуття — відчуваєш небесних, ісчадій і нежить у 60 фт","Накладання рук — запас лікування = 5 × рівень HP, розподіляєш дотиком"],
+    2:["Бойовий стиль — постійний бонус на вибір","Замовляння — готуєш закляття паладина (базова Харизма)","Божественна кара — витрачаєш комірку на +2d8 святої шкоди при влучанні"],
+    3:["Божественне здоров'я — імунітет до хвороб"],
+    5:["Додаткова атака — дві атаки за дію"],
+    6:["Аура захисту — ти й союзники в 10 фт додають модиф. Харизми до всіх порятунків"],
+    10:["Аура відваги — ти й союзники поруч не можете боятися"],
+    11:["Покращена кара — усі влучання в ближньому бою завдають +1d8 святого"],
+    14:["Очищувальний дотик — дією знімаєш закляття з себе чи союзника"],
+    18:["Аури — діють на 30 фт"]},
+  "Слідопит":{
+    1:["Улюблений ворог — перевага на вистежування обраного типу ворогів, бонусна мова","Природний дослідник — експертні бонуси в улюбленому ландшафті"],
+    2:["Бойовий стиль — постійний бонус на вибір","Замовляння — готуєш закляття слідопита (базова Мудрість)"],
+    3:["Первісна обізнаність — додаткові закляття та обізнаність архетипу"],
+    5:["Додаткова атака — дві атаки за дію"],
+    8:["Крок дикого краю — важкий природний рельєф тебе не сповільнює"],
+    10:["Прихованість на природі — можеш маскуватися, лишаючись нерухомим"],
+    14:["Зникнення — ховаєшся бонусною дією; тебе не вистежити немагічно"],
+    18:["Відчуття ворога — відчуваєш істот у 30 фт, навіть невидимих"],
+    20:["Вбивця чудовиськ — велика додаткова шкода обраній цілі щоходу"]},
+  "Пройдисвіт":{
+    1:["Експертиза — подвоєний бонус майстерності для 2 навичок","Злодійський жаргон — таємний код і жести для спілкування"],
+    2:["Хитрий маневр — бонусною дією Ривок, Відступ або Схованка"],
+    5:["Ухилення (Uncanny Dodge) — реакцією вдвічі зменшуєш шкоду від однієї атаки"],
+    6:["Експертиза — ще 2 навички"],
+    7:["Спритність (Evasion) — при порятунку Спритності половина або нуль шкоди"],
+    11:["Надійний талант — на перевірках з володінням результат d20 не нижче 10"],
+    14:["Сліпе чуття — відчуваєш прихованих і невидимих істот у 10 фт"],
+    15:["Слизький розум — здобуваєш володіння порятунками Мудрості"],
+    18:["Невловимий — жоден ворог не має переваги на атаки проти тебе"],
+    20:["Удар наосліп — 1/перепочинок перетворюєш промах на влучання"]},
+  "Чаклун":{
+    1:["Замовляння — вроджена магія (базова Харизма)","Джерело магії — походження твоєї сили (підклас)"],
+    2:["Джерело чарів — очки чарів для гнучкого чаклування"],
+    3:["Метамагія — 2 способи змінювати закляття (напр. подвоєна дальність, обережне закляття)"],
+    10:["Метамагія — 3-й спосіб"],
+    17:["Метамагія — 4-й спосіб"],
+    20:["Відновлення чарів — 1/день повертаєш 4 очки чарів"]},
+  "Чорнокнижник":{
+    1:["Пакт-магія — мало комірок, але вони відновлюються в короткий перепочинок і завжди найвищого доступного рівня"],
+    2:["Тайні звороти — 2 постійні магічні здібності на вибір"],
+    3:["Дар пакту — Клинок, Ланцюг, Фоліант або Талісман"],
+    5:["Тайні звороти — 3"],
+    7:["Тайні звороти — 4"],
+    9:["Тайні звороти — 5"],
+    11:["Містична аркана — 1 закляття 6-го рівня, 1/день"],
+    12:["Тайні звороти — 6"],
+    13:["Містична аркана — закляття 7-го рівня, 1/день"],
+    15:["Тайні звороти — 7","Містична аркана — 8-го рівня"],
+    17:["Містична аркана — 9-го рівня"],
+    18:["Тайні звороти — 8"],
+    20:["Тайний володар — 1/день відновлюєш усі пакт-комірки"]},
+  "Чарівник":{
+    1:["Замовляння — готуєш закляття з книги (базова Інтелект), зокрема ритуали","Магічне відновлення — у короткий перепочинок повертаєш комірки (сумарно ½ рівня)","Книга заклять — переписуєш нові закляття, які знаходиш"],
+    6:["Здібність школи — підсилення обраної школи магії"],
+    18:["Майстерність заклять — обране закляття 1-го та 2-го рівня чаклуєш без витрати комірки"],
+    20:["Фірмове закляття — два закляття 3-го рівня завжди готові, 1/перепочинок безкоштовно"]}
+};
+
+// Опційні вміння (Tasha's Cauldron) — вмикаються чекбоксом
+const OPT_FEATS = {
+  "Варвар":{3:["Первісне знання — здобуваєш нову навичку; у люті замінюєш деякі перевірки Сили на неї"],7:["Інстинктивний стрибок — рухаючись у люті, наближаєшся до ворога швидше"]},
+  "Бард":{2:["Магічне натхнення — кістку натхнення можна витратити на підсилення закляття союзника"]},
+  "Клірик":{2:["Спрямувати божественну силу — Божественним каналом відновлюєш комірку заклять"]},
+  "Друїд":{2:["Дикий супутник — витрачаючи дикий образ, призиваєш духа-звіра як фамільяра"]},
+  "Воїн":{1:["Нові бойові стилі — Перехоплення, Кулачний бій, Вища техніка тощо"]},
+  "Монах":{2:["Улюблена зброя — робиш обрану просту/військову зброю монашою"],3:["Атака за Ці — витративши Ці на прийом, отримуєш беззбройну атаку"]},
+  "Паладин":{3:["Спрямувати божественну силу — за Божественний канал відновлюєш комірку заклять"]},
+  "Слідопит":{1:["Спритний дослідник — заміна Улюбленому ворогу: дві навички + експертиза","Улюблений противник — за концентрацію додаєш шкоду обраній цілі"]},
+  "Пройдисвіт":{3:["Стійкий приціл — бонусною дією перевага на атаку, якщо не рухаєшся цей хід"]},
+  "Чаклун":{5:["Магічне керівництво — за очко чарів перекидаєш провалену перевірку характеристики"]},
+  "Чорнокнижник":{1:["Гнучкість зворотів — при підвищенні можеш заміняти обрані тайні звороти"]},
+  "Чарівник":{3:["Гнучкість замовлянь — при підвищенні можеш заміняти одне замовляння"]}
+};
+
+// Бойові стилі та класи, що їх обирають
+const FIGHTING_STYLES = {
+  "Оборона":"Поки носиш броню — +1 до Класу Броні.",
+  "Дуелінг":"Тримаючи одноручну зброю без іншої зброї — +2 до шкоди нею.",
+  "Великої зброї":"Перекидаєш 1 і 2 на кубиках шкоди дворучною/універсальною зброєю.",
+  "Стрільба":"+2 до кидків влучання дальньою зброєю.",
+  "Захист":"Реакцією даєш -2 до атаки по союзнику поруч (потрібен щит).",
+  "Два клинки":"Додаєш модифікатор характеристики до шкоди другою (бонусною) атакою.",
+  "Сліпий бій":"Сліпочуття 10 фт — «бачиш» усе поруч навіть наосліп/невидиме.",
+  "Перехоплення":"Реакцією зменшуєш шкоду союзнику поруч на 1d10 + бонус майстерності.",
+  "Кулачний бій":"Беззбройні удари завдають d6 (d8 без нічого в руках); можеш хапати.",
+  "Метання зброї":"Дістаєш метальну зброю безкоштовно; +2 до шкоди метанням.",
+  "Вища техніка":"Отримуєш один маневр Майстра бою та один кубик переваги (d6).",
+  "Благословенний воїн":"Знаєш два замовляння клірика; чаклуєш їх Мудрістю.",
+  "Друїдичний воїн":"Знаєш два замовляння друїда; чаклуєш їх Мудрістю."
+};
+const FS_CONFIG = {
+  "Воїн":{level:1, styles:["Оборона","Дуелінг","Великої зброї","Стрільба","Захист","Два клинки"],
+    opt:["Сліпий бій","Перехоплення","Кулачний бій","Метання зброї","Вища техніка","Благословенний воїн","Друїдичний воїн"]},
+  "Паладин":{level:2, styles:["Оборона","Дуелінг","Великої зброї","Захист"],
+    opt:["Благословенний воїн","Перехоплення","Вища техніка"]},
+  "Слідопит":{level:2, styles:["Оборона","Дуелінг","Стрільба","Два клинки"],
+    opt:["Перехоплення","Метання зброї","Вища техніка"]}
+};
+
+/* Короткі описи базових класових рис і бойових стилів (для PDF-чарника). */
+const FEATURE_DESC = {
+  // класові риси
+  "Захист без броні":"КБ без обладунків рахується за особливою формулою класу.",
+  "Лють":"Бонусною дією входиш у лють: бонус до шкоди й спротив фізичній шкоді.",
+  "Бойові мистецтва":"Беззбройні/монашою зброєю атаки на Спритність, бонусний удар.",
+  "Натхнення барда":"Бонусною дією даєш союзнику кубик натхнення до кидка.",
+  "Замовляння":"Володієш магією: замовляння та закляття свого класу.",
+  "Божественний домен":"Обраний домен дає закляття й особливі здібності.",
+  "Божественне чуття":"Дією відчуваєш небесних, нечисть і нежить поруч.",
+  "Накладання рук":"Запас лікування, який розподіляєш дотиком.",
+  "Друїдська мова":"Таємна мова друїдів для прихованих послань.",
+  "Другий подих":"Бонусною дією відновлюєш собі трохи HP (1/відпочинок).",
+  "Бойовий стиль":"Спеціалізація в бою, що дає постійний бонус.",
+  "Джерело магії":"Очки чаклунства для гнучкого створення заклять.",
+  "Експертиза":"Подвоєний бонус майстерності для обраних навичок.",
+  "Підступна атака":"Додаткова шкода за перевагою або союзником поруч.",
+  "Злодійський жаргон":"Таємний код злодіїв — приховані повідомлення.",
+  "Магічне відновлення":"Під перепочинок відновлюєш частину комірок заклять.",
+  "Потойбічний покровитель":"Уклав пакт із могутньою істотою заради сили.",
+  "Тайна магія":"Замовляння покровителя й магічні здібності пакту.",
+  "Улюблений ворог":"Перевага на вистежування обраного типу ворогів.",
+  "Природний дослідник":"Майстер виживання в обраній місцевості.",
+  // бойові стилі
+  "Оборона":"+1 КБ, поки носиш обладунок.",
+  "Дуелінг":"+2 до шкоди зброєю в одній руці.",
+  "Великої зброї":"Перекидаєш 1–2 на кубиках шкоди дворучної зброї.",
+  "Стрільба":"+2 до влучань дальнім боєм.",
+  "Захист":"Реакцією зменшуєш шкоду союзнику поруч.",
+  "Два клинки":"Додаєш модифікатор до шкоди другою зброєю.",
+};
+
+// Ресурс класу на рівні L: окремий блок із поясненням, що це таке
+function resourceInfo(name, L){
+  const ex=CLASS_EXTRA[name]||{};
+  const fmtS=(a)=>a.map((n,i)=>`${i+1}р×${n}`).join("  ");
+  const slotsHint="скільки заклять кожного рівня можеш накласти до тривалого відпочинку (Nр×К = рівень×кількість)";
+  if(ex.caster==="full"){ const a=FULL_SLOTS[L]; return a&&a.length?{label:"Комірки заклять",value:fmtS(a),hint:slotsHint}:null; }
+  if(ex.caster==="half"){ const a=HALF_SLOTS[L]; return a&&a.length?{label:"Комірки заклять",value:fmtS(a),hint:slotsHint}:null; }
+  if(ex.caster==="pact"){ const a=WARLOCK_SLOTS[L]; return a?{label:"Пакт-магія",value:`${a[0]} × ${a[1]}-й рівень`,hint:"мало комірок, але відновлюються в короткий перепочинок"}:null; }
+  if(name==="Монах"&&L>=2) return {label:"Ці",value:`${L} очок`,hint:"ресурс на прийоми (приголомшення, серія ударів, ухилення); відновлюється у відпочинок"};
+  if(name==="Пройдисвіт") return {label:"Підступна атака",value:`${Math.ceil(L/2)}d6`,hint:"додаткова шкода 1/хід, коли маєш перевагу або союзник поруч із ціллю"};
+  if(name==="Варвар"){ const r=L>=20?"∞":(L>=17?6:(L>=12?5:(L>=6?4:(L>=3?3:2)))); return {label:"Лють",value:`${r}/день`,hint:"скільки разів на день входиш у лють: бонус до шкоди Силою та спротив фізичній шкоді"}; }
+  return null;
+}
+// Усі ресурси класу на рівні L (може бути кілька: напр. Чаклун має і комірки заклять, і очки чарів)
+function resourceLines(name, L){
+  const out=[];
+  const r=resourceInfo(name,L);
+  if(r) out.push(r);
+  if(name==="Чаклун"&&L>=2) out.push({label:"Очки чарів",value:`${L}`,hint:"перетворюєш на комірки заклять і назад; живлять метамагію"});
+  return out;
+}
+
+/* ============================ ПЕРЕДІСТОРІЇ ============================ */
+const BACKGROUNDS = {
+  "Аколіт": { skills:["Прозорливість","Релігія"], tools:[], langs:2,
+    feature:{name:"Притулок вірян", desc:"Ти і союзники отримуєте безкоштовне лікування й притулок у храмах твоєї віри."},
+    desc:"Ти служив у храмі, посередник між людьми й богами." },
+  "Злочинець": { skills:["Обман","Непомітність"], tools:["Ігровий набір","Злодійські інструменти"], langs:0,
+    feature:{name:"Злочинні зв'язки", desc:"Маєш надійний контакт у злочинному світі й мережу інформаторів."},
+    desc:"Ти жив поза законом — злодій, шахрай чи контрабандист." },
+  "Народний герой": { skills:["Поводження з тваринами","Виживання"], tools:["Ремісничі інструменти","Транспорт (наземний)"], langs:0,
+    feature:{name:"Сільська гостинність", desc:"Прості люди готові прихистити й сховати тебе від закону."},
+    desc:"Ти вийшов із простолюду, але доля покликала тебе на подвиги." },
+  "Шляхтич": { skills:["Історія","Переконання"], tools:["Ігровий набір"], langs:1,
+    feature:{name:"Привілей знаті", desc:"Тебе приймають у вищому світі; люди схильні вважати, що ти маєш право бути там, де хочеш."},
+    desc:"Ти народжений у владі й багатстві, знаєш етикет двору." },
+  "Мудрець": { skills:["Магія","Історія"], tools:[], langs:2,
+    feature:{name:"Дослідник", desc:"Знаєш, де і в кого знайти потрібну інформацію, навіть найрідкіснішу."},
+    desc:"Роки серед книг зробили тебе джерелом знань." },
+  "Солдат": { skills:["Атлетика","Залякування"], tools:["Ігровий набір","Транспорт (наземний)"], langs:0,
+    feature:{name:"Військове звання", desc:"Солдати нижчого рангу підкоряються твоєму авторитету; маєш вплив у війську."},
+    desc:"Війна — твоє ремесло. Дисципліна й побратимство в крові." },
+  "Пустельник": { skills:["Медицина","Релігія"], tools:["Трав'яний набір"], langs:1,
+    feature:{name:"Відкриття", desc:"У самотності ти осягнув унікальну істину чи таємницю."},
+    desc:"Ти провів роки на самоті, у роздумах чи вигнанні." },
+  "Артист": { skills:["Акробатика","Виступ"], tools:["Набір для маскування","Муз. інструмент"], langs:0,
+    feature:{name:"Улюбленець публіки", desc:"Тебе впізнають і люблять глядачі; легко знаходиш прихисток серед шанувальників."},
+    desc:"Сцена — твоє життя: музикант, актор чи акробат." }
+};
+
+/* ================================ ЧЕРТИ ================================
+   asi: {fixed:{ab:+n}} або {choose:1, from:[...], amount:1};
+   special: масив ключів числових ефектів (hpPerLevel2, init5, passive5). */
+const FEATS = {
+  "Спостережливий": { desc:"Швидко зчитуєш оточення та по губах. +1 Інт або Мудр; +5 до пасивного Сприйняття й Дослідження.",
+    asi:{choose:1, from:["int","wis"], amount:1}, special:["passive5"] },
+  "Стійкий": { desc:"Обери характеристику: +1 до неї та володіння рятівними кидками цієї характеристики.",
+    asi:{choose:1, from:ABILS.slice(), amount:1} },
+  "Атлет": { desc:"+1 Сили або Спритності; легше вставати, лазити та стрибати.",
+    asi:{choose:1, from:["str","dex"], amount:1} },
+  "Актор": { desc:"+1 Харизми; перевага на Обман і Виступ при видаванні себе за іншого, імітація голосів.",
+    asi:{fixed:{cha:1}} },
+  "Гострий розум": { desc:"+1 Інтелекту; ідеально пам'ятаєш усе за останній місяць, завжди знаєш напрям і час.",
+    asi:{fixed:{int:1}} },
+  "Знавець мов": { desc:"+1 Інтелекту; вивчаєш три мови, вправно складаєш і розгадуєш шифри.",
+    asi:{fixed:{int:1}} },
+  "Витривалий": { desc:"Максимум здоров'я зростає на 2 за кожен рівень (зокрема +2 за поточні рівні).",
+    special:["hpPerLevel2"] },
+  "Насторожений": { desc:"+5 до ініціативи; тебе не заскочать зненацька, приховані вороги не мають переваги.",
+    special:["init5"] },
+  "Спритний": { desc:"Швидкість +10 футів; важкий рельєф не сповільнює при ривку; уникаєш атак навздогін.",
+    special:["speed10"] },
+  "Щасливчик": { desc:"3 очки удачі: перекидаєш кидок атаки, перевірки чи порятунку (або кидок ворога проти тебе)." },
+  "Майстер великої зброї": { desc:"Бонусна атака після криту чи вбивства; можеш бити з -5 до влучання за +10 шкоди важкою зброєю." },
+  "Влучний стрілець": { desc:"Ігноруєш укриття й далеку відстань; -5 влучання за +10 шкоди дальнім пострілом." },
+  "Захисник": { desc:"Атаки навздогін зупиняють ворога; можеш карати ворогів, що атакують не тебе." },
+  "Майстер щита": { desc:"Бонусний удар щитом; +перевага/половина шкоди на порятунках Спритності зі щитом." },
+  "Бойовий чаклун": { desc:"Перевага на концентрацію; можеш чаклувати з руками, зайнятими зброєю/щитом; закляття як атака навздогін." },
+  "Знавець магії": { desc:"Опановуєш два замовляння й одне закляття 1-го рівня з обраного класу." },
+  "Цілитель": { desc:"Аптечкою відновлюєш союзнику 1d6+4+рівень HP; стабілізований підводиться з 1 HP." },
+  "Рухливий боєць": { desc:"Не провокуєш атаку навздогін від того, кого атакував у ближньому бою цього ходу." }
+};
+
+if (typeof module !== "undefined") module.exports = {
+  ABILS, ABIL_UA, ABIL_SHORT, SKILLS, ALL_SKILLS, STANDARD_ARRAY, POINT_COST,
+  ASI_LEVELS, ALIGNMENTS, RACES, CLASSES, BACKGROUNDS, FEATS, raceArtSVG
+};
+</script>
+<script>
+/* ============================================================================
+   Логіка Mini App (view-роутер): список рас → деталь → список класів → деталь
+   → повний чарник (раса й клас передзаповнені) → огляд → sendData.
+   ========================================================================== */
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+const S = {
+  race:null, subrace:null, class:null, subclass:null, level:1,
+  detailRace:null, detailSub:null, detailClass:null, detailLevel:1,
+  mode:"full", method:"array",
+  base:{ str:null,dex:null,con:null,int:null,wis:null,cha:null },
+  rollPool:[...STANDARD_ARRAY],
+  raceAsiPick:[], raceSkillPick:new Set(), classSkillPick:new Set(),
+  slots:{}, humanFeat:{ feat:"", featAbil:"" },
+  asiQueue:[], asiIdx:0, asiAfter:null,
+  optionalFeats:true, raceFilter:null, fightingStyle:null,
+  _ready:false
+};
+
+const RACE_TAG = {
+  "Людина":"Універсал · +1 всім", "Ельф":"Спритність · чуття · магія",
+  "Дворф":"Витривалість · стійкість", "Піврослик":"Спритність · удача",
+  "Драконороджений":"Сила + Харизма · дихання", "Гном":"Інтелект · захист від магії",
+  "Напівельф":"Харизма · гнучкість", "Напіворк":"Сила · живучість",
+  "Тіфлінг":"Харизма · вогонь · магія"
+};
+const CLASS_ICON = {
+  "Варвар":"🪓","Бард":"🎵","Клірик":"✨","Друїд":"🍃","Воїн":"⚔️","Монах":"👊",
+  "Паладин":"🛡️","Слідопит":"🏹","Пройдисвіт":"🗡️","Чаклун":"🔮","Чорнокнижник":"👁️","Чарівник":"📖"
+};
+const CLASS_ART = {
+  "Варвар":["#6e241f","#2a0d0b"], "Бард":["#5a2a68","#221030"], "Клірик":["#6a5420","#2a2008"],
+  "Друїд":["#2c5a3e","#152e1f"], "Воїн":["#3a4652","#181e26"], "Монах":["#1c5a56","#0c2826"],
+  "Паладин":["#2e3f6e","#121a30"], "Слідопит":["#4a5a22","#20300f"], "Пройдисвіт":["#3a3540","#16141a"],
+  "Чаклун":["#7a2a52","#2e1020"], "Чорнокнижник":["#3a1f52","#160b24"], "Чарівник":["#1f4e6e","#0c2230"]
+};
+const CLASS_BG_DEF = ["#3a4652","#181e26"];
+function classPalette(name){ return CLASS_ART[name] || CLASS_BG_DEF; }
+function classGrad(name){ const b=classPalette(name); return `linear-gradient(120deg, ${b[0]}, ${b[1]})`; }
+const CLASS_ROLE = {
+  "Варвар":"лютий боєць","Бард":"підтримка/маг","Клірик":"лікар/жрець","Друїд":"природа/форми",
+  "Воїн":"майстер зброї","Монах":"бойові мистецтва","Паладин":"святий воїн","Слідопит":"стрілець/слідопит",
+  "Пройдисвіт":"спритник/шкода","Чаклун":"вроджена магія","Чорнокнижник":"пакт/магія","Чарівник":"учений маг"
+};
+const CLASS_EN = {
+  "Варвар":"Barbarian","Бард":"Bard","Клірик":"Cleric","Друїд":"Druid","Воїн":"Fighter","Монах":"Monk",
+  "Паладин":"Paladin","Слідопит":"Ranger","Пройдисвіт":"Rogue","Чаклун":"Sorcerer","Чорнокнижник":"Warlock","Чарівник":"Wizard"
+};
+const RACE_EN = {
+  "Людина":"Human","Ельф":"Elf","Дворф":"Dwarf","Піврослик":"Halfling","Драконороджений":"Dragonborn",
+  "Гном":"Gnome","Напівельф":"Half-Elf","Напіворк":"Half-Orc","Тіфлінг":"Tiefling",
+  "Аасимар":"Aasimar","Ааракокра":"Aarakocra","Голіаф":"Goliath","Табаксі":"Tabaxi","Тритон":"Triton",
+  "Фірболг":"Firbolg","Гоблін":"Goblin","Хобгоблін":"Hobgoblin","Багбір":"Bugbear","Кенку":"Kenku",
+  "Кобольд":"Kobold","Людоящер":"Lizardfolk","Орк":"Orc","Кентавр":"Centaur","Мінотавр":"Minotaur",
+  "Локсодон":"Loxodon","Сатир":"Satyr","Леонін":"Leonin","Тортл":"Tortle","Кований":"Warforged",
+  "Калаштар":"Kalashtar","Чейнджлінг":"Changeling","Генасі":"Genasi","Гіт":"Gith","Харенгон":"Harengon",
+  "Оулін":"Owlin","Юань-ті":"Yuan-ti",
+  "Автогном":"Autognome","Астральний ельф":"Astral Elf","Ведалкен":"Vedalken","Вердан":"Verdan",
+  "Гібрид Сіміків":"Simic Hybrid","Гіфф":"Giff","Грунг":"Grung","Кендер":"Kender","Локата":"Locathah",
+  "Плазмоїд":"Plasmoid","Три-крин":"Thri-kreen","Фейрі":"Fairy","Хадозі":"Hadozee","Шифтер":"Shifter"
+};
+// Джерело (книга правил) кожної раси — для помітки й фільтра
+const RACE_SRC = {
+  "Людина":"PHB","Ельф":"PHB","Дворф":"PHB","Піврослик":"PHB","Драконороджений":"PHB","Гном":"PHB",
+  "Напівельф":"PHB","Напіворк":"PHB","Тіфлінг":"PHB",
+  "Аасимар":"VGM","Голіаф":"VGM","Табаксі":"VGM","Тритон":"VGM","Фірболг":"VGM","Гоблін":"VGM",
+  "Хобгоблін":"VGM","Багбір":"VGM","Кенку":"VGM","Кобольд":"VGM","Людоящер":"VGM","Орк":"VGM","Юань-ті":"VGM",
+  "Ааракокра":"EEPC","Генасі":"EEPC",
+  "Кентавр":"GGR","Мінотавр":"GGR","Локсодон":"GGR",
+  "Сатир":"MOT","Леонін":"MOT",
+  "Тортл":"TP","Гіт":"MTF",
+  "Кований":"ERLW","Калаштар":"ERLW","Чейнджлінг":"ERLW","Шифтер":"ERLW",
+  "Харенгон":"WBW","Фейрі":"WBW","Оулін":"SCC",
+  "Автогном":"SAS","Астральний ельф":"SAS","Гіфф":"SAS","Плазмоїд":"SAS","Три-крин":"SAS","Хадозі":"SAS",
+  "Ведалкен":"GGR","Гібрид Сіміків":"GGR","Вердан":"AI","Грунг":"OGA","Кендер":"SDQ","Локата":"LR"
+};
+const EDITIONS = {
+  PHB:"Player's Handbook", VGM:"Volo's Guide", EEPC:"Elemental Evil", GGR:"Ravnica",
+  MOT:"Theros", TP:"Tortle Package", MTF:"Mordenkainen", ERLW:"Eberron", WBW:"Wild Beyond", SCC:"Strixhaven",
+  SAS:"Spelljammer", AI:"Acquisitions Inc.", OGA:"One Grung Above", SDQ:"Dragonlance", LR:"Locathah Rising"
+};
+// Колір помітки за збіркою
+const EDITION_COLOR = {
+  PHB:"#d4af37",  // золотий
+  VGM:"#4caf50",  // зелений
+  EEPC:"#ef6c2a", // помаранчевий
+  GGR:"#8e5fd0",  // фіолетовий
+  MOT:"#1fa89a",  // бірюзовий
+  TP:"#a8c93a",   // лаймовий
+  MTF:"#c74fbf",  // маджента
+  ERLW:"#26b6c6", // блакитний
+  WBW:"#ec5f95",  // рожевий
+  SCC:"#5c6bc0",  // індиго
+  SAS:"#3d8bf0",  // синій
+  AI:"#9e9e9e",   // сірий
+  OGA:"#7ecb2a",  // трав'яний
+  SDQ:"#e04a3a",  // червоний
+  LR:"#2fd0c0"    // аква
+};
+const srcColor = (s) => EDITION_COLOR[s] || "var(--hint)";
+const srcBadge = (s) => s ? `<span class="src" style="color:${srcColor(s)}">${esc(s)}</span>` : "";
+
+/* --------------------------- утиліти --------------------------- */
+const $ = (id) => document.getElementById(id);
+const getSel = (id) => { const e=$(id); return e ? e.value : ""; };
+const mod = (n) => Math.floor((n - 10) / 2);
+const fmt = (m) => (m >= 0 ? "+" : "") + m;
+const profBonus = (lvl) => 2 + Math.floor((lvl - 1) / 4);
+const esc = (s) => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const q = (s) => String(s).replace(/'/g,"\\'");
+function fillSelect(id, items, selected) {
+  const el=$(id); el.innerHTML="";
+  items.forEach(it=>{ const o=document.createElement("option"); o.value=it; o.textContent=it;
+    if(it===selected) o.selected=true; el.appendChild(o); });
+}
+function addAsi(t, src){ if(!src) return; for(const k in src) t[k]=(t[k]||0)+src[k]; }
+function asiSummary(o){ return ABILS.filter(a=>o[a]).map(a=>`+${o[a]} ${ABIL_SHORT[a]}`).join(", ") || "—"; }
+
+/* --------------------------- модалка --------------------------- */
+function openModal(title, body){ $("modalTitle").innerHTML=title; $("modalBody").innerHTML=body; $("modal").classList.remove("hidden"); }
+function closeModal(){ $("modal").classList.add("hidden"); }
+
+// Інфо-іконка + діалог (щоб не морочитися з екрануванням у onclick)
+let _infoStore = [];
+function infoReset(){ _infoStore = []; }
+function infoBtn(title, bodyHtml){ const i = _infoStore.push({title, bodyHtml}) - 1;
+  return `<button class="info-btn ii" onclick="event.stopPropagation();showInfo(${i})">ⓘ</button>`; }
+function showInfo(i){ const d = _infoStore[i]; if(d) openModal(esc(d.title), d.bodyHtml); }
+
+/* --------------------------- роутер --------------------------- */
+const VIEWS = ["race-list","race-detail","class-list","class-detail","sheet","review"];
+function setPageTheme(cols){
+  document.body.style.background = cols
+    ? `linear-gradient(180deg, ${cols[0]} 0%, ${cols[1]} 22%, var(--bg) 50%) fixed`
+    : "";
+}
+function showView(name){
+  VIEWS.forEach(v => $("view-"+v).classList.toggle("hidden", v !== name));
+  $("formErr").classList.add("hidden");
+  if(name!=="race-detail" && name!=="class-detail") setPageTheme(null);
+  window.scrollTo(0,0);
+}
+
+/* --------------------------- ініціалізація --------------------------- */
+function init(){
+  fillSelect("background", Object.keys(BACKGROUNDS), "Солдат");
+  fillSelect("alignment", ALIGNMENTS, "Істинно нейтральний");
+  $("skills").addEventListener("change", onSkillChange);
+  renderRaceFilter(); renderRaceList(); renderClassList();
+  showView("race-list");
+  if(tg){ tg.ready(); tg.expand(); try{ tg.setHeaderColor("secondary_bg_color"); }catch(e){} }
+}
+
+/* =========================================================================
+   РАСИ: список → деталь → вибір
+   ========================================================================= */
+function renderRaceFilter(){
+  const eds = [...new Set(Object.keys(RACES).map(n=>RACE_SRC[n]||"—"))];
+  let html = `<div class="filter-chip ${S.raceFilter===null?"on":""}" onclick="setRaceFilter(null)">Усі</div>`;
+  html += eds.map(e=>{
+    const c=srcColor(e), on=S.raceFilter===e;
+    const st = on ? `border-color:${c};color:${c};background:${c}22` : `color:${c};border-color:${c}55`;
+    return `<div class="filter-chip" style="${st}" onclick="setRaceFilter('${q(e)}')" title="${esc(EDITIONS[e]||e)}">${esc(e)}</div>`;
+  }).join("");
+  $("raceFilter").innerHTML = html;
+}
+function setRaceFilter(e){ S.raceFilter = e; renderRaceFilter(); renderRaceList(); }
+function renderRaceList(){
+  const names = Object.keys(RACES).filter(n => S.raceFilter===null || (RACE_SRC[n]||"—")===S.raceFilter);
+  $("raceList").innerHTML = names.map(n=>`
+    <div class="tile" onclick="openRace('${q(n)}')">
+      <div class="thumb">${raceArtSVG(n)}</div>
+      <div class="tinfo"><div class="tname">${esc(n)} <span class="en">${esc(RACE_EN[n]||"")}</span></div><div class="ttag">${esc(RACE_TAG[n]||"")}</div></div>
+      ${srcBadge(RACE_SRC[n])}
+      <div class="chev">›</div></div>`).join("");
+}
+function openRace(name){
+  S.detailRace = name;
+  const r = RACES[name];
+  S.detailSub = r.subraces ? Object.keys(r.subraces)[0] : null;
+  renderRaceDetail(); showView("race-detail");
+}
+function selectDetailSub(name){ S.detailSub = name; renderRaceDetail(); }
+
+function renderRaceDetail(){
+  const name=S.detailRace, r=RACES[name];
+  const sub = r.subraces ? r.subraces[S.detailSub] : null;
+  $("rdArt").innerHTML = raceArtSVG(name);
+  setPageTheme(racePalette(name).bg);
+  $("rdName").innerHTML = `${esc(name)} <span class="en">${esc(RACE_EN[name]||"")}</span>`;
+  $("rdTag").innerHTML = `${esc(RACE_TAG[name]||"")}${RACE_SRC[name]?` · <span class="src-tag" style="color:${srcColor(RACE_SRC[name])};border-color:${srcColor(RACE_SRC[name])}">${esc(RACE_SRC[name])}</span> ${esc(EDITIONS[RACE_SRC[name]]||"")}`:""}`;
+  $("rdDesc").textContent = r.desc || "";
+  $("rdRecommend").innerHTML = r.recommend ? `<b>💡 Кому підходить</b><p>${esc(r.recommend)}</p>` : "";
+
+  const asi={}; addAsi(asi, r.asiFixed); addAsi(asi, sub && sub.asiFixed);
+  const speed=(sub && sub.speed) || r.speed;
+  const adef = r.asiChoice || (sub && sub.asiChoice);
+  const sdef = r.skillChoice || (sub && sub.skillChoice);
+  let b = `<div class="bonus"><span class="bk">Приріст характеристик</span><span class="bv">${asiSummary(asi)}</span></div>`;
+  if(adef) b+=`<div class="bonus"><span class="bk">На вибір</span><span class="bv">+${adef.amount} до ${adef.count} характ.${adef.exclude?" (крім Хар)":""}</span></div>`;
+  if(r.skillFixed) b+=`<div class="bonus"><span class="bk">Навичка</span><span class="bv">${r.skillFixed.join(", ")}</span></div>`;
+  if(sdef) b+=`<div class="bonus"><span class="bk">Навички на вибір</span><span class="bv">${sdef.count}</span></div>`;
+  if(r.featChoice || (sub && sub.featChoice)) b+=`<div class="bonus"><span class="bk">Черта</span><span class="bv">на 1-му рівні</span></div>`;
+  b+=`<div class="bonus"><span class="bk">Швидкість</span><span class="bv">${speed} фт</span></div>`;
+  b+=`<div class="bonus"><span class="bk">Мови</span><span class="bv">${(r.langs||[]).join(", ")}</span></div>`;
+  $("rdBonuses").innerHTML = b;
+
+  const traits=[...(r.baseTraits||[]), ...((sub && sub.traits)||[])];
+  $("rdTraits").innerHTML = traits.map(t=>`<div class="trait"><b>${esc(t.name)}</b><p>${esc(t.desc)}</p></div>`).join("");
+
+  const card=$("rdSubraceCard");
+  if(r.subraces){
+    card.classList.remove("hidden");
+    $("rdSubLabel").textContent = r.subLabel || "Підраса";
+    $("rdSubraces").innerHTML = Object.entries(r.subraces).map(([sn,so])=>{
+      const sasi={}; addAsi(sasi, so.asiFixed);
+      const tr=(so.traits||[]).map(t=>t.name).join(", ");
+      return `<div class="opt ${sn===S.detailSub?"sel":""}" onclick="selectDetailSub('${q(sn)}')">
+        <div class="on">${esc(sn)}${so.src?`<span class="src-tag">${esc(so.src)}</span>`:""}</div>
+        ${Object.keys(sasi).length?`<div class="obonus">${asiSummary(sasi)}</div>`:""}
+        ${tr?`<div class="od">${esc(tr)}</div>`:""}</div>`;
+    }).join("");
+    const hasSrc=Object.values(r.subraces).some(s=>s.src);
+    $("rdSubHint").innerHTML = hasSrc ? "Позначки <b>SCAG · MToF · EGW</b> — підраси з додаткових книг правил." : "";
+  } else card.classList.add("hidden");
+
+  // стартова черта Варіанта людини — прямо тут, на расі
+  const fc=$("rdFeatCard");
+  if(detailFeatChoice()){ fc.classList.remove("hidden"); renderHumanFeatPicker(); }
+  else fc.classList.add("hidden");
+}
+function detailFeatChoice(){
+  const r=RACES[S.detailRace]; const sr=(r&&r.subraces)?r.subraces[S.detailSub]:null;
+  return !!((r&&r.featChoice)||(sr&&sr.featChoice));
+}
+function renderHumanFeatPicker(){
+  const st=S.humanFeat;
+  let html=`<div class="feat-list">`+Object.keys(FEATS).map(f=>
+    `<div class="opt ${st.feat===f?"sel":""}" onclick="selectHumanFeat('${q(f)}')">
+      <div class="on">${esc(f)}</div><div class="od">${esc(FEATS[f].desc)}</div></div>`).join("")+`</div>`;
+  const f=FEATS[st.feat];
+  if(f && f.asi && f.asi.choose){
+    html+=`<p class="sub" style="margin-top:8px">Черта дає +1 — обери куди:</p><div class="chips">`+
+      f.asi.from.map(a=>`<div class="chip ${st.featAbil===a?"sel":""}" onclick="selectHumanFeatAbil('${a}')">${ABIL_UA[a]}</div>`).join("")+`</div>`;
+  }
+  $("rdFeats").innerHTML=html;
+}
+function selectHumanFeat(f){ S.humanFeat.feat=f; S.humanFeat.featAbil=""; renderHumanFeatPicker(); }
+function selectHumanFeatAbil(a){ S.humanFeat.featAbil=a; renderHumanFeatPicker(); }
+
+function chooseRace(){
+  if(detailFeatChoice()){
+    if(!S.humanFeat.feat) return fail("Обери стартову черту для Варіанта людини.");
+    const f=FEATS[S.humanFeat.feat];
+    if(f.asi && f.asi.choose && !S.humanFeat.featAbil) return fail("Обери характеристику +1 для черти.");
+  } else { S.humanFeat={feat:"",featAbil:""}; }
+  $("formErr").classList.add("hidden");
+  S.race=S.detailRace; S.subrace=S.detailSub;
+  S.raceAsiPick=[]; S.raceSkillPick.clear();
+  showView("class-list");
+}
+
+/* =========================================================================
+   КЛАСИ: список → деталь → вибір
+   ========================================================================= */
+function renderClassList(){
+  $("classList").innerHTML = Object.keys(CLASSES).map(n=>`
+    <div class="tile" onclick="openClass('${q(n)}')">
+      <div class="ticon" style="background:${classGrad(n)}">${CLASS_ICON[n]||"⚔️"}</div>
+      <div class="tinfo"><div class="tname">${esc(n)} <span class="en">${esc(CLASS_EN[n]||"")}</span></div><div class="ttag">d${CLASSES[n].hd} · ${esc(CLASS_ROLE[n]||"")}</div></div>
+      <div class="chev">›</div></div>`).join("");
+}
+function openClass(name){
+  if(S.detailClass!==name){ S.subclass=null; S.fightingStyle=null; }
+  S.detailClass=name; if(!S.detailLevel) S.detailLevel=S.level||1;
+  renderClassDetail(); showView("class-detail");
+}
+/* HP за правилами D&D 5e. hd — максимум кістки здоров'я класу (d6→6, d8→8, d10→10, d12→12).
+   • 1-й рівень: беремо ПОВНУ кістку (hd) — максимальне значення, не кидаємо.
+   • Кожен наступний рівень: фіксоване середнє кістки = floor(hd/2)+1
+       d6→4, d8→5, d10→6, d12→7  (це і є "+N за рівень").
+   • Тому база (без Статури) = hd + (L-1)*(floor(hd/2)+1).
+       Напр. d8 на 4-му рівні: 8 + 3*5 = 23.
+   • Статура (Con): додається її МОДИФІКАТОР за КОЖЕН рівень → + мод.Статури × L.
+     Тут невідома (це опис класу, а не готовий персонаж), тож показуємо "+ Стат×L". */
+function hpForLevel(hd, L){ return hd + (L-1)*(Math.floor(hd/2)+1); }
+function hpTableHtml(hd, L){
+  const stat = L===1 ? "Стат" : `Стат×${L}`;
+  return `<div class="hp-single"><b>${hpForLevel(hd,L)} + ${stat}</b></div>`;
+}
+function renderClassDetail(){
+  const name=S.detailClass, c=CLASSES[name];
+  if(!S.detailLevel) S.detailLevel=1;
+  $("cdIcon").textContent = CLASS_ICON[name]||"⚔️";
+  $("cdIcon").style.background = classGrad(name);
+  setPageTheme(classPalette(name));
+  $("cdName").innerHTML = `${esc(name)} <span class="en">${esc(CLASS_EN[name]||"")}</span>`;
+  $("cdTag").textContent = `d${c.hd} · ${CLASS_ROLE[name]||""}`;
+  $("cdDesc").textContent = c.desc || "";
+  const lvlSel=$("cdLevel");
+  if(lvlSel.options.length!==20){ let o=""; for(let i=1;i<=20;i++) o+=`<option value="${i}">${i}</option>`; lvlSel.innerHTML=o; }
+  lvlSel.value=S.detailLevel;
+  $("cdHpNote").textContent = `1-й рівень — максимум кістки (d${c.hd}) + модиф. Статури. Далі +${Math.floor(c.hd/2)+1} + Статура за рівень. У таблиці — без Статури.`;
+  $("cdHp").innerHTML = hpTableHtml(c.hd, S.detailLevel);
+  let bs=`<div class="bonus"><span class="bk">Кістка здоров'я</span><span class="bv">d${c.hd}</span></div>`;
+  bs+=`<div class="bonus"><span class="bk">Рятівні кидки</span><span class="bv">${c.saves.map(s=>ABIL_UA[s]).join(", ")}</span></div>`;
+  bs+=`<div class="bonus"><span class="bk">Навичок на вибір</span><span class="bv">${c.skillCount} із ${c.skills.length===ALL_SKILLS.length?"будь-яких":c.skills.length}</span></div>`;
+  if(c.spell) bs+=`<div class="bonus"><span class="bk">Базова хар. заклять</span><span class="bv">${ABIL_UA[c.spell]}</span></div>`;
+  bs+=`<div class="bonus"><span class="bk">Володіння</span><span class="bv">${(c.prof||[]).join("; ")}</span></div>`;
+  $("cdBasics").innerHTML = bs;
+  renderLevelResources();
+  renderClassLevels();
+}
+// Ресурси, що масштабуються з рівнем, — зведено вгору (під Здоров'ям) для швидкого огляду
+function renderLevelResources(){
+  const name=S.detailClass, L=S.detailLevel;
+  const items=[];
+  resourceLines(name,L).forEach(res=>items.push(res));
+  spellCountLines(name,L).forEach(sc=>items.push(sc));
+  const card=$("cdResCard");
+  if(!items.length){ card.classList.add("hidden"); $("cdRes").innerHTML=""; return; }
+  card.classList.remove("hidden");
+  $("cdResTitle").textContent = `Ресурси на рівні ${L}`;
+  $("cdRes").innerHTML = items.map(it=>
+    `<div class="res-tile"><div class="rt-l">${esc(it.label)}</div>`+
+    `<div class="rt-v">${esc(it.value)}</div>`+
+    (it.hint?`<div class="rt-h">${esc(it.hint)}</div>`:"")+`</div>`
+  ).join("");
+}
+function onClassLevelChange(){ S.detailLevel=+getSel("cdLevel")||1; $("cdHp").innerHTML=hpTableHtml(currentClassDetail().hd,S.detailLevel); renderLevelResources(); renderClassLevels(); }
+function currentClassDetail(){ return CLASSES[S.detailClass]; }
+
+function subPickHtml(c){
+  const ex=CLASS_EXTRA[S.detailClass]||{};
+  const featLv=(ex.subFeat||[]).join(", ");
+  return `<div class="lvl-feat"><b>Обери ${esc(c.subLabel)}:</b></div>`+
+    c.subs.map(s=>{
+      const body=`<div class="modal-item"><p>${esc(s.desc)}</p></div>`+
+        (s.prof&&s.prof.length?`<div class="modal-item"><b>Бонусні володіння</b><p>${esc(s.prof.join(", "))}</p></div>`:"")+
+        (s.feats
+          ? Object.keys(s.feats).map(lv=>`<div class="modal-item"><b>${lv}-й рівень</b><p>${s.feats[lv].map(esc).join("<br>")}</p></div>`).join("")
+          : (featLv?`<div class="modal-item"><b>Здібності підкласу на рівнях</b><p>${featLv}</p></div>`:""))+
+        (s.src?`<div class="modal-item"><b>Джерело</b><p>${esc(s.src)}</p></div>`:"");
+      return `<div class="opt ${s.name===S.subclass?"sel":""}" onclick="selectSubclass('${q(s.name)}')">
+        <div class="on">${infoBtn(c.subLabel+": "+s.name, body)}<span>${esc(s.name)}${s.src?` <span class="src-tag">${esc(s.src)}</span>`:""}</span></div>
+        <div class="od">${esc(s.desc)}</div></div>`;
+    }).join("");
+}
+function subFeatHtml(c,L,pickerLevel){
+  const sub=(c.subs||[]).find(s=>s.name===S.subclass);
+  const list=sub&&sub.feats&&sub.feats[L];
+  if(list&&list.length){
+    return list.map(f=>{
+      const parts=String(f).split(" — "); const nm=parts[0], ds=parts.slice(1).join(" — ");
+      return `<div class="lvl-feat">✦ ${esc(f)} ${ds?infoBtn(nm, `<div class="modal-item"><p>${esc(ds)}</p></div>`):""}</div>`;
+    }).join("");
+  }
+  return pickerLevel ? "" : `<div class="lvl-feat">✦ Здібність підкласу${S.subclass?`: ${esc(S.subclass)}`:""}</div>`;
+}
+function renderClassLevels(){
+  infoReset();
+  const name=S.detailClass, c=CLASSES[name], ex=CLASS_EXTRA[name]||{}, prog=CLASS_PROG[name]||{};
+  const asiSet=new Set([...ASI_LEVELS, ...(c.extraASI||[])]);
+  const subFeat=new Set(ex.subFeat||[]);
+  const fs=FS_CONFIG[name];
+  if(S.detailLevel>=c.subLevel && c.subs && !S.subclass) S.subclass=c.subs[0].name;
+  let html="";
+  for(let L=1;L<=S.detailLevel;L++){
+    const feats=[...(prog[L]||[])];
+    let inner="";
+    feats.forEach(f=>{
+      const parts=String(f).split(" — ");
+      const nm=parts[0], ds=parts.slice(1).join(" — ");
+      inner+=`<div class="lvl-feat">${esc(f)} ${ds?infoBtn(nm, `<div class="modal-item"><p>${esc(ds)}</p></div>`):""}</div>`;
+    });
+    if(fs && L===fs.level) inner+=fsPickHtml(name);
+    if(L===c.subLevel && c.subs){ inner+=subPickHtml(c); inner+=subFeatHtml(c,L,true); }
+    else if(subFeat.has(L)) inner+=subFeatHtml(c,L,false);
+    if(asiSet.has(L)) inner+=`<div class="lvl-feat">⬆️ Підвищення характеристик або черта</div>`;
+    if(S.optionalFeats && OPT_FEATS[name] && OPT_FEATS[name][L])
+      OPT_FEATS[name][L].forEach(f=>{
+        const parts=String(f).split(" — "); const ds=parts.slice(1).join(" — ");
+        inner+=`<div class="lvl-feat">🔹 ${esc(f)} <span class="src-tag">опц.</span> ${ds?infoBtn(parts[0], `<div class="modal-item"><p>${esc(ds)}</p></div>`):""}</div>`;
+      });
+    resourceLines(name,L).forEach(res=>inner+=`<div class="lvl-res"><span class="res-l">${esc(res.label)}:</span> <b>${esc(res.value)}</b><span class="res-h">${esc(res.hint)}</span></div>`);
+    spellCountLines(name,L).forEach(sc=>inner+=`<div class="lvl-res"><span class="res-l">${esc(sc.label)}:</span> <b>${esc(sc.value)}</b><span class="res-h">${esc(sc.hint)}</span></div>`);
+    if(!inner) inner=`<span class="lvl-empty">—</span>`;
+    html+=`<div class="lvl-row${L===S.detailLevel?" cur":""}"><div class="lvl-num">${L}</div><div class="lvl-body">${inner}</div></div>`;
+  }
+  $("cdLevels").innerHTML=html;
+}
+function selectSubclass(name){ S.subclass=name; renderClassLevels(); }
+
+function chooseClass(){
+  S.class=S.detailClass; S.level=S.detailLevel; S.classSkillPick.clear(); S.slots={};
+  startAsiWizard(()=>{ buildSheet(); showView("sheet"); });
+}
+function selectFightingStyle(name){ S.fightingStyle=name; renderClassLevels(); }
+// доступні бойові стилі для класу (з опційними, якщо ввімкнено)
+function fsStyles(name){ const cfg=FS_CONFIG[name]; if(!cfg) return []; return S.optionalFeats ? [...cfg.styles, ...(cfg.opt||[])] : [...cfg.styles]; }
+function fsPickHtml(name){
+  const list=fsStyles(name);
+  if(!S.fightingStyle || !list.includes(S.fightingStyle)) S.fightingStyle=list[0];
+  return `<div class="lvl-feat"><b>Обери бойовий стиль:</b></div>`+
+    list.map(s=>{
+      const isOpt = (FS_CONFIG[name].opt||[]).includes(s);
+      return `<div class="opt ${s===S.fightingStyle?"sel":""}" onclick="selectFightingStyle('${q(s)}')">
+        <div class="on">${esc(s)}${isOpt?`<span class="src-tag">опц.</span>`:""} ${infoBtn("Бойовий стиль: "+s, `<div class="modal-item"><p>${esc(FIGHTING_STYLES[s]||"")}</p></div>`)}</div>
+        <div class="od">${esc(FIGHTING_STYLES[s]||"")}</div></div>`;
+    }).join("");
+}
+
+/* =========================================================================
+   ЧАРНИК (крок 3)
+   ========================================================================= */
+function currentRace(){ return S.race ? RACES[S.race] : null; }
+function currentClass(){ return S.class ? CLASSES[S.class] : null; }
+function currentSubraceName(){ return S.subrace || ""; }
+function currentSubrace(){ const r=currentRace(); return (r && r.subraces && S.subrace) ? r.subraces[S.subrace] : null; }
+function currentBg(){ return BACKGROUNDS[getSel("background")]; }
+
+function renderSummary(){
+  const r=currentRace(), c=currentClass();
+  $("sumRaceArt").innerHTML = raceArtSVG(S.race);
+  $("sumRaceName").textContent = S.race;
+  $("sumRaceSub").textContent = S.subrace ? ((r.subLabel||"Підраса")+": "+S.subrace) : "—";
+  $("sumClassIcon").textContent = CLASS_ICON[S.class]||"⚔️";
+  $("sumClassIcon").style.background = classGrad(S.class);
+  $("sumClassName").textContent = `${S.class} ${S.level} рів.`;
+  $("sumClassSub").textContent = `d${c.hd} · рятівні: ${c.saves.map(s=>ABIL_SHORT[s]).join("/")}` + (subclassActive()&&S.subclass?` · ${S.subclass}`:"");
+}
+
+function buildSheet(){
+  renderSummary();
+  onBackgroundChange();
+  renderRaceChoices();
+  $("raceChoicesCard").classList.toggle("hidden", !raceAsiChoiceDef());
+  renderAsiSummary();
+  if(!S._ready){ setMethod("array"); S._ready=true; } else buildAbilities();
+  buildSkills();
+  setMode(S.mode);
+  recalc();
+}
+function renderAsiSummary(){
+  const card=$("asiSummaryCard"); const ops=asiOpportunities();
+  if(!ops.length){ card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  const row=(label,st)=>{
+    let v="—";
+    if(st){ if(st.type==="asi"){ const p=[]; if(st.a1)p.push("+1 "+ABIL_SHORT[st.a1]); if(st.a2)p.push("+1 "+ABIL_SHORT[st.a2]); v=p.join(", ")||"—"; }
+      else v=st.feat?("Черта: "+st.feat):"—"; }
+    return `<div class="kv"><span class="k">${esc(label)}</span><span>${esc(v)}</span></div>`;
+  };
+  let html="";
+  ops.forEach(l=>html+=row("Рівень "+l, S.slots[String(l)]));
+  $("asiSummary").innerHTML=html;
+}
+function editAsi(){ startAsiWizard(()=>{ renderAsiSummary(); buildAbilities(); recalc(); }); }
+function setMode(m){
+  S.mode=m;
+  document.querySelectorAll(".mode-btn[data-mode]").forEach(b=>b.classList.toggle("active", b.dataset.mode===m));
+  document.querySelectorAll(".full-only").forEach(el=>el.classList.toggle("hidden", m!=="full"));
+  recalc();
+}
+
+function subclassActive(){ const c=currentClass(); return c && c.subs && S.level>=c.subLevel; }
+
+/* =========================================================================
+   ПОПАП ASI: підвищення характеристик або черта (з екраном вибору черти)
+   ========================================================================= */
+function startAsiWizard(after){
+  S.asiQueue=[];  // стартова черта Варіанта людини обирається на сторінці раси
+  asiOpportunities().forEach(l=>S.asiQueue.push(String(l)));
+  S.asiIdx=0; S.asiAfter=after;
+  if(!S.asiQueue.length){ after&&after(); return; }
+  renderAsiStep();
+}
+function asiSlotOf(key){
+  if(key==="human") return S.humanFeat;
+  if(!S.slots[key]){ const p=(currentClass()&&currentClass().priority[0])||"str"; S.slots[key]={type:"asi",a1:p,a2:p,feat:"",featAbil:""}; }
+  return S.slots[key];
+}
+function renderAsiStep(){
+  const key=S.asiQueue[S.asiIdx]; const isHuman=key==="human"; const st=asiSlotOf(key);
+  const title=isHuman?"Стартова черта — Варіант людини":`Рівень ${key}: підвищення чи черта`;
+  const type=isHuman?"feat":st.type;
+  let body=`<p class="sub">Крок ${S.asiIdx+1} з ${S.asiQueue.length}</p>`;
+  if(!isHuman){
+    body+=`<div class="seg">
+      <button class="seg-btn ${st.type==="asi"?"active":""}" onclick="asiSetType('${key}','asi')">Характеристики</button>
+      <button class="seg-btn ${st.type==="feat"?"active":""}" onclick="asiSetType('${key}','feat')">Черта</button></div>`;
+  }
+  if(type==="asi"){
+    const sel=(w)=>`<select onchange="asiSetAbil('${key}','${w}',this.value)"><option value="">—</option>`+
+      ABILS.map(a=>`<option value="${a}" ${st[w]===a?"selected":""}>${ABIL_UA[a]} +1</option>`).join("")+`</select>`;
+    body+=`<p class="sub">Дві різні = +1/+1; однакова двічі = +2 до однієї.</p><div class="race-asi-row">${sel("a1")}${sel("a2")}</div>`;
+  } else {
+    body+=`<p class="sub">Обери черту (екран вибору):</p><div class="feat-list">`+
+      Object.keys(FEATS).map(f=>`<div class="opt ${st.feat===f?"sel":""}" onclick="asiPickFeat('${key}','${q(f)}')">
+        <div class="on">${esc(f)}</div><div class="od">${esc(FEATS[f].desc)}</div></div>`).join("")+`</div>`;
+    const f=FEATS[st.feat];
+    if(f&&f.asi&&f.asi.choose){
+      body+=`<p class="sub" style="margin-top:8px">Черта дає +1 — обери куди:</p><div class="chips">`+
+        f.asi.from.map(a=>`<div class="chip ${st.featAbil===a?"sel":""}" onclick="asiSetFeatAbil('${key}','${a}')">${ABIL_UA[a]}</div>`).join("")+`</div>`;
+    }
+  }
+  body+=`<div class="modal-nav">`;
+  if(S.asiIdx>0) body+=`<button class="btn btn-ghost2" onclick="asiPrev()">← Назад</button>`;
+  body+=`<button class="btn btn-primary" onclick="asiNext()">${S.asiIdx<S.asiQueue.length-1?"Далі →":"Готово ✓"}</button></div>`;
+  openModal(title, body);
+}
+function asiSetType(key,t){ S.slots[key].type=t; renderAsiStep(); }
+function asiSetAbil(key,w,v){ asiSlotOf(key)[w]=v; }
+function asiPickFeat(key,f){ const st=asiSlotOf(key); st.feat=f; st.featAbil=""; renderAsiStep(); }
+function asiSetFeatAbil(key,a){ asiSlotOf(key).featAbil=a; renderAsiStep(); }
+function asiPrev(){ if(S.asiIdx>0){ S.asiIdx--; renderAsiStep(); } }
+function asiStepValid(){
+  const key=S.asiQueue[S.asiIdx]; const isHuman=key==="human"; const st=asiSlotOf(key); const type=isHuman?"feat":st.type;
+  if(type==="asi"){ if(!st.a1||!st.a2) return fail("Обери дві характеристики (можна однакову двічі)."); }
+  else { if(!st.feat) return fail("Обери черту."); const f=FEATS[st.feat]; if(f.asi&&f.asi.choose&&!st.featAbil) return fail("Обери характеристику для +1 від черти."); }
+  return true;
+}
+function asiNext(){
+  if(!asiStepValid()) return;
+  $("formErr").classList.add("hidden");
+  if(S.asiIdx<S.asiQueue.length-1){ S.asiIdx++; renderAsiStep(); }
+  else { closeModal(); S.asiAfter && S.asiAfter(); }
+}
+
+function bgInfo(){
+  const bg=currentBg();
+  let html=`<p>${esc(bg.desc)}</p>`;
+  html+=`<div class="modal-item"><b>Навички</b><p>${bg.skills.join(", ")}</p>`;
+  if(bg.tools&&bg.tools.length) html+=`<b>Інструменти</b><p>${bg.tools.join(", ")}</p>`;
+  if(bg.langs) html+=`<b>Мови</b><p>+${bg.langs} на вибір</p>`;
+  html+=`</div><div class="modal-item"><b>${esc(bg.feature.name)}</b><p>${esc(bg.feature.desc)}</p></div>`;
+  openModal("Передісторія: "+esc(getSel("background")), html);
+}
+function onBackgroundChange(){ $("bgDesc").textContent = currentBg().desc || ""; buildSkills(); recalc(); }
+
+/* расові бонуси на вибір */
+function raceAsiChoiceDef(){ const r=currentRace(), sr=currentSubrace(); return (r&&r.asiChoice)||(sr&&sr.asiChoice)||null; }
+function raceSkillChoiceDef(){ const r=currentRace(), sr=currentSubrace(); return (r&&r.skillChoice)||(sr&&sr.skillChoice)||null; }
+function raceFeatChoice(){ const r=currentRace(), sr=currentSubrace(); return !!((r&&r.featChoice)||(sr&&sr.featChoice)); }
+function renderRaceChoices(){
+  const box=$("raceChoices"); box.innerHTML="";
+  const def=raceAsiChoiceDef(); if(!def) return;
+  const excl=def.exclude||[];
+  const title=document.createElement("div"); title.className="sub";
+  title.textContent=`Обери ${def.count} характеристик(и) +${def.amount}`;
+  box.appendChild(title);
+  const row=document.createElement("div"); row.className="race-asi-row";
+  for(let i=0;i<def.count;i++){
+    const sel=document.createElement("select");
+    sel.innerHTML=`<option value="">—</option>`+ABILS.filter(a=>!excl.includes(a)).map(a=>`<option value="${a}">${ABIL_UA[a]}</option>`).join("");
+    sel.value=S.raceAsiPick[i]||"";
+    sel.onchange=()=>{ S.raceAsiPick[i]=sel.value;
+      const seen={}; S.raceAsiPick.forEach((v,idx)=>{ if(v&&seen[v]) S.raceAsiPick[idx]=""; if(v) seen[v]=true; });
+      renderRaceChoices(); buildAbilities(); recalc(); };
+    row.appendChild(sel);
+  }
+  box.appendChild(row);
+}
+
+/* =========================================================================
+   РІВЕНЬ + ПІДВИЩЕННЯ/ЧЕРТИ
+   ========================================================================= */
+function asiOpportunities(){
+  const c=currentClass(); if(!c) return [];
+  return [...ASI_LEVELS, ...(c.extraASI||[])].filter(l=>l<=S.level).sort((a,b)=>a-b);
+}
+
+
+/* =========================================================================
+   ХАРАКТЕРИСТИКИ
+   ========================================================================= */
+const METHOD_HINTS={ array:"Розподіли 15, 14, 13, 12, 10, 8.", pointbuy:"27 очок. Значення 8–15.",
+  roll:"Кинь 4d6, відкинь найменший — 6 разів.", manual:"Введи значення 1–30." };
+function zeroBase(){ return {str:null,dex:null,con:null,int:null,wis:null,cha:null}; }
+function setMethod(m){
+  S.method=m;
+  document.querySelectorAll("#methodTabs button").forEach(b=>b.classList.toggle("active", b.dataset.m===m));
+  $("methodHint").textContent=METHOD_HINTS[m];
+  $("rollControls").classList.toggle("hidden", m!=="roll");
+  if(m==="array"){ S.rollPool=[...STANDARD_ARRAY]; S.base=zeroBase(); }
+  else if(m==="roll"){ if(!S.rollPool||S.rollPool.length!==6) rollDice(); S.base=zeroBase(); }
+  else if(m==="pointbuy"){ S.base={str:8,dex:8,con:8,int:8,wis:8,cha:8}; }
+  else if(m==="manual"){ S.base={str:10,dex:10,con:10,int:10,wis:10,cha:10}; }
+  buildAbilities(); recalc();
+}
+function rollOne(){ const d=[0,0,0,0].map(()=>1+Math.floor(Math.random()*6)).sort((a,b)=>a-b); return d[1]+d[2]+d[3]; }
+function rollDice(){ S.rollPool=[0,0,0,0,0,0].map(rollOne).sort((a,b)=>b-a); S.base=zeroBase(); buildAbilities(); recalc(); }
+
+function raceAsiTotal(){
+  const r=currentRace(), sr=currentSubrace(), asi={};
+  addAsi(asi, r.asiFixed); addAsi(asi, sr&&sr.asiFixed);
+  const def=raceAsiChoiceDef(); if(def) S.raceAsiPick.forEach(ab=>{ if(ab) asi[ab]=(asi[ab]||0)+def.amount; });
+  return asi;
+}
+function applyFeatAsi(asi, st){ const f=FEATS[st.feat]; if(!f||!f.asi) return;
+  if(f.asi.fixed) addAsi(asi, f.asi.fixed); else if(f.asi.choose && st.featAbil) asi[st.featAbil]=(asi[st.featAbil]||0)+f.asi.amount; }
+function levelAsiTotal(){
+  const asi={};
+  asiOpportunities().forEach(l=>{ const st=S.slots[String(l)]; if(!st) return;
+    if(st.type==="asi"){ if(st.a1) asi[st.a1]=(asi[st.a1]||0)+1; if(st.a2) asi[st.a2]=(asi[st.a2]||0)+1; }
+    else if(st.feat) applyFeatAsi(asi, st); });
+  if(raceFeatChoice()) applyFeatAsi(asi, S.humanFeat);
+  return asi;
+}
+function buildAbilities(){
+  const box=$("abilities"); box.innerHTML="";
+  const raceB=raceAsiTotal(), lvlB=levelAsiTotal();
+  ABILS.forEach(ab=>{
+    const bonus=(raceB[ab]||0)+(lvlB[ab]||0);
+    const row=document.createElement("div"); row.className="abilrow";
+    let control;
+    if(S.method==="array"||S.method==="roll") control=`<select data-ab="${ab}" class="pool-sel"></select>`;
+    else control=`<div class="stepper"><button data-ab="${ab}" data-d="-1">−</button>
+      <input data-ab="${ab}" type="number" inputmode="numeric" value="${S.base[ab]??10}"/>
+      <button data-ab="${ab}" data-d="1">+</button></div>`;
+    row.innerHTML=`<div class="nm">${ABIL_UA[ab]}<small>${bonus?("бонус +"+bonus):"&nbsp;"}</small></div>
+      <div>${control}</div><div class="final" id="fin-${ab}">–</div><div class="mod" id="mod-${ab}">–</div>`;
+    box.appendChild(row);
+  });
+  if(S.method==="array"||S.method==="roll"){ rebuildPoolSelects(); wirePool(); } else wireStepper();
+}
+function rebuildPoolSelects(){
+  const used=ABILS.map(a=>S.base[a]).filter(v=>v!=null);
+  ABILS.forEach(ab=>{
+    const sel=document.querySelector(`.pool-sel[data-ab="${ab}"]`); if(!sel) return;
+    const cur=S.base[ab];
+    const pc={}; S.rollPool.forEach(v=>pc[v]=(pc[v]||0)+1);
+    const uc={}; used.forEach(v=>uc[v]=(uc[v]||0)+1);
+    let html=`<option value="">—</option>`;
+    Object.keys(pc).map(Number).sort((a,b)=>b-a).forEach(v=>{
+      const avail=pc[v]-(uc[v]||0)+(cur===v?1:0);
+      if(avail>0||cur===v) html+=`<option value="${v}" ${cur===v?"selected":""}>${v}</option>`;
+    });
+    sel.innerHTML=html;
+  });
+}
+function wirePool(){ document.querySelectorAll(".pool-sel").forEach(sel=>sel.onchange=()=>{
+  S.base[sel.dataset.ab]=sel.value===""?null:+sel.value; rebuildPoolSelects(); recalc(); }); }
+function wireStepper(){
+  document.querySelectorAll(".stepper button").forEach(b=>b.onclick=()=>step(b.dataset.ab,+b.dataset.d));
+  document.querySelectorAll(".stepper input").forEach(i=>i.onchange=()=>onManual(i.dataset.ab,i.value));
+}
+function pointsUsed(b){ return ABILS.reduce((s,a)=>s+(POINT_COST[b[a]]??0),0); }
+function step(ab,d){
+  if(S.method==="pointbuy"){ let v=Math.max(8,Math.min(15,(S.base[ab]??8)+d)); if(pointsUsed({...S.base,[ab]:v})<=27) S.base[ab]=v; }
+  else S.base[ab]=Math.max(1,Math.min(30,(S.base[ab]??10)+d));
+  buildAbilities(); recalc();
+}
+function onManual(ab,val){ S.base[ab]=Math.max(1,Math.min(30,parseInt(val||"10",10))); buildAbilities(); recalc(); }
+
+/* =========================================================================
+   НАВИЧКИ + рятівні
+   ========================================================================= */
+function raceFixedSkills(){ const r=currentRace(); return r.skillFixed?[...r.skillFixed]:[]; }
+function bgSkills(){ return currentBg().skills; }
+function skillSources(){
+  const map={}; const add=(n,s)=>{(map[n]=map[n]||[]).push(s);};
+  raceFixedSkills().forEach(s=>add(s,"раса")); S.raceSkillPick.forEach(s=>add(s,"раса"));
+  S.classSkillPick.forEach(s=>add(s,"клас")); bgSkills().forEach(s=>add(s,"передісторія"));
+  return map;
+}
+function buildSkills(){
+  const box=$("skills"); box.innerHTML="";
+  const sources=skillSources(); const conflictOf=(n)=>(sources[n]&&sources[n].length>1);
+  const raceChoice=raceSkillChoiceDef(), raceFixed=raceFixedSkills(), cl=currentClass(), bg=currentBg();
+  [...S.classSkillPick].forEach(s=>{ if(!cl.skills.includes(s)) S.classSkillPick.delete(s); });
+  if(raceFixed.length||raceChoice){
+    box.appendChild(groupHeader("Від раси", raceChoice?`оберіть ${raceChoice.count}`:""));
+    raceFixed.forEach(n=>box.appendChild(skillRow(n,"race-fixed",true,true,conflictOf(n))));
+    if(raceChoice){ const pool=raceChoice.from==="any"?ALL_SKILLS:raceChoice.from;
+      pool.forEach(n=>{ if(raceFixed.includes(n)) return; box.appendChild(skillRow(n,"race-pick",S.raceSkillPick.has(n),false,conflictOf(n))); }); }
+  }
+  box.appendChild(groupHeader("Від класу",`оберіть ${cl.skillCount}`));
+  cl.skills.forEach(n=>box.appendChild(skillRow(n,"class-pick",S.classSkillPick.has(n),false,conflictOf(n))));
+  box.appendChild(groupHeader("Від передісторії","фіксовані"));
+  bg.skills.forEach(n=>box.appendChild(skillRow(n,"bg-fixed",true,true,conflictOf(n))));
+  updateSkillStates();
+}
+function groupHeader(title,hint){ const d=document.createElement("div"); d.className="skill-group-head";
+  d.innerHTML=`<span>${title}</span><span class="counter" data-grp="${title}">${hint?("("+hint+")"):""}</span>`; return d; }
+function skillRow(name,source,checked,locked,conflict){
+  const ab=SKILLS[name]; const div=document.createElement("label");
+  div.className="skill"+(locked?" locked":"")+(conflict?" conflict":"");
+  div.innerHTML=`<input type="checkbox" data-skill="${esc(name)}" data-source="${source}" ${checked?"checked":""} ${locked?"disabled":""}/>
+    <span>${esc(name)} <small class="ab-tag">${ABIL_SHORT[ab]}</small> ${conflict?'<small class="dup">дубль!</small>':""}</span>`;
+  return div;
+}
+function onSkillChange(e){
+  const cb=e.target; if(!cb.matches("input[type=checkbox]")) return;
+  const name=cb.dataset.skill, source=cb.dataset.source;
+  if(source==="race-pick"){ const def=raceSkillChoiceDef();
+    if(cb.checked){ if(S.raceSkillPick.size>=def.count){ cb.checked=false; return; } S.raceSkillPick.add(name); } else S.raceSkillPick.delete(name);
+  } else if(source==="class-pick"){ const cl=currentClass();
+    if(cb.checked){ if(S.classSkillPick.size>=cl.skillCount){ cb.checked=false; return; } S.classSkillPick.add(name); } else S.classSkillPick.delete(name);
+  }
+  updateSkillStates(); recalc();
+}
+function updateSkillStates(){
+  const sources=skillSources(); const cl=currentClass(); const rdef=raceSkillChoiceDef();
+  document.querySelectorAll("#skills .skill").forEach(lbl=>{
+    const cb=lbl.querySelector("input"); const name=cb.dataset.skill;
+    const conflict=sources[name]&&sources[name].length>1;
+    lbl.classList.toggle("conflict", !!conflict);
+    const span=lbl.querySelector("span"); let dup=span.querySelector(".dup");
+    if(conflict&&!dup){ dup=document.createElement("small"); dup.className="dup"; dup.textContent="дубль!"; span.appendChild(document.createTextNode(" ")); span.appendChild(dup); }
+    else if(!conflict&&dup) dup.remove();
+  });
+  const classFull=S.classSkillPick.size>=cl.skillCount;
+  document.querySelectorAll('#skills input[data-source="class-pick"]').forEach(cb=>{ if(!cb.checked) cb.disabled=classFull; cb.closest(".skill").classList.toggle("locked", cb.disabled); });
+  if(rdef){ const raceFull=S.raceSkillPick.size>=rdef.count;
+    document.querySelectorAll('#skills input[data-source="race-pick"]').forEach(cb=>{ if(!cb.checked) cb.disabled=raceFull; cb.closest(".skill").classList.toggle("locked", cb.disabled); }); }
+  updateSkillCounters(); renderConflictNote(sources); renderSaves();
+}
+function updateSkillCounters(){
+  const cl=currentClass(), def=raceSkillChoiceDef();
+  document.querySelectorAll(".counter[data-grp]").forEach(c=>{
+    if(c.dataset.grp==="Від класу"){ const n=S.classSkillPick.size; c.textContent=`(${n}/${cl.skillCount})`; c.classList.toggle("warn", n!==cl.skillCount); }
+    else if(c.dataset.grp==="Від раси"&&def){ const n=S.raceSkillPick.size; c.textContent=`(${n}/${def.count})`; c.classList.toggle("warn", n!==def.count); }
+  });
+}
+function renderConflictNote(sources){
+  const dups=Object.entries(sources).filter(([,a])=>a.length>1); const el=$("skillConflict");
+  if(!dups.length){ el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  el.innerHTML="⚠️ Дублювання (обери іншу, щоб не втратити володіння): "+dups.map(([n,a])=>`<b>${esc(n)}</b> (${a.join(" + ")})`).join("; ");
+}
+function allChosenFeats(){
+  const list=[]; asiOpportunities().forEach(l=>{ const st=S.slots[String(l)]; if(st&&st.type==="feat"&&st.feat) list.push(st.feat); });
+  if(raceFeatChoice()&&S.humanFeat.feat) list.push(S.humanFeat.feat); return list;
+}
+function renderSaves(){
+  const c=currentClass(); let t=`Володіння від класу: <b>${c.saves.map(s=>ABIL_UA[s]).join(", ")}</b>`;
+  if(allChosenFeats().includes("Стійкий")) t+=` &nbsp;·&nbsp; + від черти «Стійкий»`;
+  $("savesInfo").innerHTML=t;
+}
+
+/* =========================================================================
+   АВТО (швидкий режим)
+   ========================================================================= */
+function autoFillQuick(){
+  const cl=currentClass(); const arr=[...STANDARD_ARRAY]; S.base=zeroBase();
+  cl.priority.forEach((ab,i)=>{ S.base[ab]=arr[i]; }); S.method="array"; S.rollPool=[...STANDARD_ARRAY];
+  S.classSkillPick.clear(); const taken=new Set([...bgSkills(),...raceFixedSkills()]);
+  for(const s of cl.skills){ if(S.classSkillPick.size>=cl.skillCount) break; if(!taken.has(s)) S.classSkillPick.add(s); }
+  const def=raceSkillChoiceDef();
+  if(def){ S.raceSkillPick.clear(); const pool=def.from==="any"?ALL_SKILLS:def.from;
+    for(const s of pool){ if(S.raceSkillPick.size>=def.count) break; if(!taken.has(s)&&!S.classSkillPick.has(s)) S.raceSkillPick.add(s); } }
+  const adef=raceAsiChoiceDef();
+  if(adef){ S.raceAsiPick=[]; const excl=adef.exclude||[];
+    for(const ab of cl.priority){ if(S.raceAsiPick.length>=adef.count) break; if(!excl.includes(ab)&&!S.raceAsiPick.includes(ab)) S.raceAsiPick.push(ab); } }
+  asiOpportunities().forEach(l=>{ S.slots[String(l)]={type:"asi",a1:cl.priority[0],a2:cl.priority[0],feat:"",featAbil:""}; });
+}
+
+/* =========================================================================
+   ПЕРЕРАХУНОК / ПОБУДОВА
+   ========================================================================= */
+function finalScores(){
+  const raceB=raceAsiTotal(), lvlB=levelAsiTotal(), out={};
+  ABILS.forEach(ab=>{ let b=S.base[ab]; if(b==null) b=(S.method==="pointbuy")?8:10; out[ab]=b+(raceB[ab]||0)+(lvlB[ab]||0); });
+  return out;
+}
+function recalc(){
+  if(S.mode!=="full"||!S.race) return;
+  const sc=finalScores();
+  ABILS.forEach(ab=>{ const f=$("fin-"+ab), m=$("mod-"+ab); if(!f||!m) return;
+    const has=S.base[ab]!=null||S.method==="pointbuy"||S.method==="manual";
+    f.textContent=has?sc[ab]:"–"; m.textContent=has?fmt(mod(sc[ab])):"–"; });
+  if(S.method==="pointbuy") $("methodHint").textContent=`Point buy: залишилось ${27-pointsUsed(S.base)} з 27 очок.`;
+}
+
+function computeCharacter(){
+  const level=S.level, bgName=getSel("background");
+  const c=currentClass(), r=currentRace(), sr=currentSubrace(), bg=currentBg();
+  const scores=finalScores(); const mods={}; ABILS.forEach(a=>mods[a]=mod(scores[a]));
+  const pb=profBonus(level); const feats=allChosenFeats();
+  const specials=new Set(); feats.forEach(fn=>(FEATS[fn].special||[]).forEach(s=>specials.add(s)));
+  if(sr&&sr.special) sr.special.forEach(s=>specials.add(s));
+
+  const avg=c.hd/2+1; let maxHp=c.hd+mods.con+(level-1)*(avg+mods.con);
+  if(specials.has("hpPerLevel1")) maxHp+=level;
+  if(specials.has("hpPerLevel2")) maxHp+=2*level;
+  const ac=10+mods.dex;
+  let initv=mods.dex; if(specials.has("init5")) initv+=5;
+  let speed=(sr&&sr.speed)||r.speed; if(specials.has("speed10")) speed+=10;
+
+  const profSkillsMap=skillSources(); const isProf=(n)=>!!profSkillsMap[n];
+  let pp=10+mods.wis+(isProf("Сприйняття")?pb:0); if(specials.has("passive5")) pp+=5;
+
+  const resilientAbil=feats.includes("Стійкий")
+    ? (S.humanFeat.feat==="Стійкий"?S.humanFeat.featAbil:(Object.values(S.slots).find(st=>st.feat==="Стійкий")||{}).featAbil):null;
+  const saves={}; ABILS.forEach(a=>{ const p=c.saves.includes(a)||a===resilientAbil; saves[a]={prof:p,value:mods[a]+(p?pb:0)}; });
+
+  const skills={}; ALL_SKILLS.forEach(n=>{ const ab=SKILLS[n]; const p=isProf(n); skills[n]={prof:p,value:mods[ab]+(p?pb:0),ability:ab}; });
+
+  let spellcasting=null;
+  if(c.spell) spellcasting={ability:c.spell,saveDC:8+pb+mods[c.spell],attackBonus:pb+mods[c.spell],spells:[]};
+
+  // Риси у форматі {name, desc} — опис показується в PDF-чарнику.
+  const fdesc=(n)=>FEATURE_DESC[n]||"";
+  const features=[];
+  (c.features||[]).forEach(n=>features.push({name:n, desc:fdesc(n)}));
+  let subForProf=null;
+  if(c.subs&&subclassActive()){
+    const sub=(c.subs||[]).find(s=>s.name===S.subclass); subForProf=sub;
+    features.push({name:`${c.subLabel}: ${S.subclass}`, desc: sub?sub.desc||"":""});
+    if(sub&&sub.feats) Object.keys(sub.feats).forEach(lv=>{
+      if(+lv<=level) sub.feats[lv].forEach(f=>{
+        const p=String(f).split(" — ");
+        features.push({name:`${S.subclass}: ${p[0]}`, desc:p.slice(1).join(" — ")});
+      });
+    });
+  }
+  if(FS_CONFIG[S.class] && level>=FS_CONFIG[S.class].level && S.fightingStyle)
+    features.push({name:"Бойовий стиль: "+S.fightingStyle, desc:fdesc(S.fightingStyle)});
+  (r.baseTraits||[]).forEach(t=>features.push({name:t.name, desc:t.desc||""}));
+  if(sr&&sr.traits) sr.traits.forEach(t=>features.push({name:t.name, desc:t.desc||""}));
+  features.push({name:"Передісторія: "+bg.feature.name, desc:bg.feature.desc||""});
+  feats.forEach(fn=>features.push({name:"Черта: "+fn, desc:(FEATS[fn]&&FEATS[fn].desc)||""}));
+  if(S.optionalFeats && OPT_FEATS[S.class]){
+    Object.entries(OPT_FEATS[S.class]).forEach(([lv,arr])=>{
+      if(+lv<=level) arr.forEach(f=>{
+        const p=f.split(" — "); features.push({name:"Опц.: "+p[0], desc:p.slice(1).join(" — ")});
+      });
+    });
+  }
+
+  const profList=[...(c.prof||[]), ...((subForProf&&subForProf.prof)||[]), "Мови: "+(r.langs||[]).join(", ")];
+  if(bg.tools&&bg.tools.length) profList.push("Інструменти: "+bg.tools.join(", "));
+
+  const raceLabel=S.subrace?(S.subrace.includes("(")?`${S.race} — ${S.subrace}`:`${S.race} (${S.subrace})`):S.race;
+  const classLabel=(c.subs&&subclassActive())?`${S.class} — ${S.subclass}`:S.class;
+
+  return { name:$("name").value.trim(), player:"", race:raceLabel, class:classLabel, level, background:bgName, alignment:getSel("alignment"),
+    abilities:scores, modifiers:mods, proficiencyBonus:pb, maxHp, ac, initiative:initv, speed, hitDice:`${level}d${c.hd}`, passivePerception:pp,
+    savingThrows:saves, skills, proficiencies_list:profList, features, equipment:c.equip||[], spellcasting, notes:"" };
+}
+
+/* =========================================================================
+   ВАЛІДАЦІЯ / ОГЛЯД / ФІНАЛ
+   ========================================================================= */
+function fail(msg){ const e=$("formErr"); e.textContent=msg; e.classList.remove("hidden"); return false; }
+function validate(){
+  if(!$("name").value.trim()) return fail("Введи ім'я персонажа.");
+  if(S.mode==="full"){
+    const cl=currentClass();
+    if(S.classSkillPick.size!==cl.skillCount) return fail(`Обери рівно ${cl.skillCount} навичок(и) від класу.`);
+    const rdef=raceSkillChoiceDef();
+    if(rdef&&S.raceSkillPick.size!==rdef.count) return fail(`Обери ${rdef.count} навичок(и) від раси.`);
+    const adef=raceAsiChoiceDef();
+    if(adef&&S.raceAsiPick.filter(Boolean).length!==adef.count) return fail(`Обери ${adef.count} характеристик(и) для бонусу раси.`);
+    if((S.method==="array"||S.method==="roll")&&ABILS.some(a=>S.base[a]==null)) return fail("Розподіли всі значення характеристик.");
+    if(S.method==="pointbuy"&&pointsUsed(S.base)>27) return fail("Перевищено бюджет очок (27).");
+  }
+  $("formErr").classList.add("hidden"); return true;
+}
+function showReview(){
+  if(S.mode==="quick") autoFillQuick();
+  if(!validate()) return;
+  renderReview(computeCharacter());
+  showView("review");
+}
+function renderReview(ch){
+  $("r-name").textContent=ch.name;
+  $("r-line").textContent=`${ch.race} · ${ch.class} ${ch.level} рів. · ${ch.background} · ${ch.alignment}`;
+  $("r-ac").textContent=ch.ac; $("r-hp").textContent=ch.maxHp; $("r-init").textContent=fmt(ch.initiative);
+  $("r-speed").textContent=ch.speed; $("r-pb").textContent=fmt(ch.proficiencyBonus); $("r-pp").textContent=ch.passivePerception;
+  const ab=$("r-abilities"); ab.innerHTML="";
+  ABILS.forEach(a=>{ const d=document.createElement("div"); d.className="stat";
+    d.innerHTML=`<div class="v">${fmt(ch.modifiers[a])}</div><div class="k">${ABIL_SHORT[a]} ${ch.abilities[a]}</div>`; ab.appendChild(d); });
+  const sv=$("r-saves"); sv.innerHTML="";
+  ABILS.forEach(a=>{ const s=ch.savingThrows[a]; const d=document.createElement("div"); d.className="kv";
+    d.innerHTML=`<span class="k">${s.prof?"● ":"○ "}${ABIL_UA[a]}</span><span>${fmt(s.value)}</span>`; sv.appendChild(d); });
+  const sk=Object.entries(ch.skills).filter(([,v])=>v.prof).map(([n])=>n);
+  $("r-skills").innerHTML=sk.length?sk.map(s=>`● ${esc(s)}`).join("&nbsp;&nbsp; "):'<span class="muted">немає</span>';
+  const sp=$("r-spell-card");
+  if(ch.spellcasting){ sp.classList.remove("hidden");
+    let h=`<div class="kv"><span class="k">Базова характеристика</span><span>${ABIL_UA[ch.spellcasting.ability]}</span></div>
+      <div class="kv"><span class="k">Складність порятунку (DC)</span><span>${ch.spellcasting.saveDC}</span></div>
+      <div class="kv"><span class="k">Бонус атаки закляттям</span><span>${fmt(ch.spellcasting.attackBonus)}</span></div>`;
+    spellSummaryRows(ch).forEach(r=>{ h+=`<div class="kv"><span class="k">${esc(r.k)}</span><span>${esc(r.v)}</span></div>`; });
+    $("r-spell").innerHTML=h;
+  } else sp.classList.add("hidden");
+  $("r-features").innerHTML=ch.features.map(f=>{
+    const nm=(f&&f.name!==undefined)?f.name:f, ds=(f&&f.desc)?f.desc:"";
+    return `• ${esc(nm)}`+(ds?` — <span style="opacity:.6">${esc(ds)}</span>`:"");
+  }).join("<br>");
+}
+/* PDF генерується прямо в браузері (без бота/сервера) і зберігається/розшарюється
+   на пристрій. У Telegram-WebView надійніше за все працює share-меню ОС; якщо його
+   немає — падаємо на звичайне завантаження файлу. */
+function finishStatus(msg, isErr){
+  const e=$("formErr")||$("finishMsg");
+  if(!e) { if(isErr) alert(msg); return; }
+  e.textContent=msg; e.classList.toggle("hidden", !msg);
+  e.style.color = isErr ? "" : "var(--hint)";
+}
+function downloadBlob(blob, filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=filename; a.rel="noopener";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 4000);
+}
+async function finish(){
+  let built;
+  try {
+    finishStatus("Готую PDF…", false);
+    if(window.DndFontsReady){ try{ await window.DndFontsReady; }catch(e){} }
+    const ch=computeCharacter();
+    built=window.DndPdf.build(ch);
+  } catch(err){
+    console.error(err);
+    finishStatus("Не вдалося згенерувати PDF: "+(err&&err.message||err), true);
+    return;
+  }
+  const { blob, filename }=built;
+  const file=(typeof File!=="undefined") ? new File([blob], filename, {type:"application/pdf"}) : null;
+
+  // 1) Share-меню ОС (найкраще для Telegram: зберегти у «Файли» / надіслати в чат)
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    try {
+      await navigator.share({ files:[file], title:filename });
+      finishStatus("Готово — чарник збережено/надіслано.", false);
+      return;
+    } catch(err){
+      if(err && err.name==="AbortError"){ finishStatus("", false); return; } // користувач закрив меню
+      // інакше пробуємо завантаження нижче
+    }
+  }
+  // 2) Fallback — звичайне завантаження файлу
+  try {
+    downloadBlob(blob, filename);
+    finishStatus("PDF завантажується… якщо не з'явився — перевір «Завантаження».", false);
+  } catch(err){
+    console.error(err);
+    finishStatus("Не вдалося зберегти файл. Спробуй відкрити апку в браузері.", true);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
