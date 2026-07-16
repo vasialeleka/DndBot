@@ -173,24 +173,27 @@
       return top - 46;
     }
 
-    drawAbilities(x, top, w) {
+    drawAbilities(x, top, w, bottom) {
       const char = this.char;
       const ab = char.abilities || {};
       const mods = char.modifiers || {};
-      const bh = 70, gap = 10;
+      const n = ABILITY_ORDER.length;
+      const gap = 12;
+      // Розтягуємо 6 блоків характеристик на всю висоту колонки.
+      const bh = ((top - bottom) - gap * (n - 1)) / n;
       let y = top;
       for (const a of ABILITY_ORDER) {
         this.box(x, y - bh, w, bh, { fill: PANEL });
-        this.text(x + w / 2, y - 13, ABILITY_UA[a], { size: 6.5, bold: true, color: MUTED, center: true });
-        this.text(x + w / 2, y - 38, fmtMod(mods[a]), { size: 22, bold: true, center: true });
-        this.circle(x + w / 2, y - bh + 13, 10, { stroke: LINE, fill: WHITE, lineW: 0.8 });
-        this.text(x + w / 2, y - bh + 10, String(ab[a] == null ? "—" : ab[a]), { size: 11, bold: true, center: true });
+        this.text(x + w / 2, y - 15, ABILITY_UA[a], { size: 7, bold: true, color: MUTED, center: true });
+        this.text(x + w / 2, y - bh / 2 + 8, fmtMod(mods[a]), { size: 26, bold: true, center: true });
+        this.circle(x + w / 2, y - bh + 17, 12, { stroke: LINE, fill: WHITE, lineW: 0.8 });
+        this.text(x + w / 2, y - bh + 13, String(ab[a] == null ? "—" : ab[a]), { size: 12, bold: true, center: true });
         y -= bh + gap;
       }
-      return y;
+      return y + gap;
     }
 
-    drawSavesSkills(x, top, w) {
+    drawSavesSkills(x, top, w, bottom) {
       const char = this.char;
       const mods = char.modifiers || {};
       let y = top;
@@ -201,32 +204,49 @@
       this.label(x + half / 2, y - 18, "Майстерність", 5, true);
       this.box(x + half + 6, y - 22, half, 22);
       this.label(x + half + 6 + half / 2, y - 18, "Натхнення", 5, true);
-      y -= 30;
+      y -= 22;
+
+      // Пасивні характеристики — блок із 3 боксів, прикріплений до низу колонки.
+      const skills = char.skills || {};
+      const pv = (nm) => { const s = skills[nm]; return s && s.value != null ? 10 + s.value : null; };
+      const passives = [
+        ["Пасивна уважність", char.passivePerception == null ? pv("Сприйняття") : char.passivePerception],
+        ["Пасивна прозорливість", pv("Прозорливість")],
+        ["Пасивне дослідження", pv("Дослідження")],
+      ];
+      const passH = 22, passGap = 5;
+      const passBlockH = passives.length * passH + (passives.length - 1) * passGap;
+
+      // Рівномірно розтягуємо рядки рятівних кидків і навичок, щоб заповнити
+      // всю висоту між верхнім блоком і пасивними боксами внизу.
+      const sectGap = 8;
+      const nSave = ABILITY_ORDER.length, nSkill = UA_SKILLS.length;
+      const titlesH = 20 + 20; // заголовки двох секцій
+      const freeForRows = (y - bottom) - passBlockH - 3 * sectGap - titlesH;
+      const rowH = freeForRows / (nSave + nSkill);
 
       // Рятівні кидки
+      y -= sectGap;
       const saves = char.savingThrows || {};
-      const srh = 16;
-      const rowsH = srh * 6 + 20;
-      this.box(x, y - rowsH, w, rowsH);
+      const savesH = rowH * nSave + 20;
+      this.box(x, y - savesH, w, savesH);
       this.text(x + w / 2, y - 11, "РЯТІВНІ КИДКИ", { size: 6.5, bold: true, color: ACCENT, center: true });
-      let ry = y - 26;
+      let ry = y - 20 - rowH * 0.62;
       for (const a of ABILITY_ORDER) {
         const s = saves[a] || {};
         const val = s.value == null ? mods[a] : s.value;
         this.profDot(x + 9, ry + 3, s.prof);
         this.text(x + 18, ry, fmtMod(val), { size: 8.5, bold: true });
         this.text(x + 38, ry, ABILITY_UA[a], { size: 8.5 });
-        ry -= srh;
+        ry -= rowH;
       }
-      y = y - rowsH - 8;
+      y = y - savesH - sectGap;
 
       // Навички (усі 18)
-      const skills = char.skills || {};
-      const skh = 15;
-      const srowsH = skh * UA_SKILLS.length + 20;
-      this.box(x, y - srowsH, w, srowsH);
+      const skillsH = rowH * nSkill + 20;
+      this.box(x, y - skillsH, w, skillsH);
       this.text(x + w / 2, y - 11, "НАВИЧКИ", { size: 6.5, bold: true, color: ACCENT, center: true });
-      ry = y - 26;
+      ry = y - 20 - rowH * 0.62;
       const abbrW = 26;
       for (let i = 0; i < UA_SKILLS.length; i++) {
         const name = UA_SKILLS[i][0], abil = UA_SKILLS[i][1];
@@ -238,15 +258,18 @@
         this.text(x + 18, ry, fmtMod(val), { size: 8.5, bold: true });
         this.fitText(x + 38, ry, name, w - 38 - abbrW, 8.5);
         this.text(x + w - 6, ry, "(" + (ABIL_ABBR[ab] || "") + ")", { size: 6.5, color: MUTED, right: true });
-        ry -= skh;
+        ry -= rowH;
       }
-      y = y - srowsH - 8;
 
-      // Пасивна уважність
-      this.box(x, y - 20, w, 20, { fill: PANEL });
-      this.text(x + 16, y - 13, String(char.passivePerception == null ? "—" : char.passivePerception), { size: 11, bold: true, center: true });
-      this.label(x + 30, y - 13, "Пасивна уважність");
-      return y - 20;
+      // Пасивні бокси внизу
+      let py = bottom + passBlockH;
+      for (const p of passives) {
+        this.box(x, py - passH, w, passH, { fill: PANEL });
+        this.text(x + 17, py - passH / 2 - 3, String(p[1] == null ? "—" : p[1]), { size: 11, bold: true, center: true });
+        this.fitText(x + 32, py - passH / 2 - 3, String(p[0]).toUpperCase(), w - 38, 6, { bold: true, color: MUTED });
+        py -= passH + passGap;
+      }
+      return bottom;
     }
 
     drawCombat(x, top, w) {
@@ -370,6 +393,14 @@
         this.line(x + 4, yy, x + w - 4, yy, LINE, 0.4);
         yy -= rowH;
       }
+      // заповнюємо рядки обраними атаками
+      const atks = (this.char.attacks || []).slice(0, rowsN);
+      atks.forEach((a, i) => {
+        const ry = ytab - i * rowH - 8.5;
+        this.fitText(x + 5, ry, a.name, nameW - 8, 7.5, { bold: true });
+        this.text(sep1 + bonusW / 2, ry, fmtMod(a.atk), { size: 8, bold: true, center: true, color: ACCENT });
+        this.fitText(sep2 + 4, ry, a.dmg, (x + w - sep2) - 8, 7.5, {});
+      });
       return top - h;
     }
 
@@ -459,8 +490,8 @@
       const bottom = M;
       const g = 8;
 
-      this.drawAbilities(x1, top, abW);
-      this.drawSavesSkills(x2, top, colw);
+      this.drawAbilities(x1, top, abW, bottom);
+      this.drawSavesSkills(x2, top, colw, bottom);
 
       const y3 = this.drawCombat(x3, top, colw);
       const avail = (y3 - g) - bottom;
