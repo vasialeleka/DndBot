@@ -86,11 +86,16 @@
   .trait b { display:block; font-size:14px; }
   .trait p { margin:2px 0 0; color:var(--hint); font-size:13px; }
 
-  .opt { border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
-  .opt.sel { border-color:var(--accent); background:rgba(182,65,47,.10); }
-  .opt .on { font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .opt { border:1.5px solid var(--line); border-left:3px solid transparent; border-radius:12px; padding:11px 12px; margin-bottom:8px; cursor:pointer; }
+  .opt.sel { border-color:var(--accent); border-left-color:var(--accent); background:rgba(182,65,47,.12); }
+  .opt .on { display:flex; align-items:center; gap:10px; }
+  .opt-radio { flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid var(--hint); box-sizing:border-box; }
+  .opt.sel .opt-radio { border:5px solid var(--accent); background:var(--bg); }
+  .opt-name { flex:1; min-width:0; font-weight:700; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .opt .info-btn { position:relative; margin-left:0; }
+  .opt .info-btn::after { content:""; position:absolute; top:50%; left:50%; width:44px; height:44px; transform:translate(-50%,-50%); }
   .opt .obonus { color:var(--accent); font-size:12px; font-weight:600; margin-top:2px; }
-  .opt .od { font-size:12px; color:var(--hint); margin-top:4px; }
+  .opt .od { font-size:12px; color:var(--hint); margin-top:6px; padding-left:28px; }
 
   .hp-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
   .hp-cell { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 2px; text-align:center; font-size:11px; color:var(--hint); }
@@ -2088,7 +2093,7 @@ function subPickHtml(c){
           : (featLv?`<div class="modal-item"><b>Здібності підкласу на рівнях</b><p>${featLv}</p></div>`:""))+
         (s.src?`<div class="modal-item"><b>Джерело</b><p>${esc(s.src)}</p></div>`:"");
       return `<div class="opt ${s.name===S.subclass?"sel":""}" onclick="selectSubclass('${q(s.name)}')">
-        <div class="on">${infoBtn(c.subLabel+": "+s.name, body)}<span>${esc(s.name)}${s.src?` <span class="src-tag">${esc(s.src)}</span>`:""}</span></div>
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(s.name)}${s.src?` <span class="src-tag">${esc(s.src)}</span>`:""}</span>${infoBtn(c.subLabel+": "+s.name, body)}</div>
         <div class="od">${esc(s.desc)}</div></div>`;
     }).join("");
 }
@@ -2151,7 +2156,7 @@ function fsPickHtml(name){
     list.map(s=>{
       const isOpt = (FS_CONFIG[name].opt||[]).includes(s);
       return `<div class="opt ${s===S.fightingStyle?"sel":""}" onclick="selectFightingStyle('${q(s)}')">
-        <div class="on">${esc(s)}${isOpt?`<span class="src-tag">опц.</span>`:""} ${infoBtn("Бойовий стиль: "+s, `<div class="modal-item"><p>${esc(FIGHTING_STYLES[s]||"")}</p></div>`)}</div>
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(s)}${isOpt?`<span class="src-tag">опц.</span>`:""}</span>${infoBtn("Бойовий стиль: "+s, `<div class="modal-item"><p>${esc(FIGHTING_STYLES[s]||"")}</p></div>`)}</div>
         <div class="od">${esc(FIGHTING_STYLES[s]||"")}</div></div>`;
     }).join("");
 }
