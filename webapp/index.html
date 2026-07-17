@@ -279,6 +279,11 @@
     display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; }
   .eq-item.on .eq-cbx { background:var(--accent); border-color:var(--accent); }
   .eq-noprof { color:var(--warn); font-size:10px; font-weight:700; }
+  .gear-toggle { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:11px 13px; margin-bottom:12px; cursor:pointer; font-size:14px; }
+  .gear-toggle.on { border-color:var(--accent); }
+  .gear-toggle.on .eq-cbx { background:var(--accent); border-color:var(--accent); }
+  body.has-grad .gear-toggle { background:rgba(20,20,25,.60); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
   .atk-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
   .atk-tbl th { font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--hint); text-align:left; padding:0 0 6px; font-weight:600; }
   .atk-tbl td { padding:7px 0; border-top:1px solid var(--line); vertical-align:middle; }
@@ -435,7 +440,8 @@
   </div>
 
   <p class="sub" id="eqStarter" style="margin:0 2px 10px"></p>
-  <label class="opt-toggle" style="margin-bottom:12px"><input type="checkbox" id="eqShowAll" onchange="toggleShowAll(this.checked)">
+  <label class="gear-toggle" id="eqShowAllRow" onclick="toggleShowAll(event)">
+    <span class="eq-cbx" id="eqShowAllBox"></span>
     <span>Показувати спорядження без володіння</span></label>
 
   <div class="card">
@@ -2855,10 +2861,13 @@ function buildEquipment(){
   ensureEquipment();
   const c=currentClass(); const st=$("eqStarter");
   if(st) st.textContent = "Стартовий набір класу: "+(((c&&c.equip)||[]).join(" · ")||"—");
-  const sa=$("eqShowAll"); if(sa) sa.checked=!!S.showAllGear;
+  renderShowAll();
   renderArmorSelect(); renderShield(); renderWeaponList(); renderEquipmentPreview();
 }
-function toggleShowAll(v){ S.showAllGear=v; renderArmorSelect(); renderShield(); renderWeaponList(); renderEquipmentPreview(); }
+function renderShowAll(){ const row=$("eqShowAllRow"), box=$("eqShowAllBox"); if(!row) return;
+  row.classList.toggle("on",!!S.showAllGear); box.textContent=S.showAllGear?"✓":""; }
+function toggleShowAll(ev){ if(ev) ev.preventDefault(); S.showAllGear=!S.showAllGear;
+  renderShowAll(); renderArmorSelect(); renderShield(); renderWeaponList(); renderEquipmentPreview(); }
 function renderArmorSelect(){
   const sel=$("eqArmor"); if(!sel) return;
   const tags=classProfTags(); const catProf={light:tags.lightA,medium:tags.mediumA,heavy:tags.heavyA};
