@@ -235,7 +235,7 @@
   .err-bar { position:fixed; left:14px; right:14px; bottom:78px; background:var(--accent); color:#fff;
     padding:10px 12px; border-radius:10px; font-size:13px; z-index:60; box-shadow:0 4px 14px rgba(0,0,0,.45); }
   .footer { position:fixed; left:0; right:0; bottom:0; padding:10px 14px;
-    background:linear-gradient(to top,var(--bg) 72%,transparent); display:flex; gap:10px; }
+    background:var(--bg); box-shadow:0 -10px 20px -6px rgba(0,0,0,.55); display:flex; gap:10px; }
   .btn { flex:1; padding:15px; border-radius:12px; border:none; font-size:16px; font-weight:700; cursor:pointer; }
   .btn-primary { background:var(--btn); color:var(--btn-text); }
 
@@ -317,10 +317,15 @@
   .progress .plegend { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; font-size:11px; color:var(--hint); }
   .progress .pwho { display:flex; align-items:center; gap:6px; min-width:0; }
   .progress .pwho:last-child { justify-content:flex-end; }
-  .progress .pstep { text-align:center; }
-  .progress .pwho b { color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:108px; }
-  .progress .psw { width:11px; height:11px; border-radius:3px; flex:none; border:1px solid rgba(255,255,255,.22); }
-  .progress .pstep { color:var(--accent); font-weight:700; white-space:nowrap; flex:none; }
+  .progress .pwho b { color:var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .progress .psw { width:9px; height:9px; border-radius:50%; flex:none; border:1px solid rgba(255,255,255,.45); box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .progress .pstep { text-align:center; color:var(--accent); font-weight:700; white-space:nowrap; flex:none; }
+  /* Вузькі екрани (Telegram на малих телефонах): не даємо шапці конкурувати за місце */
+  @media (max-width:380px){
+    .progress .plegend { gap:5px; font-size:10px; }
+    .progress .pstep { font-size:10px; }
+    .progress .pwho b { max-width:72px; }
+  }
 
   /* ===== фон-градієнт: напівпрозорі поверхні, щоб просвічувався ===== */
   body.has-grad .card { background:rgba(20,20,25,.60); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
@@ -329,7 +334,7 @@
   body.has-grad .stepper button, body.has-grad .stepper input,
   body.has-grad .method-tabs button, body.has-grad .mode-btn, body.has-grad .back { background:rgba(0,0,0,.26); }
   body.has-grad .topbar-title { color:#fff; }
-  body.has-grad .footer { background:linear-gradient(to top, rgba(0,0,0,.32), transparent); }
+  body.has-grad .footer { background:var(--bg); }
 
   /* ===== крок «Спорядження» ===== */
   .acbig { display:flex; align-items:center; gap:14px; background:rgba(182,65,47,.10);
@@ -2916,17 +2921,29 @@ function skillSources(){
 }
 function buildSkills(){
   const box=$("skills"); box.innerHTML="";
-  const sources=skillSources(); const conflictOf=(n)=>(sources[n]&&sources[n].length>1);
   const raceChoice=raceSkillChoiceDef(), raceFixed=raceFixedSkills(), cl=currentClass(), bg=currentBg();
-  [...S.classSkillPick].forEach(s=>{ if(!cl.skills.includes(s)) S.classSkillPick.delete(s); });
+  const bgSk=bg?bg.skills:[];
+  // Навички, вже надані ФІКСОВАНО (раса/передісторія) — їх не можна обрати повторно.
+  const fixedGranted=new Set([...raceFixed, ...bgSk]);
+  // Чистимо піки від того, що не належить класу або вже надано фіксовано,
+  // щоб лічильники й «дублі» рахувались коректно, а рядок не з’являвся двічі.
+  [...S.classSkillPick].forEach(s=>{ if(!cl.skills.includes(s)||fixedGranted.has(s)) S.classSkillPick.delete(s); });
+  [...S.raceSkillPick].forEach(s=>{ if(bgSk.includes(s)) S.raceSkillPick.delete(s); });
+  const sources=skillSources(); const conflictOf=(n)=>(sources[n]&&sources[n].length>1);
+  // Приглушена примітка «вже надано з інших джерел: …»
+  const grantedNote=(names)=>{ if(!names.length) return; const d=document.createElement("div"); d.className="desc-line";
+    d.innerHTML=`${esc(t('sh.alreadyGranted'))} ${names.map(n=>esc(tr(n))).join(", ")}`; box.appendChild(d); };
   if(raceFixed.length||raceChoice){
     box.appendChild(groupHeader("Від раси", raceChoice?t('sh.pickN').replace("{n}", raceChoice.count):""));
     raceFixed.forEach(n=>box.appendChild(skillRow(n,"race-fixed",true,true,conflictOf(n))));
-    if(raceChoice){ const pool=raceChoice.from==="any"?ALL_SKILLS:raceChoice.from;
-      pool.forEach(n=>{ if(raceFixed.includes(n)) return; box.appendChild(skillRow(n,"race-pick",S.raceSkillPick.has(n),false,conflictOf(n))); }); }
+    if(raceChoice){ const pool=raceChoice.from==="any"?ALL_SKILLS:raceChoice.from; const skipped=[];
+      pool.forEach(n=>{ if(raceFixed.includes(n)) return; if(bgSk.includes(n)){ skipped.push(n); return; } box.appendChild(skillRow(n,"race-pick",S.raceSkillPick.has(n),false,conflictOf(n))); });
+      grantedNote(skipped); }
   }
   box.appendChild(groupHeader("Від класу",t('sh.pickN').replace("{n}", cl.skillCount)));
-  cl.skills.forEach(n=>box.appendChild(skillRow(n,"class-pick",S.classSkillPick.has(n),false,conflictOf(n))));
+  const clSkipped=[];
+  cl.skills.forEach(n=>{ if(fixedGranted.has(n)){ clSkipped.push(n); return; } box.appendChild(skillRow(n,"class-pick",S.classSkillPick.has(n),false,conflictOf(n))); });
+  grantedNote(clSkipped);
   if(bg){
     box.appendChild(groupHeader("Від передісторії",t('sh.fixed')));
     bg.skills.forEach(n=>box.appendChild(skillRow(n,"bg-fixed",true,true,conflictOf(n))));
