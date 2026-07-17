@@ -11,6 +11,12 @@
 
   const MM = 72 / 25.4; // 1 мм у пунктах
 
+  // Локалізація: спираємось на глобальні t()/tr()/abShort() з index.html.
+  // Якщо їх раптом немає — повертаємо українське джерело (безпечний фолбек).
+  const T = (k) => (typeof window.t === "function" ? window.t(k) : k);
+  const TR = (s) => (typeof window.tr === "function" ? window.tr(s) : s);
+  const ABBR = (a) => (typeof window.abShort === "function" ? window.abShort(a) : (ABIL_ABBR[a] || ""));
+
   // Палітра — [r,g,b]
   const INK = [26, 26, 26];        // #1a1a1a
   const MUTED = [122, 122, 122];   // #7a7a7a
@@ -146,20 +152,20 @@
       const nbH = 30;
       const nameW = w * 0.40;
       this.box(M, nbTop - nbH, nameW, nbH, { radius: 9 });
-      this.fitText(M + 9, nbTop - nbH + 12, char.name || "Без імені", nameW - 18, 15, { bold: true });
-      this.text(M + 9, nbTop - nbH + 4, "ІМ'Я ПЕРСОНАЖА", { size: 5.5, bold: true, color: MUTED });
+      this.fitText(M + 9, nbTop - nbH + 12, char.name || T("pdf.noName"), nameW - 18, 15, { bold: true });
+      this.text(M + 9, nbTop - nbH + 4, T("pdf.charName"), { size: 5.5, bold: true, color: MUTED });
 
       const fx = M + nameW + 10;
       const fw = w - nameW - 10;
       const fbH = 44;
       this.box(fx, nbTop - fbH, fw, fbH, { radius: 9 });
       const meta = [
-        ["Клас і рівень", (String(char.class || "") + " " + String(char.level || "")).trim()],
-        ["Передісторія", char.background || ""],
-        ["Ім'я гравця", char.player || ""],
-        ["Раса", char.race || ""],
-        ["Світогляд", char.alignment || ""],
-        ["Досвід", char.xp || ""],
+        [T("pdf.classLevel"), (String(char.class || "") + " " + String(char.level || "")).trim()],
+        [T("pdf.background"), char.background || ""],
+        [T("pdf.player"), char.player || ""],
+        [T("pdf.race"), char.race || ""],
+        [T("pdf.alignment"), char.alignment || ""],
+        [T("pdf.xp"), char.xp || ""],
       ];
       const cw = fw / 3;
       for (let i = 0; i < 6; i++) {
@@ -182,7 +188,7 @@
       for (const a of ABILITY_ORDER) {
         const cy = y - bh;
         this.box(x, cy, w, bh, { radius: 9, fill: PANEL });
-        this.text(x + w / 2, y - 11, ABILITY_UA[a], { size: 6.5, bold: true, color: MUTED, center: true });
+        this.text(x + w / 2, y - 11, TR(ABILITY_UA[a]), { size: 6.5, bold: true, color: MUTED, center: true });
         this.text(x + w / 2, cy + bh * 0.42, fmtMod(mods[a]), { size: 24, bold: true, center: true });
         this.circle(x + w / 2, cy, coinR, { stroke: LINE, fill: WHITE, lineW: 1 });
         this.text(x + w / 2, cy - 4, String(ab[a] == null ? "—" : ab[a]), { size: 11, bold: true, center: true });
@@ -200,14 +206,14 @@
       const inspH = 24;
       this.box(x, y - inspH, w, inspH, { radius: 8 });
       this.circle(x + 13, y - inspH / 2, 5, { stroke: LINE, fill: WHITE, lineW: 0.9 });
-      this.text(x + 24 + (w - 24) / 2 - 6, y - inspH / 2 - 2, "НАТХНЕННЯ", { size: 7, bold: true, color: MUTED, center: true });
+      this.text(x + 24 + (w - 24) / 2 - 6, y - inspH / 2 - 2, T("pdf.inspiration"), { size: 7, bold: true, color: MUTED, center: true });
       y -= inspH + gap;
 
       // Бонус майстерності
       const profH = 24;
       this.box(x, y - profH, w, profH, { radius: 8, fill: PANEL });
       this.text(x + 16, y - profH / 2 - 2, fmtMod(char.proficiencyBonus), { size: 15, bold: true, center: true });
-      this.text(x + 30 + (w - 30) / 2, y - profH / 2 - 2, "БОНУС МАЙСТЕРНОСТІ", { size: 6, bold: true, color: MUTED, center: true });
+      this.text(x + 30 + (w - 30) / 2, y - profH / 2 - 2, T("pdf.profBonus"), { size: 6, bold: true, color: MUTED, center: true });
       y -= profH + gap;
 
       // Рятівні + навички заповнюють решту
@@ -225,10 +231,10 @@
         const val = s.value == null ? mods[a] : s.value;
         this.profDot(x + 10, ry + 3, s.prof);
         this.text(x + 19, ry, fmtMod(val), { size: 8.5, bold: true });
-        this.fitText(x + 35, ry, ABILITY_UA[a], w - 40, 8.5, { bold: !!s.prof });
+        this.fitText(x + 35, ry, TR(ABILITY_UA[a]), w - 40, 8.5, { bold: !!s.prof });
         ry -= rowH;
       }
-      this.footLabel(x, y - savesH, w, "Рятівні кидки");
+      this.footLabel(x, y - savesH, w, T("pdf.saves"));
       y -= savesH + gap;
 
       // Навички
@@ -245,11 +251,11 @@
         const ab = s.ability || abil;
         this.profDot(x + 10, ry + 3, prof);
         this.text(x + 19, ry, fmtMod(val), { size: 8, bold: true });
-        this.fitText(x + 35, ry, name, w - 35 - abbrW, 8, { bold: prof });
-        this.text(x + w - 6, ry, ABIL_ABBR[ab] || "", { size: 6, color: MUTED, right: true });
+        this.fitText(x + 35, ry, TR(name), w - 35 - abbrW, 8, { bold: prof });
+        this.text(x + w - 6, ry, ABBR(ab), { size: 6, color: MUTED, right: true });
         ry -= rowH;
       }
-      this.footLabel(x, y - skillsH, w, "Навички");
+      this.footLabel(x, y - skillsH, w, T("pdf.skills"));
     }
 
     // Пасивні характеристики (широкий блок) + інші володіння
@@ -260,9 +266,9 @@
       let py = bottom + otherH + 7 + passiveH;
       this.box(x, py - passiveH, w, passiveH, { radius: 8, fill: PANEL });
       const pass = [
-        ["Уважність", char.passivePerception == null ? pv("Сприйняття") : char.passivePerception],
-        ["Прозорл.", pv("Прозорливість")],
-        ["Дослідж.", pv("Дослідження")],
+        [T("pdf.passivePerc"), char.passivePerception == null ? pv("Сприйняття") : char.passivePerception],
+        [T("pdf.passiveIns"), pv("Прозорливість")],
+        [T("pdf.passiveInv"), pv("Дослідження")],
       ];
       const pcw = w / 3;
       for (let i = 0; i < 3; i++) {
@@ -282,7 +288,7 @@
           ty -= 11;
         }
       }
-      this.footLabel(x, bottom, w, "Інші володіння та мови");
+      this.footLabel(x, bottom, w, T("pdf.otherProf"));
     }
 
     // --- ЦЕНТР: БІЙ / АТАКИ / СПОРЯДЖЕННЯ ---------------------------------
@@ -318,38 +324,38 @@
 
       // Трійка: щит КБ / Ініціатива / Швидкість
       const t3 = (w - 2 * gap) / 3, trioH = 52;
-      this.drawShield(x, y, t3, trioH, char.ac, "Клас броні");
-      this.miniStat(x + t3 + gap, y, t3, trioH, fmtMod(char.initiative), "Ініціатива");
-      this.miniStat(x + 2 * (t3 + gap), y, t3, trioH, char.speed, "Швидкість");
+      this.drawShield(x, y, t3, trioH, char.ac, T("pdf.ac"));
+      this.miniStat(x + t3 + gap, y, t3, trioH, fmtMod(char.initiative), T("pdf.init"));
+      this.miniStat(x + 2 * (t3 + gap), y, t3, trioH, char.speed, T("pdf.speed"));
       y -= trioH + gap;
 
       // Поточні хіти
       const hpH = 50;
       this.box(x, y - hpH, w, hpH, { radius: 8 });
-      this.text(x + w / 2, y - 11, "Максимум хітів: " + (char.maxHp == null ? "—" : char.maxHp), { size: 6.5, color: MUTED, center: true });
+      this.text(x + w / 2, y - 11, T("pdf.maxHpPrefix") + (char.maxHp == null ? "—" : char.maxHp), { size: 6.5, color: MUTED, center: true });
       this.line(x + 8, y - 15, x + w - 8, y - 15, HAIR, 0.4);
       this.text(x + w / 2, y - 38, String(char.maxHp == null ? "—" : char.maxHp), { size: 26, bold: true, center: true });
-      this.footLabel(x, y - hpH, w, "Поточні хіти");
+      this.footLabel(x, y - hpH, w, T("pdf.currentHp"));
       y -= hpH + gap;
 
       // Тимчасові хіти
       const tH = 26;
       this.box(x, y - tH, w, tH, { radius: 8 });
-      this.footLabel(x, y - tH, w, "Тимчасові хіти");
+      this.footLabel(x, y - tH, w, T("pdf.tempHp"));
       y -= tH + gap;
 
       // Кості здоров'я + рятівні від смерті
       const bH = 40, hdW = (w - gap) * 0.4, dsW = (w - gap) - hdW;
       this.box(x, y - bH, hdW, bH, { radius: 8 });
       this.text(x + hdW / 2, y - 20, String(char.hitDice == null ? "—" : char.hitDice), { size: 15, bold: true, center: true });
-      this.footLabel(x, y - bH, hdW, "Кості здоров'я");
+      this.footLabel(x, y - bH, hdW, T("pdf.hitDice"));
       const dx = x + hdW + gap;
       this.box(dx, y - bH, dsW, bH, { radius: 8 });
-      this.text(dx + 8, y - 14, "Успіхи", { size: 6.5, color: INK });
+      this.text(dx + 8, y - 14, T("pdf.successes"), { size: 6.5, color: INK });
       for (let i = 0; i < 3; i++) this.circle(dx + 48 + i * 8, y - 12.5, 2.6, { stroke: LINE, fill: WHITE, lineW: 0.8 });
-      this.text(dx + 8, y - 25, "Провали", { size: 6.5, color: INK });
+      this.text(dx + 8, y - 25, T("pdf.failures"), { size: 6.5, color: INK });
       for (let i = 0; i < 3; i++) this.circle(dx + 48 + i * 8, y - 23.5, 2.6, { stroke: LINE, fill: WHITE, lineW: 0.8 });
-      this.footLabel(dx, y - bH, dsW, "Рятівні від смерті");
+      this.footLabel(dx, y - bH, dsW, T("pdf.deathSaves"));
       y -= bH + gap;
 
       // Спорядження (з монетами) — прикріплене до низу, більше місця
@@ -367,9 +373,9 @@
       const y = top - 10;
       const nameW = w * 0.52, bonusW = w * 0.16;
       const sep1 = x + nameW, sep2 = x + nameW + bonusW;
-      this.text(x + nameW / 2, y - 2, "НАЗВА", { size: 5, bold: true, color: MUTED, center: true });
-      this.text(sep1 + bonusW / 2, y - 2, "БОНУС", { size: 5, bold: true, color: MUTED, center: true });
-      this.text(sep2 + (x + w - sep2) / 2, y - 2, "ШКОДА / ТИП", { size: 5, bold: true, color: MUTED, center: true });
+      this.text(x + nameW / 2, y - 2, T("pdf.atkName"), { size: 5, bold: true, color: MUTED, center: true });
+      this.text(sep1 + bonusW / 2, y - 2, T("pdf.atkBonus"), { size: 5, bold: true, color: MUTED, center: true });
+      this.text(sep2 + (x + w - sep2) / 2, y - 2, T("pdf.atkDmg"), { size: 5, bold: true, color: MUTED, center: true });
       const ytab = y - 8;
       const rowH = 13;
       const tblBottom = top - h + 14;
@@ -384,13 +390,13 @@
         this.text(sep1 + bonusW / 2, ry, fmtMod(a.atk), { size: 8, bold: true, center: true });
         this.fitText(sep2 + 4, ry, a.dmg, (x + w - sep2) - 8, 7.5, {});
       });
-      this.footLabel(x, top - h, w, "Атаки та закляття");
+      this.footLabel(x, top - h, w, T("pdf.attacks"));
     }
 
     drawEquipment(x, top, w, h) {
       this.box(x, top - h, w, h, { radius: 8 });
       // Монети — вертикально зліва
-      const coins = ["ЗМ", "СМ", "ММ", "ЕМ", "ПМ"];
+      const coins = T("pdf.coins").split(",");
       const cbW = 34, cbH = 13, cgap = 3;
       let cy = top - 8;
       for (let i = 0; i < coins.length; i++) {
@@ -409,13 +415,13 @@
           ly -= 11;
         }
       }
-      this.footLabel(x, top - h, w, "Спорядження");
+      this.footLabel(x, top - h, w, T("pdf.equipment"));
     }
 
     // --- ПРАВОРУЧ: ОСОБИСТІСТЬ + РИСИ -------------------------------------
     drawRightRegion(x, top, w, bottom) {
       const gap = 7;
-      const boxes = [["Риси характеру", 66], ["Ідеали", 52], ["Узи", 52], ["Вади", 52]];
+      const boxes = [[T("pdf.personality"), 66], [T("pdf.ideals"), 52], [T("pdf.bonds"), 52], [T("pdf.flaws"), 52]];
       let y = top;
       for (const b of boxes) {
         this.box(x, y - b[1], w, b[1], { radius: 8 });
@@ -442,7 +448,7 @@
         }
         y -= 3;
       }
-      this.footLabel(x, top - h, w, "Риси та здібності");
+      this.footLabel(x, top - h, w, T("pdf.featuresTraits"));
     }
 
     // --- Закляття (2-га сторінка) -----------------------------------------
@@ -453,11 +459,11 @@
       d.addPage();
       const top = this.PAGE_H - M;
       const w = this.PAGE_W - 2 * M;
-      this.text(M, top - 8, "Закляття", { size: 15, bold: true, color: ACCENT });
+      this.text(M, top - 8, T("pdf.spells"), { size: 15, bold: true, color: ACCENT });
       const info = [
-        ["Базова характеристика", ABILITY_UA[sc.ability] || sc.ability || "—"],
-        ["Складність порятунку (DC)", sc.saveDC == null ? "—" : sc.saveDC],
-        ["Бонус на влучання закляттям", fmtMod(sc.attackBonus)],
+        [T("pdf.spellAbil"), TR(ABILITY_UA[sc.ability]) || sc.ability || "—"],
+        [T("pdf.spellDC"), sc.saveDC == null ? "—" : sc.saveDC],
+        [T("pdf.spellAtk"), fmtMod(sc.attackBonus)],
       ];
       const cw = w / 3;
       let y = top - 24;
@@ -477,7 +483,7 @@
       for (let lvl = 0; lvl <= maxLvl; lvl++) {
         const ci = colI % 2;
         let cy = ys[ci];
-        const title = lvl === 0 ? "Замовляння (cantrips)" : "Рівень " + lvl;
+        const title = lvl === 0 ? T("pdf.cantrips") : T("pdf.levelPrefix") + lvl;
         this.text(cols[ci], cy, title, { size: 9, bold: true, color: ACCENT });
         cy -= 6;
         const lines = lvl === 0 ? 6 : 5;
@@ -548,7 +554,7 @@
   function buildCharacterPdf(char) {
     if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("jsPDF не завантажено");
     const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
-    doc.setProperties({ title: "Чарник — " + (char.name || "персонаж") });
+    doc.setProperties({ title: T("pdf.docTitle") + " — " + (char.name || T("pdf.noName")) });
     new Sheet(doc, char).render();
     return { doc: doc, blob: doc.output("blob"), filename: safeFilename(char) };
   }
