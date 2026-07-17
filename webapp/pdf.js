@@ -138,6 +138,56 @@
       this.circle(cx, cy, 2.5, { stroke: INK, fill: filled ? INK : WHITE, lineW: 0.8 });
     }
 
+    // Число-модифікатор у тонкій рамці («чип») — якір, який легко читати.
+    numChip(cx, yBaseline, val) {
+      const cw = 18, ch = 12;
+      this.box(cx - cw / 2, yBaseline - 3, cw, ch, { radius: 2, lineW: 0.7 });
+      this.text(cx, yBaseline, val, { size: 8, bold: true, center: true });
+    }
+
+    // Маленький залитий ромб (векторний, без залежності від гліфа у шрифті).
+    diamond(cx, cy, r, color) {
+      const d = this.d;
+      const c = color || MUTED;
+      const yc = this.Y(cy);
+      d.setFillColor(c[0], c[1], c[2]);
+      d.triangle(cx - r, yc, cx, yc - r, cx + r, yc, "F");
+      d.triangle(cx - r, yc, cx, yc + r, cx + r, yc, "F");
+    }
+
+    // Заголовок секції: назва по центру + підкреслення й ромби з боків.
+    sectionTitle(x, y, w, title) {
+      this.text(x + w / 2, y - 10, String(title).toUpperCase(),
+        { size: 6.5, bold: true, color: ACCENT, center: true });
+      this.line(x + 6, y - 14, x + w - 6, y - 14, MUTED, 0.5);
+      this.diamond(x + 10, y - 8, 1.6, MUTED);
+      this.diamond(x + w - 10, y - 8, 1.6, MUTED);
+    }
+
+    // Прямокутник зі скошеними верхніми кутами (нижні — прямі).
+    // Вхід — reportlab-координати (x,y — нижній-лівий кут), як у box().
+    bevelBox(x, y, w, h, opt) {
+      opt = opt || {};
+      const c = opt.cut == null ? 6 : opt.cut;
+      const fill = opt.fill || null;
+      const stroke = opt.stroke || LINE;
+      const lineW = opt.lineW == null ? 1 : opt.lineW;
+      const d = this.d;
+      const Ytop = this.Y(y + h); // верхній-лівий кут у координатах jsPDF
+      const segs = [
+        [w - 2 * c, 0],   // верх
+        [c, c],           // скіс правого верхнього кута
+        [0, h - c],       // права сторона
+        [-w, 0],          // низ
+        [0, -(h - c)],    // ліва сторона
+        [c, -c],          // скіс лівого верхнього кута (замикання)
+      ];
+      if (fill) d.setFillColor(fill[0], fill[1], fill[2]);
+      d.setDrawColor(stroke[0], stroke[1], stroke[2]);
+      d.setLineWidth(lineW);
+      d.lines(segs, x + c, Ytop, [1, 1], fill ? "FD" : "S", true);
+    }
+
     // --- секції ------------------------------------------------------------
     drawHeader() {
       const char = this.char, M = this.MARGIN;
@@ -178,16 +228,23 @@
       const ab = char.abilities || {};
       const mods = char.modifiers || {};
       const n = ABILITY_ORDER.length;
-      const gap = 12;
-      // Розтягуємо 6 блоків характеристик на всю висоту колонки.
-      const bh = ((top - bottom) - gap * (n - 1)) / n;
+      const gap = 14;
+      const coinR = 9.5;
+      // Розтягуємо 6 блоків на висоту колонки; лишаємо coinR знизу під
+      // монету-бал останнього блоку, щоб вона не вилазила за поле сторінки.
+      const bh = ((top - bottom - coinR) - gap * (n - 1)) / n;
       let y = top;
       for (const a of ABILITY_ORDER) {
-        this.box(x, y - bh, w, bh, { fill: PANEL });
-        this.text(x + w / 2, y - 15, ABILITY_UA[a], { size: 7, bold: true, color: MUTED, center: true });
-        this.text(x + w / 2, y - bh / 2 + 8, fmtMod(mods[a]), { size: 26, bold: true, center: true });
-        this.circle(x + w / 2, y - bh + 17, 12, { stroke: LINE, fill: WHITE, lineW: 0.8 });
-        this.text(x + w / 2, y - bh + 13, String(ab[a] == null ? "—" : ab[a]), { size: 12, bold: true, center: true });
+        const cy = y - bh; // нижній край коробки
+        this.bevelBox(x, cy, w, bh, { fill: WHITE, cut: 7, lineW: 1 });
+        // назва + підкреслення
+        this.text(x + w / 2, y - 12, ABILITY_UA[a], { size: 7, bold: true, color: MUTED, center: true });
+        this.line(x + 6, y - 16, x + w - 6, y - 16, [216, 216, 216], 0.6);
+        // великий модифікатор
+        this.text(x + w / 2, cy + bh * 0.40, fmtMod(mods[a]), { size: 28, bold: true, center: true });
+        // монета-бал, що звисає з нижнього краю (біла заливка ховає лінію рамки)
+        this.circle(x + w / 2, cy, coinR, { stroke: LINE, fill: WHITE, lineW: 1 });
+        this.text(x + w / 2, cy - 4, String(ab[a] == null ? "—" : ab[a]), { size: 11, bold: true, center: true });
         y -= bh + gap;
       }
       return y + gap;
@@ -199,12 +256,13 @@
       let y = top;
 
       const half = (w - 6) / 2;
-      this.box(x, y - 22, half, 22, { fill: PANEL });
-      this.text(x + half / 2, y - 10, fmtMod(char.proficiencyBonus), { size: 12, bold: true, center: true });
-      this.label(x + half / 2, y - 18, "Майстерність", 5, true);
-      this.box(x + half + 6, y - 22, half, 22);
-      this.label(x + half + 6 + half / 2, y - 18, "Натхнення", 5, true);
-      y -= 22;
+      const topH = 30;
+      this.box(x, y - topH, half, topH, { fill: PANEL });
+      this.text(x + half / 2, y - 14, fmtMod(char.proficiencyBonus), { size: 17, bold: true, center: true });
+      this.label(x + half / 2, y - 25, "Майстерність", 6, true);
+      this.box(x + half + 6, y - topH, half, topH);
+      this.label(x + half + 6 + half / 2, y - 25, "Натхнення", 6, true);
+      y -= topH;
 
       // Пасивні характеристики — блок із 3 боксів, прикріплений до низу колонки.
       const skills = char.skills || {};
@@ -230,14 +288,14 @@
       const saves = char.savingThrows || {};
       const savesH = rowH * nSave + 20;
       this.box(x, y - savesH, w, savesH);
-      this.text(x + w / 2, y - 11, "РЯТІВНІ КИДКИ", { size: 6.5, bold: true, color: ACCENT, center: true });
+      this.sectionTitle(x, y, w, "Рятівні кидки");
       let ry = y - 20 - rowH * 0.62;
       for (const a of ABILITY_ORDER) {
         const s = saves[a] || {};
         const val = s.value == null ? mods[a] : s.value;
-        this.profDot(x + 9, ry + 3, s.prof);
-        this.text(x + 18, ry, fmtMod(val), { size: 8.5, bold: true });
-        this.text(x + 38, ry, ABILITY_UA[a], { size: 8.5 });
+        this.profDot(x + 8, ry + 3, s.prof);
+        this.numChip(x + 26, ry, fmtMod(val));
+        this.text(x + 40, ry, ABILITY_UA[a], { size: 8.5, bold: !!s.prof });
         ry -= rowH;
       }
       y = y - savesH - sectGap;
@@ -245,7 +303,7 @@
       // Навички (усі 18)
       const skillsH = rowH * nSkill + 20;
       this.box(x, y - skillsH, w, skillsH);
-      this.text(x + w / 2, y - 11, "НАВИЧКИ", { size: 6.5, bold: true, color: ACCENT, center: true });
+      this.sectionTitle(x, y, w, "Навички");
       ry = y - 20 - rowH * 0.62;
       const abbrW = 26;
       for (let i = 0; i < UA_SKILLS.length; i++) {
@@ -254,10 +312,10 @@
         const prof = !!s.prof;
         const val = s.value == null ? mods[abil] : s.value;
         const ab = s.ability || abil;
-        this.profDot(x + 9, ry + 3, prof);
-        this.text(x + 18, ry, fmtMod(val), { size: 8.5, bold: true });
-        this.fitText(x + 38, ry, name, w - 38 - abbrW, 8.5);
-        this.text(x + w - 6, ry, "(" + (ABIL_ABBR[ab] || "") + ")", { size: 6.5, color: MUTED, right: true });
+        this.profDot(x + 8, ry + 3, prof);
+        this.numChip(x + 26, ry, fmtMod(val));
+        this.fitText(x + 40, ry, name, w - 40 - abbrW, 8.5, { bold: prof });
+        this.text(x + w - 6, ry, ABIL_ABBR[ab] || "", { size: 6.5, color: MUTED, right: true });
         ry -= rowH;
       }
 
@@ -281,14 +339,15 @@
         ["ІНІЦІАТИВА", fmtMod(char.initiative)],
         ["ШВИДКІСТЬ", char.speed],
       ];
+      const stH = 38;
       for (let i = 0; i < stats.length; i++) {
         const lab = stats[i][0], val = stats[i][1];
         const bx = x + i * (third + 6);
-        this.box(bx, y - 30, third, 30, { fill: PANEL });
-        this.text(bx + third / 2, y - 17, String(val == null ? "—" : val), { size: 14, bold: true, center: true });
-        this.text(bx + third / 2, y - 26, lab, { size: 5.5, bold: true, color: MUTED, center: true });
+        this.box(bx, y - stH, third, stH, { fill: PANEL });
+        this.text(bx + third / 2, y - 21, String(val == null ? "—" : val), { size: 18, bold: true, center: true });
+        this.text(bx + third / 2, y - 33, lab, { size: 6, bold: true, color: MUTED, center: true });
       }
-      y -= 38;
+      y -= stH + 8;
 
       // HP
       this.box(x, y - 46, w, 46);
