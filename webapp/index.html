@@ -2125,6 +2125,9 @@ function refreshDynamicI18n(){
   // крок 4 (спорядження) + крок 5 (огляд)
   if (S._view === "equipment" && typeof buildEquipment === "function") buildEquipment();
   if (S._view === "review" && typeof renderReview === "function") renderReview(computeCharacter());
+  // діалог «Випадковий персонаж», якщо відкритий (визначаємо за полем rcName)
+  if (!$("modal").classList.contains("hidden") && $("rcName")
+      && typeof renderRandomDialog === "function") renderRandomDialog();
 }
 
 function toggleLangMenu(ev){
@@ -3732,7 +3735,7 @@ function rcBarsHtml(){
   return `<div style="padding-left:28px;margin-top:10px">
     <div style="display:flex;align-items:flex-end;gap:2px;height:42px">${bars}</div>
     <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--hint);margin-top:4px">
-      <span>рів.1 ~9%</span><span>10</span><span>20 ~1%</span></div></div>`;
+      <span>${t("rc.barLow")}</span><span>10</span><span>${t("rc.barHigh")}</span></div></div>`;
 }
 /* Броня раси/підкласу — скануємо лише рядки про броню/щит, щоб уникнути хибних збігів */
 function rcRaceArmorText(){
@@ -3859,26 +3862,26 @@ function renderRandomDialog(){
     <div class="od">${desc}</div>${extra||""}</div>`;
   const stepper=`<div style="display:flex;align-items:center;gap:8px;margin:10px 0 2px 28px">
     <button class="rc-step" onclick="event.stopPropagation();rcLevelStep(-1)">−</button>
-    <div class="rc-lvl">Рівень <b>${RC.level}</b></div>
+    <div class="rc-lvl">${t("rc.lvl")} <b>${RC.level}</b></div>
     <button class="rc-step" onclick="event.stopPropagation();rcLevelStep(1)">+</button></div>`;
-  let body=`<p class="sub">Раса, клас, передісторія та все інше — навмання. Обери, як задати рівень:</p>`;
-  body+=opt("uniform","Рівні порівну (1–20)","Кожен рівень із шансом 1/20 — від 1-го до 20-го.");
-  body+=opt("weighted","Більше низьких рівнів","Чим вищий рівень — тим рідше випадає.", rcBarsHtml());
-  body+=opt("fixed",`Персонаж такого-то рівня <span class="src-tag">нове</span>`,
-    "Рівень задаєш ти, решта — навмання.", RC.mode==="fixed"?stepper:"");
-  body+=`<label class="field">Ім'я персонажа</label>`+
-    `<input id="rcName" placeholder="напр. Тордек Камінь" value="${esc(RC.name)}" oninput="window._RC.name=this.value"/>`;
-  body+=`<div class="conflict-note">🎲 Характеристики — стандартний набір <b>15, 14, 13, 12, 10, 8</b> навмання. `+
-    `Зброя й броня — лише ті, якими володіє раса або клас.</div>`;
+  let body=`<p class="sub">${t("rc.sub")}</p>`;
+  body+=opt("uniform",t("rc.uniform"),t("rc.uniformDesc"));
+  body+=opt("weighted",t("rc.weighted"),t("rc.weightedDesc"), rcBarsHtml());
+  body+=opt("fixed",`${t("rc.fixed")} <span class="src-tag">${t("rc.new")}</span>`,
+    t("rc.fixedDesc"), RC.mode==="fixed"?stepper:"");
+  body+=`<label class="field">${t("sh.charName")}</label>`+
+    `<input id="rcName" placeholder="${esc(t("rc.namePh"))}" value="${esc(RC.name)}" oninput="window._RC.name=this.value"/>`;
+  body+=`<div class="conflict-note">${t("rc.statsPre")}<b>15, 14, 13, 12, 10, 8</b> `+
+    `${t("rc.statsPost")}</div>`;
   body+=`<div id="rcErr" class="hidden" style="color:var(--accent);font-size:13px;margin-top:8px"></div>`;
-  body+=`<div class="modal-nav"><button class="btn btn-primary" onclick="rcGenerate()">🎲 Згенерувати та зберегти PDF</button></div>`;
-  openModal("🎲 Випадковий персонаж", body);
+  body+=`<div class="modal-nav"><button class="btn btn-primary" onclick="rcGenerate()">${t("rc.generate")}</button></div>`;
+  openModal("🎲 "+t("dice.title"), body);
 }
 function rcSetMode(m){ window._RC.mode=m; renderRandomDialog(); }
 function rcLevelStep(d){ const RC=window._RC; RC.level=Math.max(1, Math.min(20, RC.level+d)); renderRandomDialog(); }
 function rcGenerate(){
   const RC=window._RC; RC.name=(RC.name||"").trim();
-  if(!RC.name){ const e=$("rcErr"); if(e){ e.textContent="Спершу введи ім'я персонажа."; e.classList.remove("hidden"); } return; }
+  if(!RC.name){ const e=$("rcErr"); if(e){ e.textContent=t("rc.errName"); e.classList.remove("hidden"); } return; }
   closeModal();
   generateRandomCharacter();
   finish();
