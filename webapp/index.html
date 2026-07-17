@@ -86,8 +86,8 @@
   .trait b { display:block; font-size:14px; }
   .trait p { margin:2px 0 0; color:var(--hint); font-size:13px; }
 
-  .opt { border:1.5px solid var(--line); border-left:3px solid transparent; border-radius:12px; padding:11px 12px; margin-bottom:8px; cursor:pointer; }
-  .opt.sel { border-color:var(--accent); border-left-color:var(--accent); background:rgba(182,65,47,.12); }
+  .opt { border:1.5px solid var(--line); border-radius:12px; padding:11px 12px; margin-bottom:8px; cursor:pointer; }
+  .opt.sel { border-color:var(--accent); background:rgba(182,65,47,.12); box-shadow:inset 3px 0 0 var(--accent); }
   .opt .on { display:flex; align-items:center; gap:10px; }
   .opt-radio { flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid var(--hint); box-sizing:border-box; }
   .opt.sel .opt-radio { border:5px solid var(--accent); background:var(--bg); }
@@ -111,6 +111,12 @@
   .badge .bthumb svg { width:100%; height:100%; display:block; }
   .badge .binfo { flex:1; } .badge .bt { font-weight:700; } .badge .bs { font-size:12px; color:var(--hint); }
   .badge .change { color:var(--accent); font-size:13px; background:none; border:none; cursor:pointer; padding:6px; }
+  .bg-empty { display:flex; align-items:center; gap:12px; background:var(--bg); border:1px dashed rgba(182,65,47,.6);
+    border-radius:12px; padding:11px 12px; cursor:pointer; }
+  .bg-empty-ic { font-size:22px; flex:none; }
+  .bg-empty-txt { flex:1; display:flex; flex-direction:column; }
+  .bg-empty-txt b { font-weight:700; } .bg-empty-txt small { font-size:12px; color:var(--hint); margin-top:1px; }
+  .bg-empty-cta { color:var(--accent); font-size:13px; font-weight:700; flex:none; }
 
   .modes { display:flex; gap:8px; margin:0 0 12px; }
   .mode-btn { flex:1; padding:11px; text-align:center; border-radius:12px; border:1.5px solid var(--line);
@@ -196,6 +202,17 @@
     background:linear-gradient(to top,var(--bg) 72%,transparent); display:flex; gap:10px; }
   .btn { flex:1; padding:15px; border-radius:12px; border:none; font-size:16px; font-weight:700; cursor:pointer; }
   .btn-primary { background:var(--btn); color:var(--btn-text); }
+
+  /* кнопка «випадковий персонаж» у шапці + діалог */
+  .rl-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .dice-btn { flex:none; width:44px; height:44px; margin-top:12px; border-radius:13px; border:1.5px solid var(--accent);
+    background:rgba(182,65,47,.14); color:var(--text); font-size:23px; cursor:pointer; line-height:1; }
+  .dice-btn:active { background:rgba(182,65,47,.28); }
+  .rc-step { width:36px; height:38px; border-radius:9px; border:1px solid var(--line); background:var(--bg);
+    color:var(--text); font-size:19px; cursor:pointer; padding:0; }
+  .rc-lvl { min-width:110px; text-align:center; background:var(--bg); border:1px solid var(--line);
+    border-radius:9px; padding:9px 0; font-size:15px; font-weight:700; }
+  .rc-lvl b { color:var(--accent); }
 
   /* особливості по рівнях */
   .lvl-row { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
@@ -284,6 +301,17 @@
   .gear-toggle.on { border-color:var(--accent); }
   .gear-toggle.on .eq-cbx { background:var(--accent); border-color:var(--accent); }
   body.has-grad .gear-toggle { background:rgba(20,20,25,.60); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+  /* стандартний режим — групи виборів */
+  .grp-head { display:flex; align-items:center; gap:8px; margin:0 0 8px; }
+  .grp-head .n { width:20px; height:20px; border-radius:6px; background:rgba(182,65,47,.2); color:var(--accent);
+    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
+  .grp-head .t { font-size:13px; font-weight:700; }
+  .grp-head .pick { margin-left:auto; font-size:10px; color:var(--hint); text-transform:uppercase; letter-spacing:.04em; }
+  .anybox { margin:8px 0 0 28px; padding:8px 10px; border:1px dashed rgba(182,65,47,.5); border-radius:10px; background:rgba(0,0,0,.14); }
+  .anybox select { padding:8px 10px; font-size:14px; }
+  .fixed-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .fixed-row .pill { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-size:12px; }
+  body.has-grad .fixed-row .pill { background:rgba(0,0,0,.26); }
   .atk-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
   .atk-tbl th { font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--hint); text-align:left; padding:0 0 6px; font-weight:600; }
   .atk-tbl td { padding:7px 0; border-top:1px solid var(--line); vertical-align:middle; }
@@ -299,7 +327,10 @@
 
 <!-- ============ КРОК 1: СПИСОК РАС ============ -->
 <div id="view-race-list" class="view">
-  <h1>🐉 Створення персонажа</h1>
+  <div class="rl-head">
+    <h1>🐉 Створення персонажа</h1>
+    <button class="dice-btn" onclick="openRandomDialog()" aria-label="Випадковий персонаж" title="Випадковий персонаж">🎲</button>
+  </div>
   <p class="sub">D&D 5e · Крок 1 — обери расу (тапни, щоб прочитати)</p>
   <label class="opt-toggle"><input type="checkbox" id="optToggle" checked onchange="S.optionalFeats=this.checked">
     <span>Додавати опційні вміння класів (Tasha) у чарник</span></label>
@@ -360,6 +391,27 @@
   <div class="footer"><button class="btn btn-primary" onclick="chooseClass()">Обрати клас →</button></div>
 </div>
 
+<!-- ============ СПИСОК ПЕРЕДІСТОРІЙ ============ -->
+<div id="view-bg-list" class="view hidden">
+  <div class="topbar"><button class="back" onclick="showView('sheet')">←</button>
+    <span class="topbar-title">Передісторія</span></div>
+  <p class="sub">Обери передісторію (тапни, щоб прочитати опис)</p>
+  <div class="tile-list" id="bgList"></div>
+</div>
+
+<!-- ============ ДЕТАЛЬ ПЕРЕДІСТОРІЇ ============ -->
+<div id="view-bg-detail" class="view hidden">
+  <div class="topbar"><button class="back" onclick="openBgList()">←</button>
+    <span class="topbar-title">Передісторія</span></div>
+  <div class="hero hero-banner">
+    <div class="hero-art ticon" id="bdIcon" style="display:flex;align-items:center;justify-content:center;font-size:44px;background:var(--card)"></div>
+    <div><div class="hero-name" id="bdName"></div><div class="hero-tag" id="bdTag"></div></div></div>
+  <p class="detail-desc" id="bdDesc"></p>
+  <div class="card"><h2>Що дає</h2><div id="bdGrants"></div></div>
+  <div class="card"><h2>Особливість</h2><div id="bdFeature"></div></div>
+  <div class="footer"><button class="btn btn-primary" onclick="chooseBg()">Обрати передісторію →</button></div>
+</div>
+
 <!-- ============ КРОК 3: ПОВНИЙ ЧАРНИК ============ -->
 <div id="view-sheet" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('class-list')">←</button>
@@ -377,10 +429,8 @@
   <div class="card">
     <label class="field">Ім'я персонажа</label>
     <input id="name" placeholder="напр. Тордек Камінь" />
-    <div class="pick-head"><label class="field">Передісторія</label>
-      <button class="info-btn" onclick="bgInfo()">ⓘ</button></div>
-    <select id="background" onchange="onBackgroundChange()"></select>
-    <div class="desc-line" id="bgDesc"></div>
+    <label class="field">Передісторія</label>
+    <div id="bgBadge"></div>
     <label class="field">Світогляд</label>
     <select id="alignment"></select>
   </div>
@@ -440,24 +490,35 @@
   </div>
 
   <p class="sub" id="eqStarter" style="margin:0 2px 10px"></p>
-  <label class="gear-toggle" id="eqShowAllRow" onclick="toggleShowAll(event)">
-    <span class="eq-cbx" id="eqShowAllBox"></span>
-    <span>Показувати спорядження без володіння</span></label>
 
-  <div class="card">
-    <div class="pick-head"><h2 style="margin:0">Броня</h2><span class="sub" id="eqArmorProf" style="margin:0"></span></div>
-    <label class="field">Обладунок</label>
-    <select id="eqArmor" onchange="onArmorChange()"></select>
-    <div class="desc-line" id="eqArmorDesc"></div>
-    <label class="eq-item" id="eqShieldRow" style="cursor:pointer;border-bottom:none;padding-top:10px" onclick="toggleShield(event)">
-      <span class="eq-cbx" id="eqShieldBox"></span>
-      <span class="eq-main"><b>Щит</b><small id="eqShieldNote">+2 до КБ</small></span>
-    </label>
+  <div class="modes">
+    <div class="mode-btn active" id="eqModeStd" onclick="setEquipMode('standard')">Стандартне<small>вибори класу</small></div>
+    <div class="mode-btn" id="eqModeCustom" onclick="setEquipMode('custom')">Кастомне<small>обираю сам</small></div>
   </div>
 
-  <div class="card">
-    <div class="pick-head"><h2 style="margin:0">Зброя</h2><span class="sub" id="eqWeaponCount" style="margin:0"></span></div>
-    <div id="eqWeapons"></div>
+  <label class="gear-toggle" id="eqShowAllRow" onclick="toggleShowAll(event)">
+    <span class="eq-cbx" id="eqShowAllBox"></span>
+    <span>Показувати варіанти без володіння</span></label>
+
+  <!-- Стандартне: вибори а/б/в -->
+  <div id="eqStandard"></div>
+
+  <!-- Кастомне: вільний вибір -->
+  <div id="eqCustom" class="hidden">
+    <div class="card">
+      <div class="pick-head"><h2 style="margin:0">Броня</h2><span class="sub" id="eqArmorProf" style="margin:0"></span></div>
+      <label class="field">Обладунок</label>
+      <select id="eqArmor" onchange="onArmorChange()"></select>
+      <div class="desc-line" id="eqArmorDesc"></div>
+      <label class="eq-item" id="eqShieldRow" style="cursor:pointer;border-bottom:none;padding-top:10px" onclick="toggleShield(event)">
+        <span class="eq-cbx" id="eqShieldBox"></span>
+        <span class="eq-main"><b>Щит</b><small id="eqShieldNote">+2 до КБ</small></span>
+      </label>
+    </div>
+    <div class="card">
+      <div class="pick-head"><h2 style="margin:0">Зброя</h2><span class="sub" id="eqWeaponCount" style="margin:0"></span></div>
+      <div id="eqWeapons"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -1810,7 +1871,25 @@ const BACKGROUNDS = {
     desc:"Ти провів роки на самоті, у роздумах чи вигнанні." },
   "Артист": { skills:["Акробатика","Виступ"], tools:["Набір для маскування","Муз. інструмент"], langs:0,
     feature:{name:"Улюбленець публіки", desc:"Тебе впізнають і люблять глядачі; легко знаходиш прихисток серед шанувальників."},
-    desc:"Сцена — твоє життя: музикант, актор чи акробат." }
+    desc:"Сцена — твоє життя: музикант, актор чи акробат." },
+  "Гільдієць-ремісник": { skills:["Прозорливість","Переконання"], tools:["Ремісничі інструменти"], langs:1,
+    feature:{name:"Членство в гільдії", desc:"Гільдія надає підтримку, притулок і доступ до впливових майстрів; за це платиш внески."},
+    desc:"Майстер свого ремесла й член торгової гільдії." },
+  "Чужинець": { skills:["Атлетика","Виживання"], tools:["Муз. інструмент"], langs:1,
+    feature:{name:"Мандрівник", desc:"Чудово орієнтуєшся й пам'ятаєш місцевість; завжди знайдеш їжу та воду для себе й супутників у дикій природі."},
+    desc:"Ти виріс у глушині, далеко від зручностей цивілізації." },
+  "Безпритульник": { skills:["Спритність рук","Непомітність"], tools:["Набір для маскування","Злодійські інструменти"], langs:0,
+    feature:{name:"Таємниці міста", desc:"Знаєш потаємні ходи міста й рухаєшся ним удвічі швидше за звичайні маршрути."},
+    desc:"Ти виживав дитиною на вулицях великого міста сам." },
+  "Моряк": { skills:["Атлетика","Сприйняття"], tools:["Навігаційні інструменти","Транспорт (водний)"], langs:0,
+    feature:{name:"Корабельний квиток", desc:"За послугу можеш безкоштовно проплисти на кораблі для себе й супутників — тебе пам'ятають старі знайомі команди."},
+    desc:"Роки в морі загартували тебе; палуба — твій дім." },
+  "Шарлатан": { skills:["Обман","Спритність рук"], tools:["Набір для маскування","Набір для підробок"], langs:0,
+    feature:{name:"Фальшива особистість", desc:"Маєш другу переконливу особистість із документами й вмієш підробляти папери."},
+    desc:"Ти живеш із хитрощів, афер і вправного обману." },
+  "Пірат": { skills:["Атлетика","Сприйняття"], tools:["Навігаційні інструменти","Транспорт (водний)"], langs:0,
+    feature:{name:"Погана слава", desc:"Твоя лиха репутація змушує людей поступатися; прості городяни й варта воліють не зв'язуватися з тобою."},
+    desc:"Ти ходив під чорним прапором — тебе бояться в портах." }
 };
 
 /* ================================ ЧЕРТИ ================================
@@ -1860,6 +1939,7 @@ const tg = window.Telegram ? window.Telegram.WebApp : null;
 
 const S = {
   race:null, subrace:null, class:null, subclass:null, level:1,
+  background:null, detailBg:null,
   detailRace:null, detailSub:null, detailClass:null, detailLevel:1,
   mode:"full", method:"array",
   base:{ str:null,dex:null,con:null,int:null,wis:null,cha:null },
@@ -1877,6 +1957,12 @@ const RACE_TAG = {
   "Драконороджений":"Сила + Харизма · дихання", "Гном":"Інтелект · захист від магії",
   "Напівельф":"Харизма · гнучкість", "Напіворк":"Сила · живучість",
   "Тіфлінг":"Харизма · вогонь · магія"
+};
+const BG_ICON = {
+  "Аколіт":"🙏","Злочинець":"🗝️","Народний герой":"🌾","Шляхтич":"👑",
+  "Мудрець":"📚","Солдат":"🎖️","Пустельник":"🕯️","Артист":"🎭",
+  "Гільдієць-ремісник":"⚒️","Чужинець":"🏔️","Безпритульник":"🏚️",
+  "Моряк":"⚓","Шарлатан":"🎲","Пірат":"🏴‍☠️"
 };
 const CLASS_ICON = {
   "Варвар":"🪓","Бард":"🎵","Клірик":"✨","Друїд":"🍃","Воїн":"⚔️","Монах":"👊",
@@ -1982,8 +2068,8 @@ function infoBtn(title, bodyHtml){ const i = _infoStore.push({title, bodyHtml}) 
 function showInfo(i){ const d = _infoStore[i]; if(d) openModal(esc(d.title), d.bodyHtml); }
 
 /* --------------------------- роутер --------------------------- */
-const VIEWS = ["race-list","race-detail","class-list","class-detail","sheet","equipment","review"];
-const STEP_OF = { "race-list":1,"race-detail":1,"class-list":2,"class-detail":2,"sheet":3,"equipment":4,"review":5 };
+const VIEWS = ["race-list","race-detail","class-list","class-detail","bg-list","bg-detail","sheet","equipment","review"];
+const STEP_OF = { "race-list":1,"race-detail":1,"class-list":2,"class-detail":2,"bg-list":3,"bg-detail":3,"sheet":3,"equipment":4,"review":5 };
 function setPageTheme(cols){
   document.body.style.background = cols
     ? `linear-gradient(180deg, ${cols[0]} 0%, ${cols[1]} 22%, var(--bg) 50%) fixed`
@@ -2030,7 +2116,6 @@ function showView(name){
 
 /* --------------------------- ініціалізація --------------------------- */
 function init(){
-  fillSelect("background", Object.keys(BACKGROUNDS), "Солдат");
   fillSelect("alignment", ALIGNMENTS, "Істинно нейтральний");
   $("skills").addEventListener("change", onSkillChange);
   renderRaceFilter(); renderRaceList(); renderClassList();
@@ -2310,7 +2395,49 @@ function currentRace(){ return S.race ? RACES[S.race] : null; }
 function currentClass(){ return S.class ? CLASSES[S.class] : null; }
 function currentSubraceName(){ return S.subrace || ""; }
 function currentSubrace(){ const r=currentRace(); return (r && r.subraces && S.subrace) ? r.subraces[S.subrace] : null; }
-function currentBg(){ return BACKGROUNDS[getSel("background")]; }
+function currentBg(){ return S.background ? BACKGROUNDS[S.background] : null; }
+
+/* --- Передісторія: список → деталь → вибір --- */
+function renderBgList(){
+  $("bgList").innerHTML = Object.keys(BACKGROUNDS).map(n=>{
+    const b=BACKGROUNDS[n];
+    return `<div class="tile ${n===S.background?"sel":""}" onclick="openBg('${q(n)}')">
+      <div class="ticon" style="background:var(--card)">${BG_ICON[n]||"📜"}</div>
+      <div class="tinfo"><div class="tname">${esc(n)}</div><div class="ttag">${esc(b.skills.join(" · "))}</div></div>
+      <div class="chev">›</div></div>`;
+  }).join("");
+}
+function openBgList(){ renderBgList(); showView("bg-list"); }
+function openBg(name){ S.detailBg=name; renderBgDetail(); showView("bg-detail"); }
+function renderBgDetail(){
+  const n=S.detailBg, b=BACKGROUNDS[n];
+  $("bdIcon").textContent = BG_ICON[n]||"📜";
+  $("bdName").textContent = n;
+  $("bdTag").textContent = b.skills.join(" · ");
+  $("bdDesc").textContent = b.desc||"";
+  let g=`<div class="modal-item"><b>Навички</b><p>${esc(b.skills.join(", "))}</p></div>`;
+  if(b.tools&&b.tools.length) g+=`<div class="modal-item"><b>Інструменти</b><p>${esc(b.tools.join(", "))}</p></div>`;
+  if(b.langs) g+=`<div class="modal-item"><b>Мови</b><p>+${b.langs} на вибір</p></div>`;
+  $("bdGrants").innerHTML=g;
+  $("bdFeature").innerHTML=`<div class="modal-item"><b>${esc(b.feature.name)}</b><p>${esc(b.feature.desc)}</p></div>`;
+}
+function chooseBg(){ S.background=S.detailBg; renderBgBadge(); onBackgroundChange(); showView("sheet"); }
+function renderBgBadge(){
+  const box=$("bgBadge"); if(!box) return;
+  const n=S.background;
+  if(!n){
+    box.innerHTML=`<div class="bg-empty" onclick="openBgList()">
+      <span class="bg-empty-ic">📜</span>
+      <span class="bg-empty-txt"><b>Передісторія не обрана</b><small>Тисни, щоб переглянути й обрати</small></span>
+      <span class="bg-empty-cta">Обрати →</span></div>`;
+    return;
+  }
+  const b=BACKGROUNDS[n];
+  box.innerHTML=`<div class="badge">
+    <div class="bthumb ticon" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--card)">${BG_ICON[n]||"📜"}</div>
+    <div class="binfo"><div class="bt">${esc(n)}</div><div class="bs">${esc(b.skills.join(" · "))}</div></div>
+    <button class="change" onclick="openBgList()">змінити</button></div>`;
+}
 
 function renderSummary(){
   const r=currentRace(), c=currentClass();
@@ -2325,6 +2452,7 @@ function renderSummary(){
 
 function buildSheet(){
   renderSummary();
+  renderBgBadge();
   onBackgroundChange();
   renderRaceChoices();
   $("raceChoicesCard").classList.toggle("hidden", !raceAsiChoiceDef());
@@ -2420,16 +2548,7 @@ function asiNext(){
   else { closeModal(); S.asiAfter && S.asiAfter(); }
 }
 
-function bgInfo(){
-  const bg=currentBg();
-  let html=`<p>${esc(bg.desc)}</p>`;
-  html+=`<div class="modal-item"><b>Навички</b><p>${bg.skills.join(", ")}</p>`;
-  if(bg.tools&&bg.tools.length) html+=`<b>Інструменти</b><p>${bg.tools.join(", ")}</p>`;
-  if(bg.langs) html+=`<b>Мови</b><p>+${bg.langs} на вибір</p>`;
-  html+=`</div><div class="modal-item"><b>${esc(bg.feature.name)}</b><p>${esc(bg.feature.desc)}</p></div>`;
-  openModal("Передісторія: "+esc(getSel("background")), html);
-}
-function onBackgroundChange(){ $("bgDesc").textContent = currentBg().desc || ""; buildSkills(); recalc(); }
+function onBackgroundChange(){ buildSkills(); recalc(); }
 
 /* расові бонуси на вибір */
 function raceAsiChoiceDef(){ const r=currentRace(), sr=currentSubrace(); return (r&&r.asiChoice)||(sr&&sr.asiChoice)||null; }
@@ -2550,7 +2669,7 @@ function onManual(ab,val){ S.base[ab]=Math.max(1,Math.min(30,parseInt(val||"10",
    НАВИЧКИ + рятівні
    ========================================================================= */
 function raceFixedSkills(){ const r=currentRace(); return r.skillFixed?[...r.skillFixed]:[]; }
-function bgSkills(){ return currentBg().skills; }
+function bgSkills(){ const b=currentBg(); return b?b.skills:[]; }
 function skillSources(){
   const map={}; const add=(n,s)=>{(map[n]=map[n]||[]).push(s);};
   raceFixedSkills().forEach(s=>add(s,"раса")); S.raceSkillPick.forEach(s=>add(s,"раса"));
@@ -2570,8 +2689,15 @@ function buildSkills(){
   }
   box.appendChild(groupHeader("Від класу",`оберіть ${cl.skillCount}`));
   cl.skills.forEach(n=>box.appendChild(skillRow(n,"class-pick",S.classSkillPick.has(n),false,conflictOf(n))));
-  box.appendChild(groupHeader("Від передісторії","фіксовані"));
-  bg.skills.forEach(n=>box.appendChild(skillRow(n,"bg-fixed",true,true,conflictOf(n))));
+  if(bg){
+    box.appendChild(groupHeader("Від передісторії","фіксовані"));
+    bg.skills.forEach(n=>box.appendChild(skillRow(n,"bg-fixed",true,true,conflictOf(n))));
+  } else {
+    box.appendChild(groupHeader("Від передісторії","не обрано"));
+    const d=document.createElement("div"); d.className="desc-line";
+    d.innerHTML=`Передісторія ще не обрана — <a href="#" onclick="openBgList();return false" style="color:var(--accent)">обрати</a>.`;
+    box.appendChild(d);
+  }
   updateSkillStates();
 }
 function groupHeader(title,hint){ const d=document.createElement("div"); d.className="skill-group-head";
@@ -2740,6 +2866,89 @@ const ARMORS = {
   plate:      {name:"Лати",cat:"heavy",base:18,addDex:false,maxDex:0,stealth:true,strReq:15,mk:"лати"}
 };
 // Володіння класу (з вільного тексту c.prof) → прапорці
+/* Стартові набори класів як вибори (варіант «Стандартне»).
+   grant-об'єкт: {w:ключ_зброї}|{a:ключ_броні}|{shield:1}|{any:"simple|simple-melee|martial|martial-melee"}
+                 |{pack:"текст"}|{text:"текст"}  (+ qty, extra, needProf).
+   Опція з кількома grant'ами задається через g:[...]. */
+const CLASS_EQUIP = {
+  "Варвар": { fixed:[{w:"javelin",qty:4},{pack:"Набір мандрівника"}], choose:[
+    { t:"Основна зброя", from:[{w:"greataxe"},{any:"martial-melee"}] },
+    { t:"Друга зброя", from:[{w:"handaxe",qty:2},{any:"simple"}] } ] },
+  "Бард": { fixed:[{a:"leather"},{w:"dagger"}], choose:[
+    { t:"Зброя", from:[{w:"rapier"},{w:"longsword"},{any:"simple"}] },
+    { t:"Похідний набір", from:[{pack:"Дипломатичний набір"},{pack:"Набір артиста"}] },
+    { t:"Інструмент", from:[{text:"Лютня"},{text:"Інший муз. інструмент"}] } ] },
+  "Клірик": { fixed:[{shield:1},{text:"Символ віри"}], choose:[
+    { t:"Зброя", from:[{w:"mace"},{w:"warhammer",needProf:true}] },
+    { t:"Обладунок", from:[{a:"scalemail"},{a:"leather"},{a:"chainmail",needProf:true}] },
+    { t:"Друга зброя", from:[{w:"lightcrossbow",extra:"20 болтів"},{any:"simple"}] },
+    { t:"Похідний набір", from:[{pack:"Набір священника"},{pack:"Набір дослідника"}] } ] },
+  "Друїд": { fixed:[{a:"leather"},{pack:"Набір дослідника"},{text:"Друїдичний фокус"}], choose:[
+    { t:"Щит або зброя", from:[{shield:1,text:"Дерев'яний щит"},{any:"simple"}] },
+    { t:"Зброя", from:[{w:"scimitar"},{any:"simple-melee"}] } ] },
+  "Воїн": { fixed:[], choose:[
+    { t:"Обладунок", from:[{a:"chainmail"},{g:[{a:"leather"},{w:"longbow",extra:"20 стріл"}]}] },
+    { t:"Основна зброя", from:[{g:[{any:"martial"},{shield:1}]},{g:[{any:"martial"},{any:"martial"}]}] },
+    { t:"Друга зброя", from:[{w:"lightcrossbow",extra:"20 болтів"},{w:"handaxe",qty:2}] },
+    { t:"Похідний набір", from:[{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
+  "Монах": { fixed:[{w:"dart",qty:10}], choose:[
+    { t:"Зброя", from:[{w:"shortsword"},{any:"simple"}] },
+    { t:"Похідний набір", from:[{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
+  "Паладин": { fixed:[{a:"chainmail"},{text:"Символ віри"}], choose:[
+    { t:"Основна зброя", from:[{g:[{any:"martial"},{shield:1}]},{g:[{any:"martial"},{any:"martial"}]}] },
+    { t:"Метальна/ближня", from:[{w:"javelin",qty:5},{any:"simple-melee"}] },
+    { t:"Похідний набір", from:[{pack:"Набір священника"},{pack:"Набір мандрівника"}] } ] },
+  "Слідопит": { fixed:[{w:"longbow",extra:"20 стріл"}], choose:[
+    { t:"Обладунок", from:[{a:"scalemail"},{a:"leather"}] },
+    { t:"Зброя", from:[{g:[{w:"shortsword"},{w:"shortsword"}]},{g:[{any:"simple-melee"},{any:"simple-melee"}]}] },
+    { t:"Похідний набір", from:[{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
+  "Пройдисвіт": { fixed:[{a:"leather"},{w:"dagger",qty:2},{text:"Злодійські інструменти"}], choose:[
+    { t:"Зброя", from:[{w:"rapier"},{w:"shortsword"}] },
+    { t:"Друга зброя", from:[{w:"shortbow",extra:"20 стріл"},{w:"shortsword"}] },
+    { t:"Похідний набір", from:[{pack:"Набір грабіжника"},{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
+  "Чаклун": { fixed:[{w:"dagger",qty:2}], choose:[
+    { t:"Зброя", from:[{w:"lightcrossbow",extra:"20 болтів"},{any:"simple"}] },
+    { t:"Магічний засіб", from:[{text:"Торба з компонентами"},{text:"Магічний фокус"}] },
+    { t:"Похідний набір", from:[{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
+  "Чорнокнижник": { fixed:[{a:"leather"},{w:"dagger",qty:2}], choose:[
+    { t:"Зброя", from:[{w:"lightcrossbow",extra:"20 болтів"},{any:"simple"}] },
+    { t:"Проста зброя", from:[{any:"simple"}] },
+    { t:"Магічний засіб", from:[{text:"Торба з компонентами"},{text:"Магічний фокус"}] },
+    { t:"Похідний набір", from:[{pack:"Набір науковця"},{pack:"Набір дослідника підземель"}] } ] },
+  "Чарівник": { fixed:[{text:"Книга заклять"}], choose:[
+    { t:"Зброя", from:[{w:"quarterstaff"},{w:"dagger"}] },
+    { t:"Магічний засіб", from:[{text:"Торба з компонентами"},{text:"Магічний фокус"}] },
+    { t:"Похідний набір", from:[{pack:"Набір науковця"},{pack:"Набір мандрівника"}] } ] }
+};
+function weaponAvg(dmg){ const m=String(dmg).match(/(\d+)d(\d+)/); return m?(+m[1])*((+m[2])+1)/2:0; }
+function catMatch(w,cat){
+  if(cat.indexOf("simple")===0 && w.cat!=="simple") return false;
+  if(cat.indexOf("martial")===0 && w.cat!=="martial") return false;
+  if(/melee$/.test(cat) && w.ranged) return false;
+  return true;
+}
+// «Будь-яка … зброя» → найкраща за очками шкоди під вищий модифікатор (Сила/Спритність).
+// avoidTwoH: коли опція йде разом зі щитом — не пропонуємо дворучну зброю.
+function bestWeaponFor(cat,mods,avoidTwoH,exclude){
+  let keys=Object.keys(WEAPONS).filter(k=>catMatch(WEAPONS[k],cat));
+  if(avoidTwoH){ const oneH=keys.filter(k=>!WEAPONS[k].twoH); if(oneH.length) keys=oneH; }
+  if(exclude&&exclude.length){ const left=keys.filter(k=>!exclude.includes(k)); if(left.length) keys=left; }
+  keys.sort((a,b)=>{ const wa=WEAPONS[a],wb=WEAPONS[b];
+    const sa=weaponAvg(wa.versatile||wa.dmg)+mods[weaponAbility(wa,mods)];
+    const sb=weaponAvg(wb.versatile||wb.dmg)+mods[weaponAbility(wb,mods)];
+    return sb-sa; });
+  return keys[0];
+}
+// Зброя, яку клас видає у стартовому наборі — вважається такою, що нею володієш.
+function classKitWeaponKeys(){
+  const def=CLASS_EQUIP[S.class]; const set=new Set(); if(!def) return set;
+  // зброю з needProf («лише якщо володієш») не зараховуємо як гарантоване володіння
+  const scan=o=>(o.g||[o]).forEach(x=>{ if(x.w && !x.needProf) set.add(x.w); });
+  (def.fixed||[]).forEach(scan); (def.choose||[]).forEach(g=>(g.from||[]).forEach(scan));
+  return set;
+}
+function curMods(){ const s=finalScores(); const m={}; ABILS.forEach(a=>m[a]=mod(s[a])); return m; }
+
 function classProfTags(){
   const c=currentClass(); const prof=(c&&c.prof)||[];
   const txt=prof.join(" · ").toLowerCase();
@@ -2764,9 +2973,10 @@ function weaponAbility(w,mods){
   return "str";
 }
 function computeAttacks(keys,mods,pb,tags){
+  const kit=classKitWeaponKeys();
   return (keys||[]).map(k=>{
     const w=WEAPONS[k]; if(!w) return null;
-    const ab=weaponAbility(w,mods); const prof=isWeaponProf(w,tags);
+    const ab=weaponAbility(w,mods); const prof=isWeaponProf(w,tags)||kit.has(k);
     const bonus=mods[ab];
     return { name:w.name, atk:bonus+(prof?pb:0), dmg:`${w.dmg}${bonus?fmt(bonus):""} ${w.type}`,
              ability:ab, prof, versatile:w.versatile||null, ranged:!!w.ranged };
@@ -2820,7 +3030,7 @@ function computeAC(mods,ctx){
   if(flat){ ac+=flat; label+=` + вбудований +${flat}`; }
   return {ac,label};
 }
-// Автопідбір спорядження зі стартового набору класу
+// Автопідбір із плоского c.equip (fallback, якщо для класу немає CLASS_EQUIP)
 function matchByKey(low,map,field){
   let best=null,bl=0;
   Object.keys(map).forEach(k=>{ const key=map[k][field]; if(key && low.includes(key) && key.length>bl){ best=k; bl=key.length; } });
@@ -2828,26 +3038,75 @@ function matchByKey(low,map,field){
 }
 function applyDefaultEquipment(){
   const c=currentClass(); const items=(c&&c.equip)||[];
-  let armor="none", shield=false; const weapons=[];
+  let armor="none", shield=false; const weapons=[], extra=[];
   items.forEach(it=>{ const low=it.toLowerCase();
-    if(/щит/.test(low)) shield=true;
-    const ak=matchByKey(low,ARMORS,"mk"); if(ak && armor==="none") armor=ak;
-    const wk=matchByKey(low,WEAPONS,"dk"); if(wk && !weapons.includes(wk)) weapons.push(wk);
+    if(/щит/.test(low)){ shield=true; return; }
+    const ak=matchByKey(low,ARMORS,"mk"); if(ak){ if(armor==="none") armor=ak; return; }
+    const wk=matchByKey(low,WEAPONS,"dk"); if(wk){ if(!weapons.includes(wk)) weapons.push(wk); return; }
+    extra.push(it);
   });
-  S.armor=armor; S.shield=shield; S.weapons=weapons; S._equipClass=S.class;
+  S.armor=armor; S.shield=shield; S.weapons=weapons; S.equipExtra=extra; S.equipQty={}; S.equipAmmo={}; S._equipClass=S.class;
 }
-function ensureEquipment(){ if(S.armor===undefined || S._equipClass!==S.class) applyDefaultEquipment(); }
+/* ---- Стандартний режим: вибори класу ---- */
+function optGrants(opt){ return opt.g||[opt]; }
+function optHasShield(opt){ return optGrants(opt).some(x=>x.shield); }
+function optNeedsMissingProf(opt,tags){
+  return optGrants(opt).some(x=>{
+    if(!x.needProf) return false;
+    if(x.w) return !(isWeaponProf(WEAPONS[x.w],tags)||classKitWeaponKeys().has(x.w));
+    if(x.a){ const cc=ARMORS[x.a].cat; return !(cc==="light"?tags.lightA:cc==="medium"?tags.mediumA:tags.heavyA); }
+    return false;
+  });
+}
+function equipStandardInit(){
+  const def=CLASS_EQUIP[S.class]; S.equipPick={}; S.anyPick={}; if(!def) return;
+  const tags=classProfTags(), mods=curMods();
+  (def.choose||[]).forEach((grp,gi)=>{
+    let oi=0; for(let i=0;i<grp.from.length;i++){ if(!optNeedsMissingProf(grp.from[i],tags)){ oi=i; break; } }
+    S.equipPick[gi]=oi;
+    setAnyDefaults(gi,grp.from[oi],mods,true);
+  });
+}
+// Проставляємо авто-зброю для «будь-яка» грантів опції; кілька — роблять РІЗНУ зброю.
+function setAnyDefaults(gi,opt,mods,reset){
+  const noTwoH=optHasShield(opt); const chosen=[];
+  optGrants(opt).forEach((x,j)=>{ if(!x.any) return; const key=gi+"_"+j;
+    let k=reset?null:S.anyPick[key];
+    if(!k || chosen.includes(k)) k=bestWeaponFor(x.any,mods,noTwoH,chosen);
+    S.anyPick[key]=k; chosen.push(k);
+  });
+}
+function applyStandardToGear(){
+  const def=CLASS_EQUIP[S.class]; if(!def){ applyDefaultEquipment(); return; }
+  const mods=curMods();
+  let armor="none", shield=false; const weapons=[], extra=[], qty={}, ammo={};
+  const use=(x,key,noTwoH)=>{
+    if(x.a && armor==="none") armor=x.a;
+    if(x.shield) shield=true;
+    if(x.w){ if(!weapons.includes(x.w)) weapons.push(x.w); if(x.qty>1) qty[x.w]=x.qty; if(x.extra) ammo[x.w]=x.extra; }
+    if(x.any){ const k=(S.anyPick&&S.anyPick[key])||bestWeaponFor(x.any,mods,noTwoH); if(k&&!weapons.includes(k)) weapons.push(k); }
+    if(x.pack) extra.push(x.pack);
+    if(x.text) extra.push(x.text);
+  };
+  (def.fixed||[]).forEach((o,i)=> optGrants(o).forEach((x,j)=> use(x,"f"+i+"_"+j,false)));
+  (def.choose||[]).forEach((grp,gi)=>{ const oi=(S.equipPick&&S.equipPick[gi]!=null)?S.equipPick[gi]:0;
+    const opt=grp.from[oi]; if(opt){ const noTwoH=optHasShield(opt); optGrants(opt).forEach((x,j)=> use(x,gi+"_"+j,noTwoH)); } });
+  S.armor=armor; S.shield=shield; S.weapons=weapons; S.equipExtra=extra; S.equipQty=qty; S.equipAmmo=ammo; S._equipClass=S.class;
+}
+function ensureEquipment(){
+  if(S._equipClass===S.class && S.armor!==undefined) return;
+  if(S.equipMode===undefined) S.equipMode="standard";
+  if(CLASS_EQUIP[S.class]){ equipStandardInit(); applyStandardToGear(); }
+  else applyDefaultEquipment();
+}
 function buildEquipmentList(){
-  const c=currentClass(); const out=[];
+  const out=[];
   if(S.armor && S.armor!=="none" && ARMORS[S.armor]) out.push(ARMORS[S.armor].name);
   if(S.shield) out.push("Щит");
-  (S.weapons||[]).forEach(k=>{ if(WEAPONS[k]) out.push(WEAPONS[k].name); });
-  ((c&&c.equip)||[]).forEach(it=>{ const low=it.toLowerCase();
-    if(/щит/.test(low)) return;
-    if(matchByKey(low,ARMORS,"mk")) return;
-    if(matchByKey(low,WEAPONS,"dk")) return;
-    out.push(it);
-  });
+  (S.weapons||[]).forEach(k=>{ if(WEAPONS[k]){ let n=WEAPONS[k].name;
+    const q=(S.equipQty||{})[k], am=(S.equipAmmo||{})[k];
+    if(q>1) n+=` ×${q}`; if(am) n+=` + ${am}`; out.push(n); } });
+  (S.equipExtra||[]).forEach(e=>{ if(!out.includes(e)) out.push(e); });
   return out;
 }
 /* ---- екран Спорядження ---- */
@@ -2857,17 +3116,89 @@ function showEquipment(){
   buildEquipment();
   showView("equipment");
 }
+function setEquipMode(m){ S.equipMode=m; buildEquipment(); }
+function renderEquipModeToggle(){
+  const std=$("eqModeStd"), cus=$("eqModeCustom"), sBox=$("eqStandard"), cBox=$("eqCustom");
+  const isCustom=S.equipMode==="custom";
+  if(std) std.classList.toggle("active",!isCustom);
+  if(cus) cus.classList.toggle("active",isCustom);
+  if(sBox) sBox.classList.toggle("hidden",isCustom);
+  if(cBox) cBox.classList.toggle("hidden",!isCustom);
+}
 function buildEquipment(){
   ensureEquipment();
   const c=currentClass(); const st=$("eqStarter");
   if(st) st.textContent = "Стартовий набір класу: "+(((c&&c.equip)||[]).join(" · ")||"—");
-  renderShowAll();
-  renderArmorSelect(); renderShield(); renderWeaponList(); renderEquipmentPreview();
+  renderShowAll(); renderEquipModeToggle();
+  if(S.equipMode==="custom"){ renderArmorSelect(); renderShield(); renderWeaponList(); }
+  else { applyStandardToGear(); renderStandard(); }
+  renderEquipmentPreview();
 }
+/* рендер стандартних виборів */
+function grantLabel(x){
+  if(x.w) return WEAPONS[x.w].name+(x.qty>1?` ×${x.qty}`:"")+(x.extra?` + ${x.extra}`:"");
+  if(x.a) return ARMORS[x.a].name;
+  if(x.shield) return x.text||"Щит";
+  if(x.any) return {simple:"Будь-яка проста зброя","simple-melee":"Будь-яка проста ближня зброя",martial:"Будь-яка військова зброя","martial-melee":"Будь-яка військова ближня зброя"}[x.any]||"Будь-яка зброя";
+  if(x.pack) return x.pack;
+  if(x.text) return x.text;
+  return "";
+}
+function catNoun(cat){ return {simple:"прості зброї","simple-melee":"прості ближні зброї",martial:"військові зброї","martial-melee":"військові ближні зброї"}[cat]||"зброї"; }
+function optLabel(opt){
+  const gs=optGrants(opt);
+  const ws=gs.filter(g=>g.w), anys=gs.filter(g=>g.any);
+  if(gs.length>1 && ws.length===gs.length && ws.every(w=>w.w===ws[0].w)) return WEAPONS[ws[0].w].name+" ×"+gs.length;
+  if(gs.length>1 && anys.length===gs.length && anys.every(a=>a.any===anys[0].any)) return (gs.length===2?"Дві ":gs.length+"× ")+catNoun(anys[0].any);
+  return gs.map(grantLabel).join(" + ");
+}
+function optDesc(opt){
+  const parts=[];
+  optGrants(opt).forEach(x=>{
+    if(x.w){ const w=WEAPONS[x.w]; parts.push(`${w.dmg} ${w.type}${w.finesse?" · фінт":""}${w.ranged?" · дальня":""}`); }
+    if(x.a){ const a=ARMORS[x.a]; const cc={light:"легка",medium:"середня",heavy:"важка"}[a.cat];
+      parts.push(`${cc} · КБ ${a.base}${a.addDex?(a.cat==="medium"?" + Спр (макс +2)":" + Спр"):""}`); }
+  });
+  return parts.length?`<div class="od">${esc(parts.join(" · "))}</div>`:"";
+}
+function weaponOptions(cat,cur){
+  return Object.keys(WEAPONS).filter(k=>catMatch(WEAPONS[k],cat))
+    .map(k=>`<option value="${k}" ${k===cur?"selected":""}>${esc(WEAPONS[k].name)} (${WEAPONS[k].dmg})</option>`).join("");
+}
+function fixedGrantLabels(def){ const out=[]; (def.fixed||[]).forEach(o=>optGrants(o).forEach(x=>out.push(grantLabel(x)))); return out; }
+function renderStandard(){
+  const box=$("eqStandard"); if(!box) return;
+  const def=CLASS_EQUIP[S.class];
+  if(!def){ box.innerHTML='<div class="card"><p class="sub" style="margin:0">Для цього класу набір задано напряму — скористайся Кастомним режимом.</p></div>'; return; }
+  const tags=classProfTags(); const mods=curMods(); let html="";
+  (def.choose||[]).forEach((grp,gi)=>{
+    html+=`<div class="card"><div class="grp-head"><span class="n">${gi+1}</span><span class="t">${esc(grp.t)}</span><span class="pick">обери 1</span></div>`;
+    grp.from.forEach((opt,oi)=>{
+      const miss=optNeedsMissingProf(opt,tags), sel=S.equipPick[gi]===oi;
+      if(miss && !S.showAllGear && !sel) return;
+      html+=`<div class="opt ${sel?"sel":""}" onclick="pickStd(${gi},${oi})"><div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(optLabel(opt))}${miss?' <span class="eq-noprof">без володіння</span>':""}</span></div>${optDesc(opt)}`;
+      if(sel){ const anyG=optGrants(opt).map((x,j)=>({x,j})).filter(o=>o.x.any);
+        anyG.forEach(({x,j},idx)=>{ const key=gi+"_"+j; const cur=S.anyPick[key]||bestWeaponFor(x.any,mods);
+          const lbl=anyG.length>1?`<div style="font-size:11px;color:var(--hint);margin-bottom:4px">Зброя ${idx+1}</div>`:"";
+          html+=`<div class="anybox">${lbl}<select onclick="event.stopPropagation()" onchange="pickAny('${key}',this.value)">${weaponOptions(x.any,cur)}</select></div>`; }); }
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  });
+  const fx=fixedGrantLabels(def);
+  if(fx.length) html+=`<div class="card"><div class="grp-head"><span class="t">Отримуєш завжди</span></div><div class="fixed-row">${fx.map(n=>`<span class="pill">🔒 ${esc(n)}</span>`).join("")}</div></div>`;
+  box.innerHTML=html;
+}
+function pickStd(gi,oi){
+  const def=CLASS_EQUIP[S.class]; if(!def) return;
+  S.equipPick[gi]=oi;
+  setAnyDefaults(gi,def.choose[gi].from[oi],curMods(),true);
+  applyStandardToGear(); renderStandard(); renderEquipmentPreview();
+}
+function pickAny(key,val){ S.anyPick[key]=val; applyStandardToGear(); renderStandard(); renderEquipmentPreview(); }
 function renderShowAll(){ const row=$("eqShowAllRow"), box=$("eqShowAllBox"); if(!row) return;
   row.classList.toggle("on",!!S.showAllGear); box.textContent=S.showAllGear?"✓":""; }
-function toggleShowAll(ev){ if(ev) ev.preventDefault(); S.showAllGear=!S.showAllGear;
-  renderShowAll(); renderArmorSelect(); renderShield(); renderWeaponList(); renderEquipmentPreview(); }
+function toggleShowAll(ev){ if(ev) ev.preventDefault(); S.showAllGear=!S.showAllGear; buildEquipment(); }
 function renderArmorSelect(){
   const sel=$("eqArmor"); if(!sel) return;
   const tags=classProfTags(); const catProf={light:tags.lightA,medium:tags.mediumA,heavy:tags.heavyA};
@@ -2909,14 +3240,14 @@ function renderShield(){
 }
 function toggleShield(ev){ if(ev) ev.preventDefault(); S.shield=!S.shield; renderShield(); renderEquipmentPreview(); }
 function renderWeaponList(){
-  const tags=classProfTags(); let html="";
+  const tags=classProfTags(); const kit=classKitWeaponKeys(); let html="";
   [["simple","Проста зброя"],["martial","Військова зброя"]].forEach(([cat,label])=>{
     const keys=Object.keys(WEAPONS).filter(k=>WEAPONS[k].cat===cat
-      && (S.showAllGear || isWeaponProf(WEAPONS[k],tags) || (S.weapons||[]).includes(k))); // ховаємо без володіння
+      && (S.showAllGear || isWeaponProf(WEAPONS[k],tags) || kit.has(k) || (S.weapons||[]).includes(k))); // ховаємо без володіння
     if(!keys.length) return;
     html+=`<div class="eq-group-head">${label}</div>`;
     keys.forEach(k=>{
-      const w=WEAPONS[k], on=(S.weapons||[]).includes(k), prof=isWeaponProf(w,tags);
+      const w=WEAPONS[k], on=(S.weapons||[]).includes(k), prof=isWeaponProf(w,tags)||kit.has(k);
       const props=[];
       if(w.ranged) props.push("дальня"); if(w.finesse) props.push("фінт");
       if(w.versatile) props.push("універс. "+w.versatile); if(w.thrown) props.push("метальна");
@@ -2952,7 +3283,7 @@ function renderEquipmentPreview(){
 }
 
 function computeCharacter(){
-  const level=S.level, bgName=getSel("background");
+  const level=S.level, bgName=S.background;
   const c=currentClass(), r=currentRace(), sr=currentSubrace(), bg=currentBg();
   const scores=finalScores(); const mods={}; ABILS.forEach(a=>mods[a]=mod(scores[a]));
   const pb=profBonus(level); const feats=allChosenFeats();
@@ -3027,6 +3358,7 @@ function computeCharacter(){
 function fail(msg){ const e=$("formErr"); e.textContent=msg; e.classList.remove("hidden"); return false; }
 function validate(){
   if(!$("name").value.trim()) return fail("Введи ім'я персонажа.");
+  if(!S.background) return fail("Обери передісторію.");
   if(S.mode==="full"){
     const cl=currentClass();
     if(S.classSkillPick.size!==cl.skillCount) return fail(`Обери рівно ${cl.skillCount} навичок(и) від класу.`);
@@ -3127,6 +3459,190 @@ async function finish(){
     console.error(err);
     finishStatus("Не вдалося зберегти файл. Спробуй відкрити апку в браузері.", true);
   }
+}
+
+/* =========================================================================
+   ВИПАДКОВИЙ ПЕРСОНАЖ
+   Три сценарії рівня: рівномірний / зважений (плато 1–4 → спад) / заданий.
+   Раса, клас, підклас, характеристики, навички, черти, передісторія,
+   світогляд і спорядження — навмання. Зброя й броня — лише з володінь
+   раси або класу. Ім'я вписує гравець. Далі одразу генерується PDF.
+   ========================================================================= */
+function rcPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function rcShuffle(arr){ const a=[...arr];
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+/* Ваги для зваженого режиму — плавний лінійний спад від 10 (рів.1) до 1 (рів.20).
+   Після нормування дає ймовірності ≈9% (рів.1) → ≈1% (рів.20). Єдине джерело
+   правди: використовується і для кидка рівня, і для міні-графіка в картці. */
+function rcWeights(){ const w=[]; for(let L=1;L<=20;L++) w.push(Math.max(1, 10-(L-1)*9/19)); return w; }
+/* Рівень за обраним сценарієм */
+function rcLevel(mode, fixed){
+  if(mode==="fixed") return Math.max(1, Math.min(20, fixed|0));
+  if(mode==="weighted"){
+    const w=rcWeights(); const sum=w.reduce((a,b)=>a+b,0); let r=Math.random()*sum;
+    for(let L=1;L<=20;L++){ r-=w[L-1]; if(r<0) return L; } return 20;
+  }
+  return 1+Math.floor(Math.random()*20); // uniform
+}
+/* Міні-графік спадання ймовірності по рівнях 1–20 для картки «Більше низьких рівнів» */
+function rcBarsHtml(){
+  const w=rcWeights(); const max=Math.max.apply(null,w);
+  const bars=w.map(v=>{ const h=Math.round(v/max*100); const op=(0.35+0.65*(v/max)).toFixed(2);
+    return `<span style="flex:1;min-height:3px;height:${h}%;background:var(--accent);opacity:${op};border-radius:2px 2px 0 0"></span>`;
+  }).join("");
+  return `<div style="padding-left:28px;margin-top:10px">
+    <div style="display:flex;align-items:flex-end;gap:2px;height:42px">${bars}</div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--hint);margin-top:4px">
+      <span>рів.1 ~9%</span><span>10</span><span>20 ~1%</span></div></div>`;
+}
+/* Броня раси/підкласу — скануємо лише рядки про броню/щит, щоб уникнути хибних збігів */
+function rcRaceArmorText(){
+  const r=currentRace(), sr=currentSubrace();
+  const traits=[...((r&&r.baseTraits)||[]), ...((sr&&sr.traits)||[])];
+  let out="";
+  traits.forEach(t=>{ const s=`${t.name||""} ${t.desc||""}`.toLowerCase();
+    if(/брон|обладун|щит/.test(s)) out+=" "+s; });
+  return out;
+}
+function rcSubclassProfText(){
+  const c=currentClass(); if(!(c&&c.subs&&subclassActive())) return "";
+  const sub=c.subs.find(s=>s.name===S.subclass);
+  return ((sub&&sub.prof)||[]).join(" · ").toLowerCase();
+}
+/* Володіння бронею: клас (classProfTags) АБО раса/підклас — тільки додаємо */
+function rcArmorTags(){
+  const base=classProfTags(); const extra=rcRaceArmorText()+" "+rcSubclassProfText();
+  return {
+    light: base.lightA || /легк|уся броня/.test(extra),
+    medium: base.mediumA || /середн/.test(extra),
+    heavy: base.heavyA || /важк/.test(extra),
+    shield: base.shieldA || /щит/.test(extra)
+  };
+}
+/* Спорядження навмання — лише з дозволених за володінням */
+function rcEquipment(){
+  const tags=classProfTags();
+  const at=rcArmorTags();
+  const allowedArmor=Object.keys(ARMORS).filter(k=>{ const cat=ARMORS[k].cat;
+    return (cat==="light"&&at.light)||(cat==="medium"&&at.medium)||(cat==="heavy"&&at.heavy); });
+  let armor="none";
+  if(allowedArmor.length && Math.random()<0.85) armor=rcPick(allowedArmor);
+  S.armor=armor;
+  S.shield = !!at.shield && Math.random()<0.5;
+  const allowedW=Object.keys(WEAPONS).filter(k=>isWeaponProf(WEAPONS[k],tags));
+  const pool=rcShuffle(allowedW);
+  const n=allowedW.length?(1+Math.floor(Math.random()*2)):0;
+  S.weapons=pool.slice(0, Math.min(n, pool.length));
+  S._equipClass=S.class; // щоб ensureEquipment() не перезатер дефолтом
+}
+/* Головний генератор — заповнює стан S та поля форми, без покрокового UI */
+function generateRandomCharacter(){
+  const RC=window._RC||{mode:"uniform",level:5,name:""};
+
+  // РАСА + ПІДРАСА
+  const raceName=rcPick(Object.keys(RACES)); const r=RACES[raceName];
+  S.detailRace=raceName;
+  S.detailSub = r.subraces ? rcPick(Object.keys(r.subraces)) : null;
+  S.race=raceName; S.subrace=S.detailSub;
+  S.raceAsiPick=[]; S.raceSkillPick=new Set(); S.classSkillPick=new Set();
+  S.humanFeat={feat:"",featAbil:""};
+
+  // КЛАС + РІВЕНЬ
+  const className=rcPick(Object.keys(CLASSES)); const c=CLASSES[className];
+  const level=rcLevel(RC.mode, RC.level);
+  S.detailClass=className; S.detailLevel=level;
+  S.class=className; S.level=level; S.slots={};
+
+  // ПІДКЛАС
+  S.subclass = (c.subs && level>=c.subLevel) ? rcPick(c.subs).name : null;
+
+  // БОЙОВИЙ СТИЛЬ
+  const fs=FS_CONFIG[className];
+  S.fightingStyle = (fs && level>=fs.level) ? rcPick(fsStyles(className)) : null;
+
+  // ХАРАКТЕРИСТИКИ — стандартний набір, розкидається випадково
+  S.method="array"; S.rollPool=[...STANDARD_ARRAY];
+  const arr=rcShuffle(STANDARD_ARRAY); S.base=zeroBase();
+  ABILS.forEach((ab,i)=>{ S.base[ab]=arr[i]; });
+
+  // РАСОВІ БОНУСИ НА ВИБІР
+  const adef=raceAsiChoiceDef();
+  if(adef){ const excl=adef.exclude||[];
+    S.raceAsiPick=rcShuffle(ABILS.filter(a=>!excl.includes(a))).slice(0, adef.count); }
+
+  // СТАРТОВА ЧЕРТА (Варіант людини тощо)
+  if(raceFeatChoice()){
+    const fn=rcPick(Object.keys(FEATS)); const f=FEATS[fn];
+    S.humanFeat={ feat:fn, featAbil:(f.asi&&f.asi.choose)?rcPick(f.asi.from):"" };
+  }
+
+  // ПЕРЕДІСТОРІЯ
+  S.background=rcPick(Object.keys(BACKGROUNDS)); S.detailBg=S.background;
+
+  // НАВИЧКИ (без дублів із передісторією/расою)
+  const taken=new Set([...bgSkills(), ...raceFixedSkills()]);
+  const rdef=raceSkillChoiceDef();
+  if(rdef){ const pool=rcShuffle((rdef.from==="any"?ALL_SKILLS:rdef.from).filter(s=>!taken.has(s)));
+    const pick=pool.slice(0, rdef.count); S.raceSkillPick=new Set(pick); pick.forEach(s=>taken.add(s)); }
+  const cpool=rcShuffle(c.skills.filter(s=>!taken.has(s)));
+  S.classSkillPick=new Set(cpool.slice(0, c.skillCount));
+
+  // ПІДВИЩЕННЯ / ЧЕРТИ на рівнях 4/8/…
+  S.slots={};
+  asiOpportunities().forEach(l=>{ const key=String(l);
+    if(Math.random()<0.5){
+      S.slots[key]={ type:"asi", a1:rcPick(ABILS), a2:rcPick(ABILS), feat:"", featAbil:"" };
+    } else {
+      const fn=rcPick(Object.keys(FEATS)); const f=FEATS[fn];
+      S.slots[key]={ type:"feat", feat:fn, featAbil:(f.asi&&f.asi.choose)?rcPick(f.asi.from):"" };
+    }
+  });
+
+  // СВІТОГЛЯД + ІМ'Я
+  const al=$("alignment"); if(al) al.value=rcPick(ALIGNMENTS);
+  $("name").value=RC.name;
+
+  // СПОРЯДЖЕННЯ
+  rcEquipment();
+
+  S.mode="full"; S._ready=true;
+}
+
+/* --- Діалог --- */
+function openRandomDialog(){
+  if(!window._RC) window._RC={ mode:"uniform", level:5, name:"" };
+  renderRandomDialog();
+}
+function renderRandomDialog(){
+  const RC=window._RC;
+  const opt=(m,name,desc,extra)=>`<div class="opt ${RC.mode===m?"sel":""}" onclick="rcSetMode('${m}')">
+    <div class="on"><span class="opt-radio"></span><span class="opt-name">${name}</span></div>
+    <div class="od">${desc}</div>${extra||""}</div>`;
+  const stepper=`<div style="display:flex;align-items:center;gap:8px;margin:10px 0 2px 28px">
+    <button class="rc-step" onclick="event.stopPropagation();rcLevelStep(-1)">−</button>
+    <div class="rc-lvl">Рівень <b>${RC.level}</b></div>
+    <button class="rc-step" onclick="event.stopPropagation();rcLevelStep(1)">+</button></div>`;
+  let body=`<p class="sub">Раса, клас, передісторія та все інше — навмання. Обери, як задати рівень:</p>`;
+  body+=opt("uniform","Рівні порівну (1–20)","Кожен рівень із шансом 1/20 — від 1-го до 20-го.");
+  body+=opt("weighted","Більше низьких рівнів","Чим вищий рівень — тим рідше випадає.", rcBarsHtml());
+  body+=opt("fixed",`Персонаж такого-то рівня <span class="src-tag">нове</span>`,
+    "Рівень задаєш ти, решта — навмання.", RC.mode==="fixed"?stepper:"");
+  body+=`<label class="field">Ім'я персонажа</label>`+
+    `<input id="rcName" placeholder="напр. Тордек Камінь" value="${esc(RC.name)}" oninput="window._RC.name=this.value"/>`;
+  body+=`<div class="conflict-note">🎲 Характеристики — стандартний набір <b>15, 14, 13, 12, 10, 8</b> навмання. `+
+    `Зброя й броня — лише ті, якими володіє раса або клас.</div>`;
+  body+=`<div id="rcErr" class="hidden" style="color:var(--accent);font-size:13px;margin-top:8px"></div>`;
+  body+=`<div class="modal-nav"><button class="btn btn-primary" onclick="rcGenerate()">🎲 Згенерувати та зберегти PDF</button></div>`;
+  openModal("🎲 Випадковий персонаж", body);
+}
+function rcSetMode(m){ window._RC.mode=m; renderRandomDialog(); }
+function rcLevelStep(d){ const RC=window._RC; RC.level=Math.max(1, Math.min(20, RC.level+d)); renderRandomDialog(); }
+function rcGenerate(){
+  const RC=window._RC; RC.name=(RC.name||"").trim();
+  if(!RC.name){ const e=$("rcErr"); if(e){ e.textContent="Спершу введи ім'я персонажа."; e.classList.remove("hidden"); } return; }
+  closeModal();
+  generateRandomCharacter();
+  finish();
 }
 
 document.addEventListener("DOMContentLoaded", init);
