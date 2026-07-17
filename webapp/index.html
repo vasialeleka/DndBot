@@ -3,12 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<!-- Проти агресивного кешування у Telegram WebView: не тримати застарілі скрипти -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>D&D 5e — Створення персонажа</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<!-- Клієнтська генерація PDF (той самий origin, надійно вантажиться в Mini App) -->
-<script src="vendor/jspdf.umd.min.js"></script>
-<script src="vendor/fonts.js"></script>
-<script src="pdf.js"></script>
+<!-- Клієнтська генерація PDF (той самий origin, надійно вантажиться в Mini App).
+     ?v=… — версія для скидання кешу; піднімай число після кожного оновлення скриптів. -->
+<script src="vendor/jspdf.umd.min.js?v=2"></script>
+<script src="vendor/fonts.js?v=2"></script>
+<script src="i18n.js?v=2"></script>
+<script src="pdf.js?v=2"></script>
 <style>
   :root {
     --bg: var(--tg-theme-bg-color, #17171b);
@@ -238,6 +244,23 @@
   .dice-btn { flex:none; width:44px; height:44px; margin-top:12px; border-radius:13px; border:1.5px solid var(--accent);
     background:rgba(182,65,47,.14); color:var(--text); font-size:23px; cursor:pointer; line-height:1; }
   .dice-btn:active { background:rgba(182,65,47,.28); }
+  /* перемикач мов — маленький дропдаун зліва від кубика */
+  .rl-actions { display:flex; align-items:center; gap:8px; margin-top:12px; flex:none; }
+  .rl-actions .dice-btn { margin-top:0; }
+  .lang-dd { position:relative; }
+  .lang-btn { display:flex; align-items:center; gap:5px; height:40px; padding:0 10px; border-radius:12px;
+    border:1.5px solid var(--line); background:var(--card); color:var(--text); font-size:12.5px; font-weight:700;
+    cursor:pointer; line-height:1; }
+  .lang-btn .caret { color:var(--hint); font-size:10px; }
+  .lang-menu { position:absolute; top:46px; right:0; z-index:50; min-width:172px; padding:5px;
+    background:#20202a; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.5); }
+  .lang-menu.hidden { display:none; }
+  .lang-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 11px;
+    border-radius:9px; font-size:13px; color:var(--hint); cursor:pointer; }
+  .lang-item:active { background:rgba(255,255,255,.05); }
+  .lang-item.on { background:rgba(182,65,47,.18); color:#e6b0a2; font-weight:700; }
+  .lang-item .lc { font-size:11px; opacity:.7; }
+  body.has-grad .lang-btn { background:rgba(0,0,0,.26); }
   .rc-step { width:36px; height:38px; border-radius:9px; border:1px solid var(--line); background:var(--bg);
     color:var(--text); font-size:19px; cursor:pointer; padding:0; }
   .rc-lvl { min-width:110px; text-align:center; background:var(--bg); border:1px solid var(--line);
@@ -358,12 +381,20 @@
 <!-- ============ КРОК 1: СПИСОК РАС ============ -->
 <div id="view-race-list" class="view">
   <div class="rl-head">
-    <h1>🐉 Створення персонажа</h1>
-    <button class="dice-btn" onclick="openRandomDialog()" aria-label="Випадковий персонаж" title="Випадковий персонаж">🎲</button>
+    <h1 data-i18n="app.title">🐉 Створення персонажа</h1>
+    <div class="rl-actions">
+      <div class="lang-dd">
+        <button class="lang-btn" id="langBtn" type="button" onclick="toggleLangMenu(event)"
+                aria-haspopup="true" aria-expanded="false">🌐 <span id="langCode">UA</span> <span class="caret">▾</span></button>
+        <div class="lang-menu hidden" id="langMenu"></div>
+      </div>
+      <button class="dice-btn" onclick="openRandomDialog()" data-i18n-title="dice.title"
+              aria-label="Випадковий персонаж" title="Випадковий персонаж">🎲</button>
+    </div>
   </div>
-  <p class="sub">D&D 5e · Крок 1 — обери расу (тапни, щоб прочитати)</p>
+  <p class="sub" data-i18n="race.step">D&D 5e · Крок 1 — обери расу (тапни, щоб прочитати)</p>
   <label class="opt-toggle"><input type="checkbox" id="optToggle" checked onchange="S.optionalFeats=this.checked">
-    <span>Додавати опційні вміння класів (Tasha) у чарник</span></label>
+    <span data-i18n="race.tashaToggle">Додавати опційні вміння класів (Tasha) у чарник</span></label>
   <div class="filter-row" id="raceFilter"></div>
   <div class="tile-list" id="raceList"></div>
 </div>
@@ -371,164 +402,164 @@
 <!-- ============ ДЕТАЛЬ РАСИ ============ -->
 <div id="view-race-detail" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('race-list')">←</button>
-    <span class="topbar-title">Раса</span></div>
+    <span class="topbar-title" data-i18n="rd.topbar">Раса</span></div>
   <div class="hero hero-banner" id="rdHero"><div class="hero-art" id="rdArt"></div>
     <div><div class="hero-name" id="rdName"></div><div class="hero-tag" id="rdTag"></div></div></div>
   <p class="detail-desc" id="rdDesc"></p>
   <div class="recommend" id="rdRecommend"></div>
-  <div class="card"><h2>Бонуси раси</h2><div id="rdBonuses"></div></div>
-  <div class="card"><h2>Особливості</h2><div id="rdTraits"></div></div>
+  <div class="card"><h2 data-i18n="rd.bonuses">Бонуси раси</h2><div id="rdBonuses"></div></div>
+  <div class="card"><h2 data-i18n="rd.traits">Особливості</h2><div id="rdTraits"></div></div>
   <div class="card" id="rdSubraceCard"><h2 id="rdSubLabel">Підраса</h2>
-    <p class="sub">Обери підрасу — вона змінює бонуси й додає особливості.</p>
+    <p class="sub" data-i18n="rd.subHint">Обери підрасу — вона змінює бонуси й додає особливості.</p>
     <div id="rdSubraces"></div>
     <p class="sub" id="rdSubHint" style="margin-bottom:0"></p></div>
-  <div class="card hidden" id="rdFeatCard"><h2>Стартова черта</h2>
-    <p class="sub">Варіант людини одразу отримує одну черту.</p>
+  <div class="card hidden" id="rdFeatCard"><h2 data-i18n="rd.startFeat">Стартова черта</h2>
+    <p class="sub" data-i18n="rd.humanFeatNote">Варіант людини одразу отримує одну черту.</p>
     <div id="rdFeats"></div></div>
-  <div class="footer"><button class="btn btn-primary" onclick="chooseRace()">Обрати расу →</button></div>
+  <div class="footer"><button class="btn btn-primary" onclick="chooseRace()" data-i18n="rd.choose">Обрати расу →</button></div>
 </div>
 
 <!-- ============ КРОК 2: СПИСОК КЛАСІВ ============ -->
 <div id="view-class-list" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('race-list')">←</button>
-    <span class="topbar-title">Крок 2 — Клас</span></div>
-  <p class="sub">Обери клас (тапни, щоб прочитати опис і HP по рівнях)</p>
+    <span class="topbar-title" data-i18n="cl.topbar">Крок 2 — Клас</span></div>
+  <p class="sub" data-i18n="cl.sub">Обери клас (тапни, щоб прочитати опис і HP по рівнях)</p>
   <div class="tile-list" id="classList"></div>
 </div>
 
 <!-- ============ ДЕТАЛЬ КЛАСУ ============ -->
 <div id="view-class-detail" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('class-list')">←</button>
-    <span class="topbar-title">Клас</span></div>
+    <span class="topbar-title" data-i18n="cd.topbar">Клас</span></div>
   <div class="hero hero-banner" id="cdHero"><div class="hero-art ticon" id="cdIcon" style="display:flex;align-items:center;justify-content:center;font-size:44px;background:var(--card)"></div>
     <div><div class="hero-name" id="cdName"></div><div class="hero-tag" id="cdTag"></div></div></div>
   <p class="detail-desc" id="cdDesc"></p>
   <div class="card">
-    <label class="field">Рівень персонажа</label>
+    <label class="field" data-i18n="cd.charLevel">Рівень персонажа</label>
     <select id="cdLevel" onchange="onClassLevelChange()"></select>
-    <p class="sub" style="margin-bottom:0">З цим рівнем підемо далі у чарник.</p>
+    <p class="sub" style="margin-bottom:0" data-i18n="cd.levelNote">З цим рівнем підемо далі у чарник.</p>
   </div>
-  <div class="card"><h2>Здоров'я</h2>
+  <div class="card"><h2 data-i18n="cd.hp">Здоров'я</h2>
     <p class="sub" id="cdHpNote"></p>
     <div id="cdHp"></div></div>
   <div class="card hidden" id="cdResCard"><h2 id="cdResTitle">Ресурси рівня</h2>
-    <p class="sub">Ось що змінюється з рівнем — комірки заклять, лють, Ці тощо.</p>
+    <p class="sub" data-i18n="cd.resHint">Ось що змінюється з рівнем — комірки заклять, лють, Ці тощо.</p>
     <div class="res-grid" id="cdRes"></div></div>
-  <div class="card"><h2>Основне</h2><div id="cdBasics"></div></div>
-  <div class="card"><h2>Що отримуєш по рівнях</h2>
-    <p class="sub">Виділено твій рівень. Тут — вибір підкласу та ресурси (комірки заклять, Ці тощо).</p>
+  <div class="card"><h2 data-i18n="cd.basics">Основне</h2><div id="cdBasics"></div></div>
+  <div class="card"><h2 data-i18n="cd.byLevel">Що отримуєш по рівнях</h2>
+    <p class="sub" data-i18n="cd.byLevelHint">Виділено твій рівень. Тут — вибір підкласу та ресурси (комірки заклять, Ці тощо).</p>
     <div id="cdLevels"></div></div>
-  <div class="footer"><button class="btn btn-primary" onclick="chooseClass()">Обрати клас →</button></div>
+  <div class="footer"><button class="btn btn-primary" onclick="chooseClass()" data-i18n="cd.choose">Обрати клас →</button></div>
 </div>
 
 <!-- ============ СПИСОК ПЕРЕДІСТОРІЙ ============ -->
 <div id="view-bg-list" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('sheet')">←</button>
-    <span class="topbar-title">Передісторія</span></div>
-  <p class="sub">Обери передісторію (тапни, щоб прочитати опис)</p>
+    <span class="topbar-title" data-i18n="bg.topbar">Передісторія</span></div>
+  <p class="sub" data-i18n="bg.listSub">Обери передісторію (тапни, щоб прочитати опис)</p>
   <div class="tile-list" id="bgList"></div>
 </div>
 
 <!-- ============ ДЕТАЛЬ ПЕРЕДІСТОРІЇ ============ -->
 <div id="view-bg-detail" class="view hidden">
   <div class="topbar"><button class="back" onclick="openBgList()">←</button>
-    <span class="topbar-title">Передісторія</span></div>
+    <span class="topbar-title" data-i18n="bg.topbar">Передісторія</span></div>
   <div class="hero hero-banner">
     <div class="hero-art ticon" id="bdIcon" style="display:flex;align-items:center;justify-content:center;font-size:44px;background:var(--card)"></div>
     <div><div class="hero-name" id="bdName"></div><div class="hero-tag" id="bdTag"></div></div></div>
   <p class="detail-desc" id="bdDesc"></p>
-  <div class="card"><h2>Що дає</h2><div id="bdGrants"></div></div>
-  <div class="card"><h2>Особливість</h2><div id="bdFeature"></div></div>
-  <div class="footer"><button class="btn btn-primary" onclick="chooseBg()">Обрати передісторію →</button></div>
+  <div class="card"><h2 data-i18n="bg.grants">Що дає</h2><div id="bdGrants"></div></div>
+  <div class="card"><h2 data-i18n="bg.feature">Особливість</h2><div id="bdFeature"></div></div>
+  <div class="footer"><button class="btn btn-primary" onclick="chooseBg()" data-i18n="bg.choose">Обрати передісторію →</button></div>
 </div>
 
 <!-- ============ КРОК 3: ПОВНИЙ ЧАРНИК ============ -->
 <div id="view-sheet" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('class-list')">←</button>
-    <span class="topbar-title">Характеристики</span></div>
+    <span class="topbar-title" data-i18n="sh.topbar">Характеристики</span></div>
 
   <div class="card"><div class="summary">
     <div class="badge"><div class="bthumb" id="sumRaceArt"></div>
       <div class="binfo"><div class="bt" id="sumRaceName"></div><div class="bs" id="sumRaceSub"></div></div>
-      <button class="change" onclick="showView('race-list')">змінити</button></div>
+      <button class="change" onclick="showView('race-list')" data-i18n="sh.change">змінити</button></div>
     <div class="badge"><div class="bthumb ticon" id="sumClassIcon" style="display:flex;align-items:center;justify-content:center;font-size:22px"></div>
       <div class="binfo"><div class="bt" id="sumClassName"></div><div class="bs" id="sumClassSub"></div></div>
-      <button class="change" onclick="showView('class-list')">змінити</button></div>
+      <button class="change" onclick="showView('class-list')" data-i18n="sh.change">змінити</button></div>
   </div></div>
 
   <div class="card">
-    <label class="field">Ім'я персонажа</label>
-    <input id="name" placeholder="напр. Тордек Камінь" />
-    <label class="field">Передісторія</label>
+    <label class="field" data-i18n="sh.charName">Ім'я персонажа</label>
+    <input id="name" placeholder="напр. Тордек Камінь" data-i18n-ph="sh.charNamePh" />
+    <label class="field" data-i18n="sh.bg">Передісторія</label>
     <div id="bgBadge"></div>
-    <label class="field">Світогляд</label>
+    <label class="field" data-i18n="sh.alignment">Світогляд</label>
     <select id="alignment"></select>
   </div>
 
   <div class="card hidden" id="asiSummaryCard">
-    <div class="pick-head"><h2 style="margin:0">Підвищення / черти<span class="pick-count" id="asiCount"></span></h2>
-      <button class="change" onclick="editAsi()">налаштувати</button></div>
+    <div class="pick-head"><h2 style="margin:0" data-i18n="sh.asiTitle">Підвищення / черти<span class="pick-count" id="asiCount"></span></h2>
+      <button class="change" onclick="editAsi()" data-i18n="sh.configure">налаштувати</button></div>
     <div id="asiSummary"></div>
   </div>
 
   <div class="card hidden" id="raceChoicesCard">
-    <h2>Бонуси раси на вибір</h2>
+    <h2 data-i18n="sh.raceChoices">Бонуси раси на вибір</h2>
     <div id="raceChoices"></div>
   </div>
 
   <div class="modes" style="margin-top:2px">
-    <div class="mode-btn active" data-mode="full" onclick="setMode('full')">Вручну<small>сам обираю цифри</small></div>
-    <div class="mode-btn" data-mode="quick" onclick="setMode('quick')">Автоматично<small>підбереться саме</small></div>
+    <div class="mode-btn active" data-mode="full" onclick="setMode('full')"><span data-i18n="sh.modeManual">Вручну</span><small data-i18n="sh.modeManualSub">сам обираю цифри</small></div>
+    <div class="mode-btn" data-mode="quick" onclick="setMode('quick')"><span data-i18n="sh.modeAuto">Автоматично</span><small data-i18n="sh.modeAutoSub">підбереться саме</small></div>
   </div>
 
   <div class="card full-only">
-    <h2>Характеристики</h2>
+    <h2 data-i18n="sh.abilities">Характеристики</h2>
     <div class="method-tabs" id="methodTabs">
-      <button data-m="array" class="active" onclick="setMethod('array')">Стандарт</button>
-      <button data-m="pointbuy" onclick="setMethod('pointbuy')">Point buy</button>
-      <button data-m="roll" onclick="setMethod('roll')">Кидки 4d6</button>
-      <button data-m="manual" onclick="setMethod('manual')">Вручну</button>
+      <button data-m="array" class="active" onclick="setMethod('array')" data-i18n="sh.mArray">Стандарт</button>
+      <button data-m="pointbuy" onclick="setMethod('pointbuy')" data-i18n="sh.mPoint">Point buy</button>
+      <button data-m="roll" onclick="setMethod('roll')" data-i18n="sh.mRoll">Кидки 4d6</button>
+      <button data-m="manual" onclick="setMethod('manual')" data-i18n="sh.mManual">Вручну</button>
     </div>
     <p class="sub" id="methodHint"></p>
     <div id="rollControls" class="hidden" style="margin-bottom:10px">
-      <button class="mode-btn" style="width:100%" onclick="rollDice()">🎲 Перекинути кубики</button>
+      <button class="mode-btn" style="width:100%" onclick="rollDice()" data-i18n="sh.reroll">🎲 Перекинути кубики</button>
     </div>
     <div id="abilities"></div>
   </div>
 
   <div class="card full-only">
-    <h2>Навички</h2>
+    <h2 data-i18n="sh.skills">Навички</h2>
     <div id="skills"></div>
     <div class="conflict-note hidden" id="skillConflict"></div>
     <div class="saves-info" id="savesInfo"></div>
   </div>
 
-  <div class="footer"><button class="btn btn-primary" onclick="showEquipment()">Далі: Спорядження →</button></div>
+  <div class="footer"><button class="btn btn-primary" onclick="showEquipment()" data-i18n="sh.next">Далі: Спорядження →</button></div>
 </div>
 
 <!-- ============ КРОК 4: СПОРЯДЖЕННЯ ============ -->
 <div id="view-equipment" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('sheet')">←</button>
-    <span class="topbar-title">Спорядження</span></div>
+    <span class="topbar-title" data-i18n="eq.topbar">Спорядження</span></div>
 
   <div class="acbig">
     <div class="ac-shield">
       <svg viewBox="0 0 52 56" width="52" height="56"><path d="M26 2 L48 9 V27 C48 42 38 51 26 55 C14 51 4 42 4 27 V9 Z" fill="rgba(182,65,47,.16)" stroke="var(--accent)" stroke-width="1.5"/></svg>
       <div class="acnum" id="eqAcNum">10</div>
     </div>
-    <div class="ac-brk"><div class="ac-formula" id="eqAcFormula">Клас Броні</div><div id="eqAcDetail"></div></div>
+    <div class="ac-brk"><div class="ac-formula" id="eqAcFormula" data-i18n="eq.acLabel">Клас Броні</div><div id="eqAcDetail"></div></div>
   </div>
 
   <p class="sub" id="eqStarter" style="margin:0 2px 10px"></p>
 
   <div class="modes">
-    <div class="mode-btn active" id="eqModeStd" onclick="setEquipMode('standard')">Стандартне<small>вибори класу</small></div>
-    <div class="mode-btn" id="eqModeCustom" onclick="setEquipMode('custom')">Кастомне<small>обираю сам</small></div>
+    <div class="mode-btn active" id="eqModeStd" onclick="setEquipMode('standard')"><span data-i18n="eq.modeStd">Стандартне</span><small data-i18n="eq.modeStdSub">вибори класу</small></div>
+    <div class="mode-btn" id="eqModeCustom" onclick="setEquipMode('custom')"><span data-i18n="eq.modeCustom">Кастомне</span><small data-i18n="eq.modeCustomSub">обираю сам</small></div>
   </div>
 
   <label class="gear-toggle" id="eqShowAllRow" onclick="toggleShowAll(event)">
     <span class="eq-cbx" id="eqShowAllBox"></span>
-    <span>Показувати варіанти без володіння</span></label>
+    <span data-i18n="eq.showNoProf">Показувати варіанти без володіння</span></label>
 
   <!-- Стандартне: вибори а/б/в -->
   <div id="eqStandard"></div>
@@ -536,53 +567,53 @@
   <!-- Кастомне: вільний вибір -->
   <div id="eqCustom" class="hidden">
     <div class="card">
-      <div class="pick-head"><h2 style="margin:0">Броня</h2><span class="sub" id="eqArmorProf" style="margin:0"></span></div>
-      <label class="field">Обладунок</label>
+      <div class="pick-head"><h2 style="margin:0" data-i18n="eq.armorH">Броня</h2><span class="sub" id="eqArmorProf" style="margin:0"></span></div>
+      <label class="field" data-i18n="eq.armor">Обладунок</label>
       <select id="eqArmor" onchange="onArmorChange()"></select>
       <div class="desc-line" id="eqArmorDesc"></div>
       <label class="eq-item" id="eqShieldRow" style="cursor:pointer;border-bottom:none;padding-top:10px" onclick="toggleShield(event)">
         <span class="eq-cbx" id="eqShieldBox"></span>
-        <span class="eq-main"><b>Щит</b><small id="eqShieldNote">+2 до КБ</small></span>
+        <span class="eq-main"><b data-i18n="eq.shieldB">Щит</b><small id="eqShieldNote">+2 до КБ</small></span>
       </label>
     </div>
     <div class="card">
-      <div class="pick-head"><h2 style="margin:0">Зброя</h2><span class="sub" id="eqWeaponCount" style="margin:0"></span></div>
+      <div class="pick-head"><h2 style="margin:0" data-i18n="eq.weaponH">Зброя</h2><span class="sub" id="eqWeaponCount" style="margin:0"></span></div>
       <div id="eqWeapons"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="margin:0 0 6px">Атаки (авто)</h2>
+    <h2 style="margin:0 0 6px" data-i18n="eq.attacks">Атаки (авто)</h2>
     <div id="eqAttacks"></div>
     <div class="desc-line" id="eqAttackNote"></div>
   </div>
 
-  <div class="footer"><button class="btn btn-primary" onclick="showReview()">Переглянути →</button></div>
+  <div class="footer"><button class="btn btn-primary" onclick="showReview()" data-i18n="eq.review">Переглянути →</button></div>
 </div>
 
 <!-- ============ ОГЛЯД ============ -->
 <div id="view-review" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('equipment')">←</button>
-    <span class="topbar-title">Перевірка</span></div>
-  <p class="sub">Переконайся, що все правильно, і тисни «Готово».</p>
+    <span class="topbar-title" data-i18n="rv.topbar">Перевірка</span></div>
+  <p class="sub" data-i18n="rv.sub">Переконайся, що все правильно, і тисни «Готово».</p>
   <div class="card"><div style="font-size:19px;font-weight:700" id="r-name"></div>
     <div class="muted" id="r-line"></div></div>
-  <div class="card"><h2>Бойові показники</h2>
+  <div class="card"><h2 data-i18n="rv.combat">Бойові показники</h2>
     <div class="stat-grid">
-      <div class="stat"><div class="v" id="r-ac"></div><div class="k">Броня</div></div>
-      <div class="stat"><div class="v" id="r-hp"></div><div class="k">Макс. HP</div></div>
-      <div class="stat"><div class="v" id="r-init"></div><div class="k">Ініціатива</div></div>
-      <div class="stat"><div class="v" id="r-speed"></div><div class="k">Швидкість</div></div>
-      <div class="stat"><div class="v" id="r-pb"></div><div class="k">Майстерн.</div></div>
-      <div class="stat"><div class="v" id="r-pp"></div><div class="k">Пас. уваж.</div></div>
+      <div class="stat"><div class="v" id="r-ac"></div><div class="k" data-i18n="rv.ac">Броня</div></div>
+      <div class="stat"><div class="v" id="r-hp"></div><div class="k" data-i18n="rv.hp">Макс. HP</div></div>
+      <div class="stat"><div class="v" id="r-init"></div><div class="k" data-i18n="rv.init">Ініціатива</div></div>
+      <div class="stat"><div class="v" id="r-speed"></div><div class="k" data-i18n="rv.speed">Швидкість</div></div>
+      <div class="stat"><div class="v" id="r-pb"></div><div class="k" data-i18n="rv.pb">Майстерн.</div></div>
+      <div class="stat"><div class="v" id="r-pp"></div><div class="k" data-i18n="rv.pp">Пас. уваж.</div></div>
     </div></div>
-  <div class="card"><h2>Характеристики</h2><div class="stat-grid" id="r-abilities"></div></div>
-  <div class="card"><h2>Рятівні кидки</h2><div id="r-saves"></div></div>
-  <div class="card"><h2>Навички (володіння)</h2><div class="list-inline" id="r-skills"></div></div>
-  <div class="card"><h2>Спорядження та атаки</h2><div id="r-attacks"></div><div class="list-inline" id="r-equip" style="margin-top:8px"></div></div>
-  <div class="card" id="r-spell-card"><h2>Магія</h2><div id="r-spell"></div></div>
-  <div class="card"><h2>Риси, здібності та черти</h2><div class="list-inline" id="r-features"></div></div>
-  <div class="footer"><button class="btn btn-primary" onclick="finish()">✅ Готово — зберегти PDF</button></div>
+  <div class="card"><h2 data-i18n="rv.abilities">Характеристики</h2><div class="stat-grid" id="r-abilities"></div></div>
+  <div class="card"><h2 data-i18n="rv.saves">Рятівні кидки</h2><div id="r-saves"></div></div>
+  <div class="card"><h2 data-i18n="rv.skills">Навички (володіння)</h2><div class="list-inline" id="r-skills"></div></div>
+  <div class="card"><h2 data-i18n="rv.gear">Спорядження та атаки</h2><div id="r-attacks"></div><div class="list-inline" id="r-equip" style="margin-top:8px"></div></div>
+  <div class="card" id="r-spell-card"><h2 data-i18n="rv.magic">Магія</h2><div id="r-spell"></div></div>
+  <div class="card"><h2 data-i18n="rv.features">Риси, здібності та черти</h2><div class="list-inline" id="r-features"></div></div>
+  <div class="footer"><button class="btn btn-primary" onclick="finish()" data-i18n="rv.finish">✅ Готово — зберегти PDF</button></div>
 </div>
 
 <!-- модалка -->
@@ -868,7 +899,7 @@ const RACES = {
   "Ельф": {
     speed:30, langs:["Спільна","Ельфійська"], skillFixed:["Сприйняття"],
     desc:"Витончений довговічний народ, пов'язаний із магією та природою. Граційні й спостережливі.",
-    recommend:"Бонус Спритності любить Пройдисвіт, Слідопит і Монах. Високий ельф (+Інт) — чудовий Чарівник; Лісовий (+Мдр, швидкість 35) — Друїд/Слідопит; Дроу (+Хар) — Чаклун/Чорнокнижник.",
+    recommend:"Бонус Спритності любить Плут, Слідопит і Монах. Високий ельф (+Інт) — чудовий Чарівник; Лісовий (+Мдр, швидкість 35) — Друїд/Слідопит; Дроу (+Хар) — Чаклун/Чорнокнижник.",
     baseTraits:[
       {name:"Темнобачення 60 фт", desc:"Бачиш у темряві на 60 футів як за тьмяного світла."},
       {name:"Фейське походження", desc:"Перевага на порятунок від зачарування; магія не може тебе приспати."},
@@ -918,7 +949,7 @@ const RACES = {
   "Піврослик": {
     speed:25, langs:["Спільна","Півросликова"],
     desc:"Маленький, доброзичливий і навдивовижу хоробрий народ. Уникають небезпек, але не бракує відваги.",
-    recommend:"Спритність + риса «Щасливчик» (перекид одиниць) чудові для Пройдисвіта й Слідопита. Легконогий (+Хар) — Бард/Чаклун; Кремезний (+Ста) — витриваліший боєць.",
+    recommend:"Спритність + риса «Щасливчик» (перекид одиниць) чудові для Плута й Слідопита. Легконогий (+Хар) — Бард/Чаклун; Кремезний (+Ста) — витриваліший боєць.",
     baseTraits:[
       {name:"Щасливчик", desc:"Якщо на d20 випало 1 (атака, перевірка, порятунок) — перекидаєш, береш новий результат."},
       {name:"Хоробрість", desc:"Перевага на порятунок від страху."},
@@ -1018,7 +1049,7 @@ const RACES = {
     baseTraits:[{name:"Витривалість каменю",desc:"Реакцією зменшуєш шкоду 1d12+Ста."},{name:"Могутня статура",desc:"Рахуєшся більшим для перенесення."},{name:"Гірський народжений",desc:"Стійкий до холоду й висоти."}] },
   "Табаксі": { speed:30, langs:["Спільна","+1"], asiFixed:{dex:2,cha:1},
     desc:"Котоподібні мандрівники, гнані цікавістю.",
-    recommend:"+Спритність, +Харизма — Пройдисвіт, Монах, Бард.",
+    recommend:"+Спритність, +Харизма — Плут, Монах, Бард.",
     baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Котяча спритність",desc:"Подвоюєш швидкість на хід (1/раз)."},{name:"Котячі кігті",desc:"Пазури 1d4 та лазіння."}] },
   "Тритон": { speed:30, langs:["Спільна","Первомова"], asiFixed:{str:1,con:1,cha:1},
     desc:"Горді захисники морських глибин.",
@@ -1030,7 +1061,7 @@ const RACES = {
     baseTraits:[{name:"Фірболгова магія",desc:"Знаєш «Виявлення магії» та «Маскування»."},{name:"Прихований крок",desc:"Бонусною дією стаєш невидимим на хід."},{name:"Могутня статура",desc:"Рахуєшся більшим."}] },
   "Гоблін": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{dex:2,con:1},
     desc:"Маленькі хитрі створіння, спритні й винахідливі.",
-    recommend:"+Спритність — Пройдисвіт, Слідопит.",
+    recommend:"+Спритність — Плут, Слідопит.",
     baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Лють малих",desc:"Бонусна шкода більшим ворогам (1/хід)."},{name:"Спритна втеча",desc:"Бонусною дією Ривок або Схованка щоходу."}] },
   "Хобгоблін": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{con:2,int:1},
     desc:"Дисципліновані вояки з жорсткою ієрархією.",
@@ -1038,15 +1069,15 @@ const RACES = {
     baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Збереження обличчя",desc:"Бонус до провалу, якщо поруч союзники."},{name:"Військова підготовка",desc:"Володіння зброєю та легкою бронею."}] },
   "Багбір": { speed:30, langs:["Спільна","Гоблінська"], asiFixed:{str:2,dex:1},
     desc:"Волохаті гобліноїди-засідники з довгими руками.",
-    recommend:"+Сила, засідки — Варвар, Воїн, Пройдисвіт.",
+    recommend:"+Сила, засідки — Варвар, Воїн, Плут.",
     baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Довгі кінцівки",desc:"+5 фт досяжність у ближньому бою."},{name:"Раптова атака",desc:"+2d6 шкоди при засідці."}] },
   "Кенку": { speed:30, langs:["Спільна","Ауран"], asiFixed:{dex:2,wis:1},
     desc:"Безкрилі птахолюди, що спілкуються звуконаслідуванням.",
-    recommend:"+Спритність — Пройдисвіт, Слідопит.",
+    recommend:"+Спритність — Плут, Слідопит.",
     baseTraits:[{name:"Наслідування",desc:"Копіюєш будь-які почуті звуки й голоси."},{name:"Майстер підробок",desc:"Перевага на підробку письма/предметів."},{name:"Зграйна допомога",desc:"Легко допомагаєш союзнику."}] },
   "Кобольд": { speed:30, langs:["Спільна","Драконяча"], asiFixed:{dex:2},
     desc:"Дрібні лускаті нащадки драконів, сильні у зграї.",
-    recommend:"+Спритність — Пройдисвіт, будь-який дальній.",
+    recommend:"+Спритність — Плут, будь-який дальній.",
     baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Зграйна тактика",desc:"Перевага на атаку, якщо союзник поруч із ціллю."},{name:"Сонячна чутливість",desc:"Перешкода на атаки під сонцем."}] },
   "Людоящер": { speed:30, langs:["Спільна","Драконяча"], asiFixed:{con:2,wis:1},
     desc:"Холоднокровні рептилоїди з чужою логікою виживання.",
@@ -1090,7 +1121,7 @@ const RACES = {
     baseTraits:[{name:"Ментальна дисципліна",desc:"Перевага проти зачарування; не читаються думки."},{name:"Ментальний зв'язок",desc:"Телепатично говориш із тими, кого бачив."}] },
   "Чейнджлінг": { speed:30, langs:["Спільна","+2"], asiFixed:{cha:2}, asiChoice:{count:1,amount:1,exclude:["cha"]},
     desc:"Перевертні, що змінюють подобу за бажанням.",
-    recommend:"+Харизма — Бард, Пройдисвіт, Чаклун.",
+    recommend:"+Харизма — Бард, Плут, Чаклун.",
     baseTraits:[{name:"Перевтілення",desc:"Дією змінюєш зовнішність на будь-яку гуманоїдну."},{name:"Інстинкти обману",desc:"Володіння двома соц. навичками."}] },
   "Генасі": { speed:30, langs:["Спільна","Первомова"], asiFixed:{con:2},
     desc:"Смертні, у чиїх жилах — сила елементних планів.",
@@ -1110,11 +1141,11 @@ const RACES = {
       "Гітзераї": { asiFixed:{wis:2,int:1}, traits:[{name:"Психічний захист",desc:"Знаєш «Щит»; згодом «Виявлення думок»."}] } } },
   "Харенгон": { speed:30, langs:["Спільна","Сільванська"], asiFixed:{dex:2,wis:1},
     desc:"Спритні кролеподібні фейські мандрівники.",
-    recommend:"+Спритність, ініціатива — Монах, Пройдисвіт, Слідопит.",
+    recommend:"+Спритність, ініціатива — Монах, Плут, Слідопит.",
     baseTraits:[{name:"Спритні ноги",desc:"Бонус майстерності до ініціативи."},{name:"Щасливий крок",desc:"Реакцією стрибаєш геть від небезпеки."},{name:"Довгі стрибки",desc:"Стрибаєш значно далі."}] },
   "Оулін": { speed:30, langs:["Спільна","+1"], asiFixed:{dex:2,wis:1},
     desc:"Совоподібні крилаті вчені-нічники.",
-    recommend:"Політ + Спритність — Слідопит, Чарівник, Пройдисвіт.",
+    recommend:"Політ + Спритність — Слідопит, Чарівник, Плут.",
     baseTraits:[{name:"Темнобачення 120 фт",desc:"Чудово бачиш у темряві."},{name:"Тихий політ",desc:"Політ 30 фт; майже безшумний."}] },
   "Юань-ті": { speed:30, langs:["Спільна","Аб'їссальна","Драконяча"], asiFixed:{cha:2,int:1},
     desc:"Змієлюди з холодним розумом і вродженою магією.",
@@ -1147,11 +1178,11 @@ const RACES = {
     baseTraits:[{name:"Гнучкі бонуси",desc:"+1 до трьох характеристик."},{name:"Могутня статура",desc:"Рахуєшся більшим для перенесення."},{name:"Вогнепальна вправність",desc:"Володіння вогнепальною зброєю."},{name:"Головою вперед",desc:"Раз на хід таранний ривок."}] },
   "Грунг": { speed:25, langs:["Спільна","Грунг"], asiFixed:{dex:2,con:1},
     desc:"Отруйні деревні жаболюди з жорсткою кастовою системою.",
-    recommend:"+Спритність — Пройдисвіт, Монах.",
+    recommend:"+Спритність — Плут, Монах.",
     baseTraits:[{name:"Амфібія",desc:"Дихаєш повітрям і водою."},{name:"Отруйна шкіра",desc:"Дотик до тебе може отруїти."},{name:"Standing Leap",desc:"Стрибаєш далеко з місця."},{name:"Потреба вологи",desc:"Маєш занурюватись у воду щодня."}] },
   "Кендер": { speed:30, langs:["Спільна","Кендерська"], asiChoice:{count:3,amount:1},
     desc:"Маленькі безстрашні непосиди зі світу Драконлансу.",
-    recommend:"Гнучкі бонуси — Пройдисвіт, Бард.",
+    recommend:"Гнучкі бонуси — Плут, Бард.",
     baseTraits:[{name:"Безстрашний кендер",desc:"Перевага на порятунки від страху."},{name:"Спритні пальці",desc:"Володіння Спритністю рук."},{name:"Провокація",desc:"Бонусною дією глузуєш, даючи союзнику перевагу."}] },
   "Локата": { speed:30, langs:["Спільна","Акван"], asiFixed:{str:2,dex:1},
     desc:"Рибоподібний народ мілин, вигнаний із рідних вод.",
@@ -1159,11 +1190,11 @@ const RACES = {
     baseTraits:[{name:"Обмежена амфібія",desc:"Дихаєш під водою, але маєш зволожуватись."},{name:"Швидкість плавання 30",desc:"Вправно плаваєш."},{name:"Природна броня",desc:"КБ = 12 + Спритність без броні."}] },
   "Плазмоїд": { speed:30, langs:["Спільна","+1"], asiChoice:{count:3,amount:1},
     desc:"Аморфні желеподібні мандрівники з космічних безодень.",
-    recommend:"Гнучкі бонуси, аморфність — Пройдисвіт, Монах.",
+    recommend:"Гнучкі бонуси, аморфність — Плут, Монах.",
     baseTraits:[{name:"Аморфний",desc:"Просочуєшся крізь щілини завширшки 1 дюйм."},{name:"Псевдоподія",desc:"Відрощуєш кінцівку для маніпуляцій."},{name:"Природна стійкість",desc:"Спротив кислоті й отруті; затримка дихання."}] },
   "Три-крин": { speed:30, langs:["Спільна","Три-крин"], asiChoice:{count:3,amount:1},
     desc:"Комахоподібні кочівники пустель із чотирма руками.",
-    recommend:"Гнучкі бонуси, зайві руки — Воїн, Монах, Пройдисвіт.",
+    recommend:"Гнучкі бонуси, зайві руки — Воїн, Монах, Плут.",
     baseTraits:[{name:"Хітиновий панцир",desc:"КБ = 13 + Спритність без броні."},{name:"Додаткові кінцівки",desc:"Дві менші руки для маніпуляцій."},{name:"Хамелеон",desc:"Змінюєш колір — бонус до Непомітності."},{name:"Стрибучість",desc:"Стрибаєш далі."}] },
   "Фейрі": { speed:30, langs:["Спільна","Сільванська"], asiChoice:{count:3,amount:1},
     desc:"Крихітні феї зі світу дикого чарівного лісу.",
@@ -1171,11 +1202,11 @@ const RACES = {
     baseTraits:[{name:"Політ 30 фт",desc:"Літаєш, поки не у важкій броні."},{name:"Фейська магія",desc:"Знаєш «Мала ілюзія»; згодом «Заплутування», «Втеча»."},{name:"Фейське походження",desc:"Перевага проти зачарування."}] },
   "Хадозі": { speed:30, langs:["Спільна","+1"], asiChoice:{count:3,amount:1},
     desc:"Мавпоподібні космоплавці-планеристи зі Спелджаммера.",
-    recommend:"Гнучкі бонуси, планування — Пройдисвіт, Слідопит.",
+    recommend:"Гнучкі бонуси, планування — Плут, Слідопит.",
     baseTraits:[{name:"Ковзання",desc:"Реакцією планеруєш, не зазнаючи шкоди від падіння."},{name:"Чіпкі лапи",desc:"Швидкість лазіння; вправно хапаєшся."},{name:"Спритне ухилення",desc:"Реакцією зменшуєш шкоду від атаки/ефекту."}] },
   "Шифтер": { speed:30, langs:["Спільна"], asiFixed:{dex:1}, asiChoice:{count:1,amount:1,exclude:["dex"]},
     desc:"Нащадки лікантропів, здатні на мить прикликати звірину натуру.",
-    recommend:"Спритність + перевтілення — Слідопит, Пройдисвіт, Друїд.",
+    recommend:"Спритність + перевтілення — Слідопит, Плут, Друїд.",
     baseTraits:[{name:"Темнобачення 60 фт",desc:"Бачиш у темряві."},{name:"Перевтілення (Shifting)",desc:"Бонусною дією прикликаєш звірину форму: тимч. HP та бонус (за типом шифтера)."}] }
 };
 
@@ -1429,7 +1460,7 @@ const CLASSES = {
           7:["Залізний розум — володіння порятунками Мудрості (або Інтелекту чи Харизми, якщо вже маєш Мудрість)"],
           11:["Град переслідувача — раз за хід при промаху атакою можеш одразу атакувати ще раз"],
           15:["Тіньове ухилення — реакцією, коли істота атакує тебе (і ти дієздатний), накладаєш перешкоду на її кидок атаки"]}}] },
-  "Пройдисвіт": { hd:8, saves:["dex","int"], skillCount:4, spell:null,
+  "Плут": { hd:8, saves:["dex","int"], skillCount:4, spell:null,
     skills:["Акробатика","Атлетика","Обман","Прозорливість","Залякування","Дослідження","Сприйняття","Виступ","Переконання","Спритність рук","Непомітність"],
     desc:"Майстер прихованості, точності та хитрощів. Величезна підступна шкода та експертиза навичок.",
     features:["Експертиза","Підступна атака","Злодійський жаргон"],
@@ -1571,7 +1602,7 @@ const CLASS_EXTRA = {
   "Монах":{caster:null,subFeat:[3,6,11,17]},
   "Паладин":{caster:"half",subFeat:[3,7,15,20]},
   "Слідопит":{caster:"half",subFeat:[3,7,11,15]},
-  "Пройдисвіт":{caster:null,subFeat:[3,9,13,17]},
+  "Плут":{caster:null,subFeat:[3,9,13,17]},
   "Чаклун":{caster:"full",subFeat:[1,6,14,18]},
   "Чорнокнижник":{caster:"pact",subFeat:[1,6,10,14]},
   "Чарівник":{caster:"full",subFeat:[2,6,10,14]}
@@ -1618,8 +1649,8 @@ function spellCountLines(name,L){
   } else if(PREP_CASTER[name]){
     const p=PREP_CASTER[name];
     if(!(p.half && L<2)){
-      const lvlPart=p.half?`½ рівня (${Math.floor(L/2)})`:`рівень (${L})`;
-      lines.push({label:"Готуєш заклять", value:`модиф. ${ABIL_UA[p.abil]} + ${lvlPart}`,
+      const lvlPart=p.half?t('res.halfLvl').replace("{n}",Math.floor(L/2)):t('res.fullLvl').replace("{n}",L);
+      lines.push({label:"Готуєш заклять", value:t('res.prepVal').replace("{abil}",tr(ABIL_UA[p.abil])).replace("{part}",lvlPart),
         hint:"щодня готуєш стільки заклять зі списку класу (мінімум 1); заговори сюди не входять"});
       if(name==="Чарівник") lines.push({label:"У книзі заклять", value:`${6+(L-1)*2}`,
         hint:"6 на 1-му рівні, +2 за кожен новий рівень; готуєш закляття саме з книги"});
@@ -1637,21 +1668,21 @@ function maxSpellLevel(name,L){
 }
 // Рядки «магія» для екрана-перевірки (характеристики вже відомі → конкретні числа)
 function spellSummaryRows(ch){
-  const name=ch.class, L=ch.level, rows=[];
+  const name=S.class, L=ch.level, rows=[];
   const cc=cantripsKnown(name,L);
-  if(cc>0) rows.push({k:"Заговори (відомі)", v:`${cc}`});
+  if(cc>0) rows.push({k:t('rv.cantrips'), v:`${cc}`});
   const sk=SPELLS_KNOWN[name];
-  if(sk){ if(sk[L]>0) rows.push({k:"Відомі закляття", v:`${sk[L]}`}); }
+  if(sk){ if(sk[L]>0) rows.push({k:t('rv.spellsKnown'), v:`${sk[L]}`}); }
   else if(PREP_CASTER[name]){
     const p=PREP_CASTER[name];
     if(!(p.half && L<2)){
       const n=Math.max(1, ch.modifiers[p.abil] + (p.half?Math.floor(L/2):L));
-      rows.push({k:"Готуєш заклять/день", v:`${n}`});
-      if(name==="Чарівник") rows.push({k:"У книзі заклять", v:`${6+(L-1)*2}`});
+      rows.push({k:t('rv.prepPerDay'), v:`${n}`});
+      if(name==="Чарівник") rows.push({k:t('rv.spellbook'), v:`${6+(L-1)*2}`});
     }
   }
   const mx=maxSpellLevel(name,L);
-  if(mx>0) rows.push({k:"Макс. рівень заклять", v:`${mx}-й`});
+  if(mx>0) rows.push({k:t('rv.maxSpellLvl'), v:t('rv.spellLvlVal').replace("{n}",mx)});
   return rows;
 }
 
@@ -1741,7 +1772,7 @@ const CLASS_PROG = {
     14:["Зникнення — ховаєшся бонусною дією; тебе неможливо вистежити немагічними засобами"],
     18:["Відчуття ворога — відчуваєш істот у межах 30 фт, навіть невидимих"],
     20:["Вбивця чудовиськ — щоходу завдаєш велику додаткову шкоду одній обраній цілі"]},
-  "Пройдисвіт":{
+  "Плут":{
     1:["Експертиза — подвоюєш бонус майстерності для 2 обраних навичок","Злодійський жаргон — таємний код і жести, зрозумілі лише втаємниченим"],
     2:["Хитрий маневр — бонусною дією можеш зробити Ривок, Відступ або Сховатися"],
     5:["Незбагненне ухилення — реакцією вдвічі зменшуєш шкоду від однієї атаки по тобі"],
@@ -1790,7 +1821,7 @@ const OPT_FEATS = {
   "Монах":{2:["Улюблена зброя — робиш обрану просту/військову зброю монашою"],3:["Атака за Ці — витративши Ці на прийом, отримуєш беззбройну атаку"]},
   "Паладин":{3:["Спрямувати божественну силу — за Божественний канал відновлюєш комірку заклять"]},
   "Слідопит":{1:["Спритний дослідник — заміна Улюбленому ворогу: дві навички + експертиза","Улюблений противник — за концентрацію додаєш шкоду обраній цілі"]},
-  "Пройдисвіт":{3:["Стійкий приціл — бонусною дією перевага на атаку, якщо не рухаєшся цей хід"]},
+  "Плут":{3:["Стійкий приціл — бонусною дією перевага на атаку, якщо не рухаєшся цей хід"]},
   "Чаклун":{5:["Магічне керівництво — за очко чарів перекидаєш провалену перевірку характеристики"]},
   "Чорнокнижник":{1:["Гнучкість зворотів — при підвищенні можеш заміняти обрані тайні звороти"]},
   "Чарівник":{3:["Гнучкість замовлянь — при підвищенні можеш заміняти одне замовляння"]}
@@ -1856,14 +1887,14 @@ const FEATURE_DESC = {
 // Ресурс класу на рівні L: окремий блок із поясненням, що це таке
 function resourceInfo(name, L){
   const ex=CLASS_EXTRA[name]||{};
-  const fmtS=(a)=>a.map((n,i)=>`${i+1}р×${n}`).join("  ");
+  const fmtS=(a)=>a.map((n,i)=>`${i+1}${t('res.lvlAbbr')}×${n}`).join("  ");
   const slotsHint="скільки заклять кожного рівня можеш накласти до тривалого відпочинку (Nр×К = рівень×кількість)";
   if(ex.caster==="full"){ const a=FULL_SLOTS[L]; return a&&a.length?{label:"Комірки заклять",value:fmtS(a),hint:slotsHint}:null; }
   if(ex.caster==="half"){ const a=HALF_SLOTS[L]; return a&&a.length?{label:"Комірки заклять",value:fmtS(a),hint:slotsHint}:null; }
-  if(ex.caster==="pact"){ const a=WARLOCK_SLOTS[L]; return a?{label:"Пакт-магія",value:`${a[0]} × ${a[1]}-й рівень`,hint:"мало комірок, але відновлюються в короткий перепочинок"}:null; }
-  if(name==="Монах"&&L>=2) return {label:"Ці",value:`${L} очок`,hint:"ресурс на прийоми (приголомшення, серія ударів, ухилення); відновлюється у відпочинок"};
-  if(name==="Пройдисвіт") return {label:"Підступна атака",value:`${Math.ceil(L/2)}d6`,hint:"додаткова шкода 1/хід, коли маєш перевагу або союзник поруч із ціллю"};
-  if(name==="Варвар"){ const r=L>=20?"∞":(L>=17?6:(L>=12?5:(L>=6?4:(L>=3?3:2)))); return {label:"Лють",value:`${r}/день`,hint:"скільки разів на день входиш у лють: бонус до шкоди Силою та спротив фізичній шкоді"}; }
+  if(ex.caster==="pact"){ const a=WARLOCK_SLOTS[L]; return a?{label:"Пакт-магія",value:t('res.pactVal').replace("{n}",a[0]).replace("{lvl}",a[1]),hint:"мало комірок, але відновлюються в короткий перепочинок"}:null; }
+  if(name==="Монах"&&L>=2) return {label:"Ці",value:t('res.kiVal').replace("{n}",L),hint:"ресурс на прийоми (приголомшення, серія ударів, ухилення); відновлюється у відпочинок"};
+  if(name==="Плут") return {label:"Підступна атака",value:`${Math.ceil(L/2)}d6`,hint:"додаткова шкода 1/хід, коли маєш перевагу або союзник поруч із ціллю"};
+  if(name==="Варвар"){ const r=L>=20?"∞":(L>=17?6:(L>=12?5:(L>=6?4:(L>=3?3:2)))); return {label:"Лють",value:(r==="∞"?r:t('res.perDay').replace("{n}",r)),hint:"скільки разів на день входиш у лють: бонус до шкоди Силою та спротив фізичній шкоді"}; }
   return null;
 }
 // Усі ресурси класу на рівні L (може бути кілька: напр. Чаклун має і комірки заклять, і очки чарів)
@@ -1977,8 +2008,136 @@ const S = {
   slots:{}, humanFeat:{ feat:"", featAbil:"" },
   asiQueue:[], asiIdx:0, asiAfter:null,
   optionalFeats:true, raceFilter:null, fightingStyle:null,
+  lang:"uk",
   _ready:false
 };
+
+/* =========================== i18n (мови) =============================
+   Каркас: словники по мовах + t() з відкатом на українську. Поки заповнено
+   лише uk — en/be/ru доливаються згодом; відсутній ключ автоматично показує
+   український текст, тож інтерфейс ніколи не «ламається» на порожнечу. */
+const LANG_ORDER = ["uk", "en", "be", "ru"];                 // меню: UA · EN · BY · RU
+const LANG_CODE  = { uk:"UA", en:"EN", be:"BY", ru:"RU" };
+const LANG_NAME  = { uk:"Українська", en:"English", be:"Беларуская", ru:"Русский" };
+
+/* Словники живуть у i18n.js (window.I18N — статичні ключі, window.TR —
+   пам'ять перекладу). Англійські назви рас/класів досіваємо з наявних мап
+   RACE_EN/CLASS_EN у seedTranslations() (виклик з init, коли ті визначені). */
+function seedTranslations(){
+  if (window.TR && window.TR.en) {
+    Object.assign(window.TR.en, RACE_EN, CLASS_EN);
+  }
+}
+
+/* Переклад статичного ключа: активна мова → відкат на uk → сам ключ. */
+function t(key){
+  const L = window.I18N || {};
+  const d = L[S.lang] || {};
+  if (key in d) return d[key];
+  const u = L.uk || {};
+  return (key in u) ? u[key] : key;
+}
+
+/* Переклад динамічного рядка (пам'ять перекладу): українську лишаємо як є,
+   для інших мов шукаємо в TR, інакше відкат на вихідний український рядок. */
+function tr(s){
+  if (S.lang === "uk" || !s) return s;
+  const d = (window.TR && window.TR[S.lang]) || {};
+  return (s in d) ? d[s] : s;
+}
+
+/* Проставляє тексти всім елементам з data-i18n / data-i18n-title. */
+function applyI18n(root){
+  root = root || document;
+  // Якщо переклад не знайдено, t() повертає сам ключ. У такому разі НЕ затираємо
+  // текст, вписаний у HTML (український фолбек), щоб при збої завантаження i18n.js
+  // користувач бачив українську, а не сирі ключі на кшталт «app.title».
+  root.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.getAttribute("data-i18n"); const v = t(k);
+    if (v !== k) el.textContent = v;
+  });
+  root.querySelectorAll("[data-i18n-title]").forEach(el => {
+    const k = el.getAttribute("data-i18n-title"); const v = t(k);
+    if (v !== k) { el.title = v; el.setAttribute("aria-label", v); }
+  });
+  root.querySelectorAll("[data-i18n-ph]").forEach(el => {
+    const k = el.getAttribute("data-i18n-ph"); const v = t(k);
+    if (v !== k) el.setAttribute("placeholder", v);
+  });
+  document.documentElement.lang = S.lang;
+}
+
+/* Стартова мова: збережений вибір → мова Telegram → українська. */
+function detectLang(){
+  try {
+    const saved = localStorage.getItem("dnd_lang");
+    if (saved && LANG_ORDER.includes(saved)) return saved;
+  } catch(e){}
+  const code = ((tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+                 && tg.initDataUnsafe.user.language_code) || "").toLowerCase();
+  if (code.startsWith("uk")) return "uk";
+  if (code.startsWith("be")) return "be";
+  if (code.startsWith("ru")) return "ru";
+  if (code.startsWith("en")) return "en";
+  return "uk";
+}
+
+function renderLangMenu(){
+  $("langMenu").innerHTML = LANG_ORDER.map(l =>
+    `<div class="lang-item ${l===S.lang?"on":""}" onclick="setLang('${l}')">` +
+    `<span>${LANG_NAME[l]}</span><span class="lc">${LANG_CODE[l]}</span></div>`
+  ).join("");
+}
+
+function setLang(l){
+  if (!LANG_ORDER.includes(l)) return;
+  S.lang = l;
+  try { localStorage.setItem("dnd_lang", l); } catch(e){}
+  $("langCode").textContent = LANG_CODE[l];
+  renderLangMenu();
+  applyI18n();
+  refreshDynamicI18n();
+  closeLangMenu();
+}
+
+/* Перемальовує списки, побудовані через innerHTML (статичний data-i18n
+   застосовується окремо в applyI18n). Розширюється в міру перекладу екранів. */
+function refreshDynamicI18n(){
+  if (typeof renderRaceFilter === "function") renderRaceFilter();
+  if (typeof renderRaceList === "function") renderRaceList();
+  if (typeof renderClassList === "function") renderClassList();
+  // якщо відкрита деталь раси/класу — перемалювати її теж
+  if (S.detailRace && !$("view-race-detail").classList.contains("hidden")
+      && typeof renderRaceDetail === "function") renderRaceDetail();
+  if (S.detailClass && !$("view-class-detail").classList.contains("hidden")
+      && typeof renderClassDetail === "function") renderClassDetail();
+  // прогрес-бар (назви кроків + раси/класу) — на кожному екрані
+  if (S._view && typeof renderProgress === "function") renderProgress(S._view);
+  // селект світогляду — перезаповнити з перекладеними мітками (значення лишається укр.)
+  if ($("alignment") && $("alignment").options.length) fillSelect("alignment", ALIGNMENTS, getSel("alignment"));
+  // підказка методу характеристик
+  if ($("methodHint") && typeof METHOD_HINTS !== "undefined" && S.method) $("methodHint").textContent = tr(METHOD_HINTS[S.method]);
+  // чарник (крок 3) — якщо відкритий, перемалювати з поточного стану
+  if (S._view === "sheet" && typeof buildSheet === "function") buildSheet();
+  // екрани передісторій
+  if (S._view === "bg-list" && typeof renderBgList === "function") renderBgList();
+  if (S._view === "bg-detail" && S.detailBg && typeof renderBgDetail === "function") renderBgDetail();
+  // крок 4 (спорядження) + крок 5 (огляд)
+  if (S._view === "equipment" && typeof buildEquipment === "function") buildEquipment();
+  if (S._view === "review" && typeof renderReview === "function") renderReview(computeCharacter());
+}
+
+function toggleLangMenu(ev){
+  if (ev) ev.stopPropagation();
+  const m = $("langMenu");
+  m.classList.toggle("hidden");
+  $("langBtn").setAttribute("aria-expanded", String(!m.classList.contains("hidden")));
+}
+function closeLangMenu(){
+  const m = $("langMenu");
+  if (m) { m.classList.add("hidden"); $("langBtn").setAttribute("aria-expanded", "false"); }
+}
+document.addEventListener("click", e => { if (!e.target.closest(".lang-dd")) closeLangMenu(); });
 
 const RACE_TAG = {
   "Людина":"Універсал · +1 всім", "Ельф":"Спритність · чуття · магія",
@@ -1995,12 +2154,12 @@ const BG_ICON = {
 };
 const CLASS_ICON = {
   "Варвар":"🪓","Бард":"🎵","Клірик":"✨","Друїд":"🍃","Воїн":"⚔️","Монах":"👊",
-  "Паладин":"🛡️","Слідопит":"🏹","Пройдисвіт":"🗡️","Чаклун":"🔮","Чорнокнижник":"👁️","Чарівник":"📖"
+  "Паладин":"🛡️","Слідопит":"🏹","Плут":"🗡️","Чаклун":"🔮","Чорнокнижник":"👁️","Чарівник":"📖"
 };
 const CLASS_ART = {
   "Варвар":["#6e241f","#2a0d0b"], "Бард":["#5a2a68","#221030"], "Клірик":["#6a5420","#2a2008"],
   "Друїд":["#2c5a3e","#152e1f"], "Воїн":["#3a4652","#181e26"], "Монах":["#1c5a56","#0c2826"],
-  "Паладин":["#2e3f6e","#121a30"], "Слідопит":["#4a5a22","#20300f"], "Пройдисвіт":["#3a3540","#16141a"],
+  "Паладин":["#2e3f6e","#121a30"], "Слідопит":["#4a5a22","#20300f"], "Плут":["#3a3540","#16141a"],
   "Чаклун":["#7a2a52","#2e1020"], "Чорнокнижник":["#3a1f52","#160b24"], "Чарівник":["#1f4e6e","#0c2230"]
 };
 const CLASS_BG_DEF = ["#3a4652","#181e26"];
@@ -2009,11 +2168,11 @@ function classGrad(name){ const b=classPalette(name); return `linear-gradient(12
 const CLASS_ROLE = {
   "Варвар":"лютий боєць","Бард":"підтримка/маг","Клірик":"лікар/жрець","Друїд":"природа/форми",
   "Воїн":"майстер зброї","Монах":"бойові мистецтва","Паладин":"святий воїн","Слідопит":"стрілець/слідопит",
-  "Пройдисвіт":"спритник/шкода","Чаклун":"вроджена магія","Чорнокнижник":"пакт/магія","Чарівник":"учений маг"
+  "Плут":"спритник/шкода","Чаклун":"вроджена магія","Чорнокнижник":"пакт/магія","Чарівник":"учений маг"
 };
 const CLASS_EN = {
   "Варвар":"Barbarian","Бард":"Bard","Клірик":"Cleric","Друїд":"Druid","Воїн":"Fighter","Монах":"Monk",
-  "Паладин":"Paladin","Слідопит":"Ranger","Пройдисвіт":"Rogue","Чаклун":"Sorcerer","Чорнокнижник":"Warlock","Чарівник":"Wizard"
+  "Паладин":"Paladin","Слідопит":"Ranger","Плут":"Rogue","Чаклун":"Sorcerer","Чорнокнижник":"Warlock","Чарівник":"Wizard"
 };
 const RACE_EN = {
   "Людина":"Human","Ельф":"Elf","Дворф":"Dwarf","Піврослик":"Halfling","Драконороджений":"Dragonborn",
@@ -2079,11 +2238,12 @@ const esc = (s) => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;
 const q = (s) => String(s).replace(/'/g,"\\'");
 function fillSelect(id, items, selected) {
   const el=$(id); el.innerHTML="";
-  items.forEach(it=>{ const o=document.createElement("option"); o.value=it; o.textContent=it;
+  items.forEach(it=>{ const o=document.createElement("option"); o.value=it; o.textContent=tr(it);
     if(it===selected) o.selected=true; el.appendChild(o); });
 }
 function addAsi(t, src){ if(!src) return; for(const k in src) t[k]=(t[k]||0)+src[k]; }
-function asiSummary(o){ return ABILS.filter(a=>o[a]).map(a=>`+${o[a]} ${ABIL_SHORT[a]}`).join(", ") || "—"; }
+function abShort(a){ return tr(ABIL_SHORT[a]); }
+function asiSummary(o){ return ABILS.filter(a=>o[a]).map(a=>`+${o[a]} ${abShort(a)}`).join(", ") || "—"; }
 
 /* --------------------------- модалка --------------------------- */
 function openModal(title, body){ $("modalTitle").innerHTML=title; $("modalBody").innerHTML=body; $("modal").classList.remove("hidden"); }
@@ -2128,12 +2288,13 @@ function renderProgress(view){
   prog.innerHTML =
     `<div class="slim">${segs}</div>`+
     `<div class="plegend">`+
-      `<span class="pwho">${rSw}<b>${showRace?esc(S.race):""}</b></span>`+
-      `<span class="pstep">Крок ${step} з 5 · ${esc(STEP_TITLES[step])}</span>`+
-      `<span class="pwho"><b>${showClass?esc(S.class):""}</b>${cSw}</span>`+
+      `<span class="pwho">${rSw}<b>${showRace?esc(tr(S.race)):""}</b></span>`+
+      `<span class="pstep">${esc(t('prog.step').replace("{n}", step))} ${esc(tr(STEP_TITLES[step]))}</span>`+
+      `<span class="pwho"><b>${showClass?esc(tr(S.class)):""}</b>${cSw}</span>`+
     `</div>`;
 }
 function showView(name){
+  S._view = name;
   VIEWS.forEach(v => $("view-"+v).classList.toggle("hidden", v !== name));
   $("formErr").classList.add("hidden");
   applyStepBackground(name);
@@ -2143,6 +2304,11 @@ function showView(name){
 
 /* --------------------------- ініціалізація --------------------------- */
 function init(){
+  seedTranslations();
+  S.lang = detectLang();
+  $("langCode").textContent = LANG_CODE[S.lang];
+  renderLangMenu();
+  applyI18n();
   fillSelect("alignment", ALIGNMENTS, "Істинно нейтральний");
   $("skills").addEventListener("change", onSkillChange);
   renderRaceFilter(); renderRaceList(); renderClassList();
@@ -2155,7 +2321,7 @@ function init(){
    ========================================================================= */
 function renderRaceFilter(){
   const eds = [...new Set(Object.keys(RACES).map(n=>RACE_SRC[n]||"—"))];
-  let html = `<div class="filter-chip ${S.raceFilter===null?"on":""}" onclick="setRaceFilter(null)">Усі</div>`;
+  let html = `<div class="filter-chip ${S.raceFilter===null?"on":""}" onclick="setRaceFilter(null)">${esc(tr("Усі"))}</div>`;
   html += eds.map(e=>{
     const c=srcColor(e), on=S.raceFilter===e;
     const st = on ? `border-color:${c};color:${c};background:${c}22` : `color:${c};border-color:${c}55`;
@@ -2169,7 +2335,7 @@ function renderRaceList(){
   $("raceList").innerHTML = names.map(n=>`
     <div class="tile" onclick="openRace('${q(n)}')">
       <div class="thumb">${raceArtSVG(n)}</div>
-      <div class="tinfo"><div class="tname">${esc(n)} <span class="en">${esc(RACE_EN[n]||"")}</span></div><div class="ttag">${esc(RACE_TAG[n]||"")}</div></div>
+      <div class="tinfo"><div class="tname">${esc(tr(n))} ${S.lang==='en'?"":`<span class="en">${esc(RACE_EN[n]||"")}</span>`}</div><div class="ttag">${esc(tr(RACE_TAG[n]||""))}</div></div>
       ${srcBadge(RACE_SRC[n])}
       <div class="chev">›</div></div>`).join("");
 }
@@ -2187,45 +2353,46 @@ function renderRaceDetail(){
   const sub = r.subraces ? r.subraces[S.detailSub] : null;
   $("rdArt").innerHTML = raceArtSVG(name);
   setPageTheme(racePalette(name).bg);
-  $("rdName").innerHTML = `${esc(name)} <span class="en">${esc(RACE_EN[name]||"")}</span>`;
-  $("rdTag").innerHTML = `${esc(RACE_TAG[name]||"")}${RACE_SRC[name]?` · <span class="src-tag" style="color:${srcColor(RACE_SRC[name])};border-color:${srcColor(RACE_SRC[name])}">${esc(RACE_SRC[name])}</span> ${esc(EDITIONS[RACE_SRC[name]]||"")}`:""}`;
-  $("rdDesc").textContent = r.desc || "";
-  $("rdRecommend").innerHTML = r.recommend ? `<b>💡 Кому підходить</b><p>${esc(r.recommend)}</p>` : "";
+  $("rdName").innerHTML = `${esc(tr(name))} ${S.lang==='en'?"":`<span class="en">${esc(RACE_EN[name]||"")}</span>`}`;
+  $("rdTag").innerHTML = `${esc(tr(RACE_TAG[name]||""))}${RACE_SRC[name]?` · <span class="src-tag" style="color:${srcColor(RACE_SRC[name])};border-color:${srcColor(RACE_SRC[name])}">${esc(RACE_SRC[name])}</span> ${esc(EDITIONS[RACE_SRC[name]]||"")}`:""}`;
+  $("rdDesc").textContent = tr(r.desc || "");
+  $("rdRecommend").innerHTML = r.recommend ? `<b>${esc(t('rd.recommend'))}</b><p>${esc(tr(r.recommend))}</p>` : "";
 
   const asi={}; addAsi(asi, r.asiFixed); addAsi(asi, sub && sub.asiFixed);
   const speed=(sub && sub.speed) || r.speed;
   const adef = r.asiChoice || (sub && sub.asiChoice);
   const sdef = r.skillChoice || (sub && sub.skillChoice);
-  let b = `<div class="bonus"><span class="bk">Приріст характеристик</span><span class="bv">${asiSummary(asi)}</span></div>`;
-  if(adef) b+=`<div class="bonus"><span class="bk">На вибір</span><span class="bv">+${adef.amount} до ${adef.count} характ.${adef.exclude?" (крім Хар)":""}</span></div>`;
-  if(r.skillFixed) b+=`<div class="bonus"><span class="bk">Навичка</span><span class="bv">${r.skillFixed.join(", ")}</span></div>`;
-  if(sdef) b+=`<div class="bonus"><span class="bk">Навички на вибір</span><span class="bv">${sdef.count}</span></div>`;
-  if(r.featChoice || (sub && sub.featChoice)) b+=`<div class="bonus"><span class="bk">Черта</span><span class="bv">на 1-му рівні</span></div>`;
-  b+=`<div class="bonus"><span class="bk">Швидкість</span><span class="bv">${speed} фт</span></div>`;
-  b+=`<div class="bonus"><span class="bk">Мови</span><span class="bv">${(r.langs||[]).join(", ")}</span></div>`;
+  let b = `<div class="bonus"><span class="bk">${esc(t('rd.asiGain'))}</span><span class="bv">${asiSummary(asi)}</span></div>`;
+  if(adef) b+=`<div class="bonus"><span class="bk">${esc(t('rd.asiChoice'))}</span><span class="bv">+${adef.amount} ${esc(t('rd.toN'))} ${adef.count} ${esc(t('rd.abilAbbr'))}${adef.exclude?" "+esc(t('rd.exclCha')):""}</span></div>`;
+  if(r.skillFixed) b+=`<div class="bonus"><span class="bk">${esc(t('rd.skill'))}</span><span class="bv">${r.skillFixed.map(s=>esc(tr(s))).join(", ")}</span></div>`;
+  if(sdef) b+=`<div class="bonus"><span class="bk">${esc(t('rd.skillChoice'))}</span><span class="bv">${sdef.count}</span></div>`;
+  if(r.featChoice || (sub && sub.featChoice)) b+=`<div class="bonus"><span class="bk">${esc(t('rd.feat'))}</span><span class="bv">${esc(t('rd.atLvl1'))}</span></div>`;
+  b+=`<div class="bonus"><span class="bk">${esc(t('rd.speed'))}</span><span class="bv">${speed} ${esc(t('rd.ft'))}</span></div>`;
+  b+=`<div class="bonus"><span class="bk">${esc(t('rd.langs'))}</span><span class="bv">${(r.langs||[]).map(l=>esc(tr(l))).join(", ")}</span></div>`;
   $("rdBonuses").innerHTML = b;
 
   const traits=[...(r.baseTraits||[]), ...((sub && sub.traits)||[])];
-  $("rdTraits").innerHTML = traits.map(t=>`<div class="trait"><b>${esc(t.name)}</b><p>${esc(t.desc)}</p></div>`).join("");
+  $("rdTraits").innerHTML = traits.map(x=>`<div class="trait"><b>${esc(tr(x.name))}</b><p>${esc(tr(x.desc))}</p></div>`).join("");
 
   const card=$("rdSubraceCard");
   if(r.subraces){
     card.classList.remove("hidden");
-    $("rdSubLabel").textContent = r.subLabel || "Підраса";
+    $("rdSubLabel").textContent = r.subLabel ? tr(r.subLabel) : t('rd.subrace');
     $("rdSubraces").innerHTML = Object.entries(r.subraces).map(([sn,so])=>{
       const sasi={}; addAsi(sasi, so.asiFixed);
       // трейти, що лише переписують бонус характеристик (напр. «+1 до всіх…»), не показуємо —
       // їх і так видно в рядку бонусів, тож окрема ⓘ була б дублем
-      const realTraits=(so.traits||[]).filter(t=>!/^\+/.test((t.name||"").trim()));
-      const tr=realTraits.map(t=>t.name).join(", ");
-      const trBody=realTraits.map(t=>`<div class="modal-item"><b>${esc(t.name)}</b><p>${esc(t.desc)}</p></div>`).join("");
+      const realTraits=(so.traits||[]).filter(x=>!/^\+/.test((x.name||"").trim()));
+      const names=realTraits.map(x=>tr(x.name)).join(", ");
+      const trBody=realTraits.map(x=>`<div class="modal-item"><b>${esc(tr(x.name))}</b><p>${esc(tr(x.desc))}</p></div>`).join("");
+      const subLabelTxt = r.subLabel ? tr(r.subLabel) : t('rd.subrace');
       return `<div class="opt ${sn===S.detailSub?"sel":""}" onclick="selectDetailSub('${q(sn)}')">
-        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(sn)}${so.src?` <span class="src-tag">${esc(so.src)}</span>`:""}</span>${trBody?infoBtn((r.subLabel||"Підраса")+": "+sn, trBody):""}</div>
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(sn))}${so.src?` <span class="src-tag">${esc(so.src)}</span>`:""}</span>${trBody?infoBtn(subLabelTxt+": "+tr(sn), trBody):""}</div>
         ${Object.keys(sasi).length?`<div class="obonus">${asiSummary(sasi)}</div>`:""}
-        ${tr?`<div class="od">${esc(tr)}</div>`:""}</div>`;
+        ${names?`<div class="od">${esc(names)}</div>`:""}</div>`;
     }).join("");
     const hasSrc=Object.values(r.subraces).some(s=>s.src);
-    $("rdSubHint").innerHTML = hasSrc ? "Позначки <b>SCAG · MToF · EGW</b> — підраси з додаткових книг правил." : "";
+    $("rdSubHint").innerHTML = hasSrc ? t('rd.subSrcNote') : "";
   } else card.classList.add("hidden");
 
   // стартова черта Варіанта людини — прямо тут, на расі
@@ -2241,11 +2408,11 @@ function renderHumanFeatPicker(){
   const st=S.humanFeat;
   let html=`<div class="feat-list">`+Object.keys(FEATS).map(f=>
     `<div class="opt ${st.feat===f?"sel":""}" onclick="selectHumanFeat('${q(f)}')">
-      <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(f)}</span></div><div class="od">${esc(FEATS[f].desc)}</div></div>`).join("")+`</div>`;
+      <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(f))}</span></div><div class="od">${esc(tr(FEATS[f].desc))}</div></div>`).join("")+`</div>`;
   const f=FEATS[st.feat];
   if(f && f.asi && f.asi.choose){
-    html+=`<p class="sub" style="margin-top:8px">Черта дає +1 — обери куди:</p><div class="chips">`+
-      f.asi.from.map(a=>`<div class="chip ${st.featAbil===a?"sel":""}" onclick="selectHumanFeatAbil('${a}')">${ABIL_UA[a]}</div>`).join("")+`</div>`;
+    html+=`<p class="sub" style="margin-top:8px">${esc(t('rd.featPlus1'))}</p><div class="chips">`+
+      f.asi.from.map(a=>`<div class="chip ${st.featAbil===a?"sel":""}" onclick="selectHumanFeatAbil('${a}')">${esc(tr(ABIL_UA[a]))}</div>`).join("")+`</div>`;
   }
   $("rdFeats").innerHTML=html;
 }
@@ -2254,9 +2421,9 @@ function selectHumanFeatAbil(a){ S.humanFeat.featAbil=a; renderHumanFeatPicker()
 
 function chooseRace(){
   if(detailFeatChoice()){
-    if(!S.humanFeat.feat) return fail("Обери стартову черту для Варіанта людини.");
+    if(!S.humanFeat.feat) return fail(t("err.humanFeat"));
     const f=FEATS[S.humanFeat.feat];
-    if(f.asi && f.asi.choose && !S.humanFeat.featAbil) return fail("Обери характеристику +1 для черти.");
+    if(f.asi && f.asi.choose && !S.humanFeat.featAbil) return fail(t("err.humanFeatAbil"));
   } else { S.humanFeat={feat:"",featAbil:""}; }
   $("formErr").classList.add("hidden");
   S.race=S.detailRace; S.subrace=S.detailSub;
@@ -2271,7 +2438,7 @@ function renderClassList(){
   $("classList").innerHTML = Object.keys(CLASSES).map(n=>`
     <div class="tile" onclick="openClass('${q(n)}')">
       <div class="ticon" style="background:${classGrad(n)}">${CLASS_ICON[n]||"⚔️"}</div>
-      <div class="tinfo"><div class="tname">${esc(n)} <span class="en">${esc(CLASS_EN[n]||"")}</span></div><div class="ttag">d${CLASSES[n].hd} · ${esc(CLASS_ROLE[n]||"")}</div></div>
+      <div class="tinfo"><div class="tname">${esc(tr(n))} ${S.lang==='en'?"":`<span class="en">${esc(CLASS_EN[n]||"")}</span>`}</div><div class="ttag">d${CLASSES[n].hd} · ${esc(tr(CLASS_ROLE[n]||""))}</div></div>
       <div class="chev">›</div></div>`).join("");
 }
 function openClass(name){
@@ -2289,7 +2456,8 @@ function openClass(name){
      Тут невідома (це опис класу, а не готовий персонаж), тож показуємо "+ Стат×L". */
 function hpForLevel(hd, L){ return hd + (L-1)*(Math.floor(hd/2)+1); }
 function hpTableHtml(hd, L){
-  const stat = L===1 ? "Стат" : `Стат×${L}`;
+  const con = t('cd.conAbbr');
+  const stat = L===1 ? con : `${con}×${L}`;
   return `<div class="hp-single"><b>${hpForLevel(hd,L)} + ${stat}</b></div>`;
 }
 function renderClassDetail(){
@@ -2298,19 +2466,19 @@ function renderClassDetail(){
   $("cdIcon").textContent = CLASS_ICON[name]||"⚔️";
   $("cdIcon").style.background = classGrad(name);
   setPageTheme(classPalette(name));
-  $("cdName").innerHTML = `${esc(name)} <span class="en">${esc(CLASS_EN[name]||"")}</span>`;
-  $("cdTag").textContent = `d${c.hd} · ${CLASS_ROLE[name]||""}`;
-  $("cdDesc").textContent = c.desc || "";
+  $("cdName").innerHTML = `${esc(tr(name))} ${S.lang==='en'?"":`<span class="en">${esc(CLASS_EN[name]||"")}</span>`}`;
+  $("cdTag").textContent = `d${c.hd} · ${tr(CLASS_ROLE[name]||"")}`;
+  $("cdDesc").textContent = tr(c.desc || "");
   const lvlSel=$("cdLevel");
   if(lvlSel.options.length!==20){ let o=""; for(let i=1;i<=20;i++) o+=`<option value="${i}">${i}</option>`; lvlSel.innerHTML=o; }
   lvlSel.value=S.detailLevel;
-  $("cdHpNote").textContent = `1-й рівень — максимум кістки (d${c.hd}) + модиф. Статури. Далі +${Math.floor(c.hd/2)+1} + Статура за рівень. У таблиці — без Статури.`;
+  $("cdHpNote").textContent = t('cd.hpNote').replace("{hd}", "d"+c.hd).replace("{step}", "+"+(Math.floor(c.hd/2)+1));
   $("cdHp").innerHTML = hpTableHtml(c.hd, S.detailLevel);
-  let bs=`<div class="bonus"><span class="bk">Кістка здоров'я</span><span class="bv">d${c.hd}</span></div>`;
-  bs+=`<div class="bonus"><span class="bk">Рятівні кидки</span><span class="bv">${c.saves.map(s=>ABIL_UA[s]).join(", ")}</span></div>`;
-  bs+=`<div class="bonus"><span class="bk">Навичок на вибір</span><span class="bv">${c.skillCount} із ${c.skills.length===ALL_SKILLS.length?"будь-яких":c.skills.length}</span></div>`;
-  if(c.spell) bs+=`<div class="bonus"><span class="bk">Базова хар. заклять</span><span class="bv">${ABIL_UA[c.spell]}</span></div>`;
-  bs+=`<div class="bonus"><span class="bk">Володіння</span><span class="bv">${(c.prof||[]).join("; ")}</span></div>`;
+  let bs=`<div class="bonus"><span class="bk">${esc(t('cd.hitDie'))}</span><span class="bv">d${c.hd}</span></div>`;
+  bs+=`<div class="bonus"><span class="bk">${esc(t('cd.saves'))}</span><span class="bv">${c.saves.map(s=>esc(tr(ABIL_UA[s]))).join(", ")}</span></div>`;
+  bs+=`<div class="bonus"><span class="bk">${esc(t('cd.skillPick'))}</span><span class="bv">${c.skillCount} ${esc(t('cd.of'))} ${c.skills.length===ALL_SKILLS.length?esc(t('cd.any')):c.skills.length}</span></div>`;
+  if(c.spell) bs+=`<div class="bonus"><span class="bk">${esc(t('cd.spellAbil'))}</span><span class="bv">${esc(tr(ABIL_UA[c.spell]))}</span></div>`;
+  bs+=`<div class="bonus"><span class="bk">${esc(t('cd.prof'))}</span><span class="bv">${(c.prof||[]).map(p=>esc(tr(p))).join("; ")}</span></div>`;
   $("cdBasics").innerHTML = bs;
   renderLevelResources();
   renderClassLevels();
@@ -2324,11 +2492,11 @@ function renderLevelResources(){
   const card=$("cdResCard");
   if(!items.length){ card.classList.add("hidden"); $("cdRes").innerHTML=""; return; }
   card.classList.remove("hidden");
-  $("cdResTitle").textContent = `Ресурси на рівні ${L}`;
+  $("cdResTitle").textContent = t('cd.resTitle').replace("{L}", L);
   $("cdRes").innerHTML = items.map(it=>
-    `<div class="res-tile"><div class="rt-l">${esc(it.label)}</div>`+
-    `<div class="rt-v">${esc(it.value)}</div>`+
-    (it.hint?`<div class="rt-h">${esc(it.hint)}</div>`:"")+`</div>`
+    `<div class="res-tile"><div class="rt-l">${esc(tr(it.label))}</div>`+
+    `<div class="rt-v">${esc(tr(it.value))}</div>`+
+    (it.hint?`<div class="rt-h">${esc(tr(it.hint))}</div>`:"")+`</div>`
   ).join("");
 }
 function onClassLevelChange(){ S.detailLevel=+getSel("cdLevel")||1; $("cdHp").innerHTML=hpTableHtml(currentClassDetail().hd,S.detailLevel); renderLevelResources(); renderClassLevels(); }
@@ -2337,17 +2505,17 @@ function currentClassDetail(){ return CLASSES[S.detailClass]; }
 function subPickHtml(c){
   const ex=CLASS_EXTRA[S.detailClass]||{};
   const featLv=(ex.subFeat||[]).join(", ");
-  return `<div class="pick-lead"><span class="pick-badge">Треба обрати</span>${esc(c.subLabel)}</div>`+
+  return `<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(tr(c.subLabel))}</div>`+
     c.subs.map(s=>{
       const body=
-        (s.prof&&s.prof.length?`<div class="modal-item"><b>Бонусні володіння</b><p>${esc(s.prof.join(", "))}</p></div>`:"")+
+        (s.prof&&s.prof.length?`<div class="modal-item"><b>${esc(t('cd.bonusProf'))}</b><p>${esc(s.prof.map(tr).join(", "))}</p></div>`:"")+
         (s.feats
-          ? Object.keys(s.feats).map(lv=>`<div class="modal-item"><b>${lv}-й рівень</b><p>${s.feats[lv].map(esc).join("<br>")}</p></div>`).join("")
-          : (featLv?`<div class="modal-item"><b>Здібності підкласу на рівнях</b><p>${featLv}</p></div>`:""))+
-        (s.src?`<div class="modal-item"><b>Джерело</b><p>${esc(s.src)}</p></div>`:"");
+          ? Object.keys(s.feats).map(lv=>`<div class="modal-item"><b>${t('cd.nthLevel').replace("{L}", lv)}</b><p>${s.feats[lv].map(x=>esc(tr(x))).join("<br>")}</p></div>`).join("")
+          : (featLv?`<div class="modal-item"><b>${esc(t('cd.subFeatsByLvl'))}</b><p>${featLv}</p></div>`:""))+
+        (s.src?`<div class="modal-item"><b>${esc(t('cd.source'))}</b><p>${esc(s.src)}</p></div>`:"");
       return `<div class="opt ${s.name===S.subclass?"sel":""}" onclick="selectSubclass('${q(s.name)}')">
-        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(s.name)}${s.src?` <span class="src-tag">${esc(s.src)}</span>`:""}</span>${body?infoBtn(c.subLabel+": "+s.name, body):""}</div>
-        <div class="od">${esc(s.desc)}</div></div>`;
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(s.name))}${s.src?` <span class="src-tag">${esc(s.src)}</span>`:""}</span>${body?infoBtn(tr(c.subLabel)+": "+tr(s.name), body):""}</div>
+        <div class="od">${esc(tr(s.desc))}</div></div>`;
     }).join("");
 }
 function subFeatHtml(c,L,pickerLevel,items){
@@ -2355,12 +2523,12 @@ function subFeatHtml(c,L,pickerLevel,items){
   const list=sub&&sub.feats&&sub.feats[L];
   if(list&&list.length){
     return list.map(f=>{
-      const parts=String(f).split(" — "); const nm=parts[0], ds=parts.slice(1).join(" — ");
+      const parts=String(tr(f)).split(" — "); const nm=parts[0], ds=parts.slice(1).join(" — ");
       if(ds && items) items.push({name:nm, desc:ds});
       return `<div class="lvl-feat">✦ ${esc(nm)}</div>`;
     }).join("");
   }
-  return pickerLevel ? "" : `<div class="lvl-feat">✦ Здібність підкласу${S.subclass?`: ${esc(S.subclass)}`:""}</div>`;
+  return pickerLevel ? "" : `<div class="lvl-feat">✦ ${esc(t('cd.subFeat'))}${S.subclass?`: ${esc(tr(S.subclass))}`:""}</div>`;
 }
 function renderClassLevels(){
   infoReset();
@@ -2375,7 +2543,7 @@ function renderClassLevels(){
     const featItems=[];
     let inner="";
     feats.forEach(f=>{
-      const parts=String(f).split(" — ");
+      const parts=String(tr(f)).split(" — ");
       const nm=parts[0], ds=parts.slice(1).join(" — ");
       if(ds) featItems.push({name:nm, desc:ds});
       inner+=`<div class="lvl-feat">${esc(nm)}</div>`;
@@ -2383,24 +2551,24 @@ function renderClassLevels(){
     if(fs && L===fs.level) inner+=fsPickHtml(name);
     if(L===c.subLevel && c.subs){ inner+=subPickHtml(c); inner+=subFeatHtml(c,L,true,featItems); }
     else if(subFeat.has(L)) inner+=subFeatHtml(c,L,false,featItems);
-    if(asiSet.has(L)) inner+=`<div class="pick-lead"><span class="pick-badge">Треба обрати</span>Підвищення характеристик або черта</div>`;
+    if(asiSet.has(L)) inner+=`<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(t('cd.asiOrFeat'))}</div>`;
     if(S.optionalFeats && OPT_FEATS[name] && OPT_FEATS[name][L])
       OPT_FEATS[name][L].forEach(f=>{
-        const parts=String(f).split(" — "); const nm=parts[0], ds=parts.slice(1).join(" — ");
+        const parts=String(tr(f)).split(" — "); const nm=parts[0], ds=parts.slice(1).join(" — ");
         if(ds) featItems.push({name:nm, desc:ds});
-        inner+=`<div class="lvl-feat">🔹 ${esc(nm)} <span class="src-tag">опц.</span></div>`;
+        inner+=`<div class="lvl-feat">🔹 ${esc(nm)} <span class="src-tag">${esc(t('cd.opt'))}</span></div>`;
       });
     const normRes=(v)=>String(v).replace(/\s*\(\d+\)\s*$/,"").trim();
     const curRes=[...resourceLines(name,L), ...spellCountLines(name,L)];
     const prevMap={}; if(L>1) [...resourceLines(name,L-1), ...spellCountLines(name,L-1)].forEach(r=>prevMap[r.label]=normRes(r.value));
     curRes.forEach(r=>{
       const nv=normRes(r.value), prev=prevMap[r.label];
-      if(prev===undefined) inner+=`<div class="lvl-res"><span class="res-l">${esc(r.label)}</span> <b>${esc(nv)}</b></div>`;
-      else if(prev!==nv) inner+=`<div class="lvl-res"><span class="res-chg">⬆</span> <span class="res-l">${esc(r.label)}</span> <b>${esc(nv)}</b></div>`;
+      if(prev===undefined) inner+=`<div class="lvl-res"><span class="res-l">${esc(tr(r.label))}</span> <b>${esc(tr(nv))}</b></div>`;
+      else if(prev!==nv) inner+=`<div class="lvl-res"><span class="res-chg">⬆</span> <span class="res-l">${esc(tr(r.label))}</span> <b>${esc(tr(nv))}</b></div>`;
     });
     if(!inner) inner=`<span class="lvl-empty">—</span>`;
     const lvlInfo = featItems.length
-      ? infoBtn(`Рівень ${L} — здібності`, featItems.map(it=>`<div class="modal-item"><b>${esc(it.name)}</b><p>${esc(it.desc)}</p></div>`).join(""))
+      ? infoBtn(t('cd.levelInfo').replace("{L}", L), featItems.map(it=>`<div class="modal-item"><b>${esc(it.name)}</b><p>${esc(it.desc)}</p></div>`).join(""))
       : "";
     html+=`<div class="lvl-row${L===S.detailLevel?" cur":""}"><div class="lvl-num">${L}</div><div class="lvl-body">${inner}</div>${lvlInfo}</div>`;
   }
@@ -2418,12 +2586,12 @@ function fsStyles(name){ const cfg=FS_CONFIG[name]; if(!cfg) return []; return S
 function fsPickHtml(name){
   const list=fsStyles(name);
   if(!S.fightingStyle || !list.includes(S.fightingStyle)) S.fightingStyle=list[0];
-  return `<div class="pick-lead"><span class="pick-badge">Треба обрати</span>Бойовий стиль</div>`+
+  return `<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(t('cd.fightStyle'))}</div>`+
     list.map(s=>{
       const isOpt = (FS_CONFIG[name].opt||[]).includes(s);
       return `<div class="opt ${s===S.fightingStyle?"sel":""}" onclick="selectFightingStyle('${q(s)}')">
-        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(s)}${isOpt?`<span class="src-tag">опц.</span>`:""}</span></div>
-        <div class="od">${esc(FIGHTING_STYLES[s]||"")}</div></div>`;
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(s))}${isOpt?`<span class="src-tag">${esc(t('cd.opt'))}</span>`:""}</span></div>
+        <div class="od">${esc(tr(FIGHTING_STYLES[s]||""))}</div></div>`;
     }).join("");
 }
 
@@ -2442,7 +2610,7 @@ function renderBgList(){
     const b=BACKGROUNDS[n];
     return `<div class="tile ${n===S.background?"sel":""}" onclick="openBg('${q(n)}')">
       <div class="ticon" style="background:var(--card)">${BG_ICON[n]||"📜"}</div>
-      <div class="tinfo"><div class="tname">${esc(n)}</div><div class="ttag">${esc(b.skills.join(" · "))}</div></div>
+      <div class="tinfo"><div class="tname">${esc(tr(n))}</div><div class="ttag">${esc(b.skills.map(tr).join(" · "))}</div></div>
       <div class="chev">›</div></div>`;
   }).join("");
 }
@@ -2451,14 +2619,14 @@ function openBg(name){ S.detailBg=name; renderBgDetail(); showView("bg-detail");
 function renderBgDetail(){
   const n=S.detailBg, b=BACKGROUNDS[n];
   $("bdIcon").textContent = BG_ICON[n]||"📜";
-  $("bdName").textContent = n;
-  $("bdTag").textContent = b.skills.join(" · ");
-  $("bdDesc").textContent = b.desc||"";
-  let g=`<div class="modal-item"><b>Навички</b><p>${esc(b.skills.join(", "))}</p></div>`;
-  if(b.tools&&b.tools.length) g+=`<div class="modal-item"><b>Інструменти</b><p>${esc(b.tools.join(", "))}</p></div>`;
-  if(b.langs) g+=`<div class="modal-item"><b>Мови</b><p>+${b.langs} на вибір</p></div>`;
+  $("bdName").textContent = tr(n);
+  $("bdTag").textContent = b.skills.map(tr).join(" · ");
+  $("bdDesc").textContent = tr(b.desc||"");
+  let g=`<div class="modal-item"><b>${esc(t('sh.skills'))}</b><p>${esc(b.skills.map(tr).join(", "))}</p></div>`;
+  if(b.tools&&b.tools.length) g+=`<div class="modal-item"><b>${esc(t('sh.tools'))}</b><p>${esc(b.tools.map(tr).join(", "))}</p></div>`;
+  if(b.langs) g+=`<div class="modal-item"><b>${esc(t('rd.langs'))}</b><p>${esc(t('sh.langPick').replace("{n}", b.langs))}</p></div>`;
   $("bdGrants").innerHTML=g;
-  $("bdFeature").innerHTML=`<div class="modal-item"><b>${esc(b.feature.name)}</b><p>${esc(b.feature.desc)}</p></div>`;
+  $("bdFeature").innerHTML=`<div class="modal-item"><b>${esc(tr(b.feature.name))}</b><p>${esc(tr(b.feature.desc))}</p></div>`;
 }
 function chooseBg(){ S.background=S.detailBg; renderBgBadge(); onBackgroundChange(); showView("sheet"); }
 function renderBgBadge(){
@@ -2467,26 +2635,26 @@ function renderBgBadge(){
   if(!n){
     box.innerHTML=`<div class="bg-empty" onclick="openBgList()">
       <span class="bg-empty-ic">📜</span>
-      <span class="bg-empty-txt"><b>Передісторія не обрана</b><small>Тисни, щоб переглянути й обрати</small></span>
-      <span class="bg-empty-cta">Обрати →</span></div>`;
+      <span class="bg-empty-txt"><b>${esc(t('sh.bgNone'))}</b><small>${esc(t('sh.bgNoneHint'))}</small></span>
+      <span class="bg-empty-cta">${esc(t('sh.bgPick'))}</span></div>`;
     return;
   }
   const b=BACKGROUNDS[n];
   box.innerHTML=`<div class="badge">
     <div class="bthumb ticon" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--card)">${BG_ICON[n]||"📜"}</div>
-    <div class="binfo"><div class="bt">${esc(n)}</div><div class="bs">${esc(b.skills.join(" · "))}</div></div>
-    <button class="change" onclick="openBgList()">змінити</button></div>`;
+    <div class="binfo"><div class="bt">${esc(tr(n))}</div><div class="bs">${esc(b.skills.map(tr).join(" · "))}</div></div>
+    <button class="change" onclick="openBgList()">${esc(t('sh.change'))}</button></div>`;
 }
 
 function renderSummary(){
   const r=currentRace(), c=currentClass();
   $("sumRaceArt").innerHTML = raceArtSVG(S.race);
-  $("sumRaceName").textContent = S.race;
-  $("sumRaceSub").textContent = S.subrace ? ((r.subLabel||"Підраса")+": "+S.subrace) : "—";
+  $("sumRaceName").textContent = tr(S.race);
+  $("sumRaceSub").textContent = S.subrace ? ((r.subLabel?tr(r.subLabel):t('rd.subrace'))+": "+tr(S.subrace)) : "—";
   $("sumClassIcon").textContent = CLASS_ICON[S.class]||"⚔️";
   $("sumClassIcon").style.background = classGrad(S.class);
-  $("sumClassName").textContent = `${S.class} ${S.level} рів.`;
-  $("sumClassSub").textContent = `d${c.hd} · рятівні: ${c.saves.map(s=>ABIL_SHORT[s]).join("/")}` + (subclassActive()&&S.subclass?` · ${S.subclass}`:"");
+  $("sumClassName").textContent = `${tr(S.class)} ${t('sh.lvlTpl').replace("{n}", S.level)}`;
+  $("sumClassSub").textContent = `d${c.hd} · ${t('sh.savesShort')} ${c.saves.map(s=>abShort(s)).join("/")}` + (subclassActive()&&S.subclass?` · ${tr(S.subclass)}`:"");
 }
 
 function buildSheet(){
@@ -2510,27 +2678,27 @@ function renderAsiSummary(){
     // порожній рівень — заклик обрати
     if(!filled(st)){
       return `<div class="asi-row"><div class="asi-lvl empty">${lvl}</div>`+
-        `<div class="asi-main asi-empty">Ще не обрано</div>`+
-        `<span class="asi-tag cta">+ обрати</span></div>`;
+        `<div class="asi-main asi-empty">${esc(t('sh.asiEmpty'))}</div>`+
+        `<span class="asi-tag cta">${esc(t('sh.asiPickCta'))}</span></div>`;
     }
     let main, tag;
     if(st.type==="asi"){
       // однакова двічі = +2 до однієї; різні = +1/+1
       const chips = st.a1===st.a2
-        ? [`+2 ${ABIL_SHORT[st.a1]}`]
-        : [`+1 ${ABIL_SHORT[st.a1]}`, `+1 ${ABIL_SHORT[st.a2]}`];
+        ? [`+2 ${abShort(st.a1)}`]
+        : [`+1 ${abShort(st.a1)}`, `+1 ${abShort(st.a2)}`];
       main = `<div class="asi-chips">`+chips.map(c=>`<span class="asi-chip">${esc(c)}</span>`).join("")+`</div>`;
-      tag = `<span class="asi-tag asi">хар-ки</span>`;
+      tag = `<span class="asi-tag asi">${esc(t('sh.asiTagAsi'))}</span>`;
     } else {
-      main = `<div class="asi-cap">Черта</div><div class="asi-name">${esc(st.feat)}</div>`;
-      tag = `<span class="asi-tag feat">черта</span>`;
+      main = `<div class="asi-cap">${esc(t('cd.feat'))}</div><div class="asi-name">${esc(tr(st.feat))}</div>`;
+      tag = `<span class="asi-tag feat">${esc(t('sh.asiTagFeat'))}</span>`;
     }
     return `<div class="asi-row"><div class="asi-lvl">${lvl}</div>`+
       `<div class="asi-main">${main}</div>${tag}</div>`;
   };
   let html="", done=0;
   ops.forEach(l=>{ const st=S.slots[String(l)]; if(filled(st)) done++; html+=row(l, st); });
-  const cnt=$("asiCount"); if(cnt) cnt.textContent = `${done} / ${ops.length} обрано`;
+  const cnt=$("asiCount"); if(cnt) cnt.textContent = t('sh.asiCountTpl').replace("{d}",done).replace("{t}",ops.length);
   $("asiSummary").innerHTML=html;
 }
 function editAsi(){ startAsiWizard(()=>{ renderAsiSummary(); buildAbilities(); recalc(); }); }
@@ -2560,32 +2728,32 @@ function asiSlotOf(key){
 }
 function renderAsiStep(){
   const key=S.asiQueue[S.asiIdx]; const isHuman=key==="human"; const st=asiSlotOf(key);
-  const title=isHuman?"Стартова черта — Варіант людини":`Рівень ${key}: підвищення чи черта`;
+  const title=isHuman?t('asi.humanTitle'):t('asi.levelTitle').replace("{n}", key);
   const type=isHuman?"feat":st.type;
-  let body=`<p class="sub">Крок ${S.asiIdx+1} з ${S.asiQueue.length}</p>`;
+  let body=`<p class="sub">${esc(t('asi.stepTpl').replace("{i}", S.asiIdx+1).replace("{n}", S.asiQueue.length))}</p>`;
   if(!isHuman){
     body+=`<div class="seg">
-      <button class="seg-btn ${st.type==="asi"?"active":""}" onclick="asiSetType('${key}','asi')">Характеристики</button>
-      <button class="seg-btn ${st.type==="feat"?"active":""}" onclick="asiSetType('${key}','feat')">Черта</button></div>`;
-    body+=`<p class="sub" style="margin-top:6px">Можеш лишити рівень порожнім — обереш пізніше.</p>`;
+      <button class="seg-btn ${st.type==="asi"?"active":""}" onclick="asiSetType('${key}','asi')">${esc(t('sh.abilities'))}</button>
+      <button class="seg-btn ${st.type==="feat"?"active":""}" onclick="asiSetType('${key}','feat')">${esc(t('cd.feat'))}</button></div>`;
+    body+=`<p class="sub" style="margin-top:6px">${esc(t('asi.emptyHint'))}</p>`;
   }
   if(type==="asi"){
     const sel=(w)=>`<select onchange="asiSetAbil('${key}','${w}',this.value)"><option value="">—</option>`+
-      ABILS.map(a=>`<option value="${a}" ${st[w]===a?"selected":""}>${ABIL_UA[a]} +1</option>`).join("")+`</select>`;
-    body+=`<p class="sub">Дві різні = +1/+1; однакова двічі = +2 до однієї.</p><div class="race-asi-row">${sel("a1")}${sel("a2")}</div>`;
+      ABILS.map(a=>`<option value="${a}" ${st[w]===a?"selected":""}>${esc(tr(ABIL_UA[a]))} +1</option>`).join("")+`</select>`;
+    body+=`<p class="sub">${esc(t('asi.asiHint'))}</p><div class="race-asi-row">${sel("a1")}${sel("a2")}</div>`;
   } else {
-    body+=`<p class="sub">Обери черту (екран вибору):</p><div class="feat-list">`+
+    body+=`<p class="sub">${esc(t('asi.pickFeat'))}</p><div class="feat-list">`+
       Object.keys(FEATS).map(f=>`<div class="opt ${st.feat===f?"sel":""}" onclick="asiPickFeat('${key}','${q(f)}')">
-        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(f)}</span></div><div class="od">${esc(FEATS[f].desc)}</div></div>`).join("")+`</div>`;
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(f))}</span></div><div class="od">${esc(tr(FEATS[f].desc))}</div></div>`).join("")+`</div>`;
     const f=FEATS[st.feat];
     if(f&&f.asi&&f.asi.choose){
-      body+=`<p class="sub" style="margin-top:8px">Черта дає +1 — обери куди:</p><div class="chips">`+
-        f.asi.from.map(a=>`<div class="chip ${st.featAbil===a?"sel":""}" onclick="asiSetFeatAbil('${key}','${a}')">${ABIL_UA[a]}</div>`).join("")+`</div>`;
+      body+=`<p class="sub" style="margin-top:8px">${esc(t('rd.featPlus1'))}</p><div class="chips">`+
+        f.asi.from.map(a=>`<div class="chip ${st.featAbil===a?"sel":""}" onclick="asiSetFeatAbil('${key}','${a}')">${esc(tr(ABIL_UA[a]))}</div>`).join("")+`</div>`;
     }
   }
   body+=`<div class="modal-nav">`;
-  if(S.asiIdx>0) body+=`<button class="btn btn-ghost2" onclick="asiPrev()">← Назад</button>`;
-  body+=`<button class="btn btn-primary" onclick="asiNext()">${S.asiIdx<S.asiQueue.length-1?"Далі →":"Готово ✓"}</button></div>`;
+  if(S.asiIdx>0) body+=`<button class="btn btn-ghost2" onclick="asiPrev()">${esc(t('asi.back'))}</button>`;
+  body+=`<button class="btn btn-primary" onclick="asiNext()">${esc(S.asiIdx<S.asiQueue.length-1?t('asi.next'):t('asi.done'))}</button></div>`;
   openModal(title, body);
 }
 function asiSetType(key,t){ S.slots[key].type=t; renderAsiStep(); }
@@ -2597,11 +2765,11 @@ function asiStepValid(){
   const key=S.asiQueue[S.asiIdx]; const isHuman=key==="human"; const st=asiSlotOf(key); const type=isHuman?"feat":st.type;
   if(type==="asi"){
     if(!isHuman && !st.a1 && !st.a2) return true;              // порожньо → пропустити рівень
-    if(!st.a1||!st.a2) return fail("Обери дві характеристики (або лиши обидві порожніми, щоб пропустити).");
+    if(!st.a1||!st.a2) return fail(t('err.pickTwoAbil'));
   } else {
     if(!isHuman && !st.feat) return true;                      // порожньо → пропустити рівень
-    if(!st.feat) return fail("Обери черту.");
-    const f=FEATS[st.feat]; if(f.asi&&f.asi.choose&&!st.featAbil) return fail("Обери характеристику для +1 від черти.");
+    if(!st.feat) return fail(t('err.pickFeat'));
+    const f=FEATS[st.feat]; if(f.asi&&f.asi.choose&&!st.featAbil) return fail(t('err.pickFeatAbil'));
   }
   return true;
 }
@@ -2623,12 +2791,12 @@ function renderRaceChoices(){
   const def=raceAsiChoiceDef(); if(!def) return;
   const excl=def.exclude||[];
   const title=document.createElement("div"); title.className="sub";
-  title.textContent=`Обери ${def.count} характеристик(и) +${def.amount}`;
+  title.textContent=t('sh.raceChoiceTitle').replace("{c}", def.count).replace("{a}", def.amount);
   box.appendChild(title);
   const row=document.createElement("div"); row.className="race-asi-row";
   for(let i=0;i<def.count;i++){
     const sel=document.createElement("select");
-    sel.innerHTML=`<option value="">—</option>`+ABILS.filter(a=>!excl.includes(a)).map(a=>`<option value="${a}">${ABIL_UA[a]}</option>`).join("");
+    sel.innerHTML=`<option value="">—</option>`+ABILS.filter(a=>!excl.includes(a)).map(a=>`<option value="${a}">${esc(tr(ABIL_UA[a]))}</option>`).join("");
     sel.value=S.raceAsiPick[i]||"";
     sel.onchange=()=>{ S.raceAsiPick[i]=sel.value;
       const seen={}; S.raceAsiPick.forEach((v,idx)=>{ if(v&&seen[v]) S.raceAsiPick[idx]=""; if(v) seen[v]=true; });
@@ -2656,7 +2824,7 @@ function zeroBase(){ return {str:null,dex:null,con:null,int:null,wis:null,cha:nu
 function setMethod(m){
   S.method=m;
   document.querySelectorAll("#methodTabs button").forEach(b=>b.classList.toggle("active", b.dataset.m===m));
-  $("methodHint").textContent=METHOD_HINTS[m];
+  $("methodHint").textContent=tr(METHOD_HINTS[m]);
   $("rollControls").classList.toggle("hidden", m!=="roll");
   if(m==="array"){ S.rollPool=[...STANDARD_ARRAY]; S.base=zeroBase(); }
   else if(m==="roll"){ if(!S.rollPool||S.rollPool.length!==6) rollDice(); S.base=zeroBase(); }
@@ -2685,18 +2853,18 @@ function levelAsiTotal(){
 }
 function buildAbilities(){
   const box=$("abilities");
-  box.innerHTML=`<div class="abilhead"><span>Характеристика</span><span>Значення</span><span>Разом</span><span>Мод.</span></div>`;
+  box.innerHTML=`<div class="abilhead"><span>${esc(t('sh.thAbil'))}</span><span>${esc(t('sh.thVal'))}</span><span>${esc(t('sh.thTotal'))}</span><span>${esc(t('sh.thMod'))}</span></div>`;
   const raceB=raceAsiTotal(), lvlB=levelAsiTotal();
   ABILS.forEach(ab=>{
     const rb=raceB[ab]||0, lb=lvlB[ab]||0, bonus=rb+lb;
-    const bonusLbl = bonus ? ((rb&&!lb)?("раса +"+bonus):(lb&&!rb)?("рівні +"+bonus):("бонус +"+bonus)) : "&nbsp;";
+    const bonusLbl = bonus ? ((rb&&!lb)?(t('sh.bonusRace')+bonus):(lb&&!rb)?(t('sh.bonusLevel')+bonus):(t('sh.bonusOther')+bonus)) : "&nbsp;";
     const row=document.createElement("div"); row.className="abilrow";
     let control;
     if(S.method==="array"||S.method==="roll") control=`<select data-ab="${ab}" class="pool-sel"></select>`;
     else control=`<div class="stepper"><button data-ab="${ab}" data-d="-1">−</button>
       <input data-ab="${ab}" type="number" inputmode="numeric" value="${S.base[ab]??10}"/>
       <button data-ab="${ab}" data-d="1">+</button></div>`;
-    row.innerHTML=`<div class="nm">${ABIL_UA[ab]}<small>${bonusLbl}</small></div>
+    row.innerHTML=`<div class="nm">${esc(tr(ABIL_UA[ab]))}<small>${bonusLbl}</small></div>
       <div>${control}</div><div class="final" id="fin-${ab}">–</div><div class="mod" id="mod-${ab}">–</div>`;
     box.appendChild(row);
   });
@@ -2709,7 +2877,7 @@ function rebuildPoolSelects(){
     const cur=S.base[ab];
     const pc={}; S.rollPool.forEach(v=>pc[v]=(pc[v]||0)+1);
     const uc={}; used.forEach(v=>uc[v]=(uc[v]||0)+1);
-    let html=`<option value="">обери</option>`;
+    let html=`<option value="">${esc(t('sh.selectPick'))}</option>`;
     Object.keys(pc).map(Number).sort((a,b)=>b-a).forEach(v=>{
       const avail=pc[v]-(uc[v]||0)+(cur===v?1:0);
       if(avail>0||cur===v) html+=`<option value="${v}" ${cur===v?"selected":""}>${v}</option>`;
@@ -2749,31 +2917,31 @@ function buildSkills(){
   const raceChoice=raceSkillChoiceDef(), raceFixed=raceFixedSkills(), cl=currentClass(), bg=currentBg();
   [...S.classSkillPick].forEach(s=>{ if(!cl.skills.includes(s)) S.classSkillPick.delete(s); });
   if(raceFixed.length||raceChoice){
-    box.appendChild(groupHeader("Від раси", raceChoice?`оберіть ${raceChoice.count}`:""));
+    box.appendChild(groupHeader("Від раси", raceChoice?t('sh.pickN').replace("{n}", raceChoice.count):""));
     raceFixed.forEach(n=>box.appendChild(skillRow(n,"race-fixed",true,true,conflictOf(n))));
     if(raceChoice){ const pool=raceChoice.from==="any"?ALL_SKILLS:raceChoice.from;
       pool.forEach(n=>{ if(raceFixed.includes(n)) return; box.appendChild(skillRow(n,"race-pick",S.raceSkillPick.has(n),false,conflictOf(n))); }); }
   }
-  box.appendChild(groupHeader("Від класу",`оберіть ${cl.skillCount}`));
+  box.appendChild(groupHeader("Від класу",t('sh.pickN').replace("{n}", cl.skillCount)));
   cl.skills.forEach(n=>box.appendChild(skillRow(n,"class-pick",S.classSkillPick.has(n),false,conflictOf(n))));
   if(bg){
-    box.appendChild(groupHeader("Від передісторії","фіксовані"));
+    box.appendChild(groupHeader("Від передісторії",t('sh.fixed')));
     bg.skills.forEach(n=>box.appendChild(skillRow(n,"bg-fixed",true,true,conflictOf(n))));
   } else {
-    box.appendChild(groupHeader("Від передісторії","не обрано"));
+    box.appendChild(groupHeader("Від передісторії",t('sh.notChosen')));
     const d=document.createElement("div"); d.className="desc-line";
-    d.innerHTML=`Передісторія ще не обрана — <a href="#" onclick="openBgList();return false" style="color:var(--accent)">обрати</a>.`;
+    d.innerHTML=`${esc(t('sh.bgNotChosen'))} <a href="#" onclick="openBgList();return false" style="color:var(--accent)">${esc(t('sh.bgChooseLink'))}</a>.`;
     box.appendChild(d);
   }
   updateSkillStates();
 }
 function groupHeader(title,hint){ const d=document.createElement("div"); d.className="skill-group-head";
-  d.innerHTML=`<span>${title}</span><span class="counter" data-grp="${title}">${hint?("("+hint+")"):""}</span>`; return d; }
+  d.innerHTML=`<span>${esc(tr(title))}</span><span class="counter" data-grp="${esc(title)}">${hint?("("+esc(hint)+")"):""}</span>`; return d; }
 function skillRow(name,source,checked,locked,conflict){
   const ab=SKILLS[name]; const div=document.createElement("label");
   div.className="skill"+(locked?" locked":"")+(conflict?" conflict":"");
   div.innerHTML=`<input type="checkbox" data-skill="${esc(name)}" data-source="${source}" ${checked?"checked":""} ${locked?"disabled":""}/>
-    <span>${esc(name)} <small class="ab-tag">${ABIL_SHORT[ab]}</small> ${conflict?'<small class="dup">дубль!</small>':""}</span>`;
+    <span>${esc(tr(name))} <small class="ab-tag">${abShort(ab)}</small> ${conflict?`<small class="dup">${esc(t('sh.dup'))}</small>`:""}</span>`;
   return div;
 }
 function onSkillChange(e){
@@ -2805,7 +2973,7 @@ function updateSkillStates(){
     const conflict=sources[name]&&sources[name].length>1;
     lbl.classList.toggle("conflict", !!conflict);
     const span=lbl.querySelector("span"); let dup=span.querySelector(".dup");
-    if(conflict&&!dup){ dup=document.createElement("small"); dup.className="dup"; dup.textContent="дубль!"; span.appendChild(document.createTextNode(" ")); span.appendChild(dup); }
+    if(conflict&&!dup){ dup=document.createElement("small"); dup.className="dup"; dup.textContent=t('sh.dup'); span.appendChild(document.createTextNode(" ")); span.appendChild(dup); }
     else if(!conflict&&dup) dup.remove();
   });
   const classFull=S.classSkillPick.size>=cl.skillCount;
@@ -2833,16 +3001,16 @@ function renderConflictNote(sources){
   const dups=Object.entries(sources).filter(([,a])=>a.length>1); const el=$("skillConflict");
   if(!dups.length){ el.classList.add("hidden"); return; }
   el.classList.remove("hidden");
-  el.innerHTML="⚠️ Дублювання (обери іншу, щоб не втратити володіння): "+dups.map(([n,a])=>`<b>${esc(n)}</b> (${a.join(" + ")})`).join("; ");
+  el.innerHTML=esc(t('sh.dupWarn'))+dups.map(([n,a])=>`<b>${esc(tr(n))}</b> (${a.map(x=>esc(tr(x))).join(" + ")})`).join("; ");
 }
 function allChosenFeats(){
   const list=[]; asiOpportunities().forEach(l=>{ const st=S.slots[String(l)]; if(st&&st.type==="feat"&&st.feat) list.push(st.feat); });
   if(raceFeatChoice()&&S.humanFeat.feat) list.push(S.humanFeat.feat); return list;
 }
 function renderSaves(){
-  const c=currentClass(); let t=`Володіння від класу: <b>${c.saves.map(s=>ABIL_UA[s]).join(", ")}</b>`;
-  if(allChosenFeats().includes("Стійкий")) t+=` &nbsp;·&nbsp; + від черти «Стійкий»`;
-  $("savesInfo").innerHTML=t;
+  const c=currentClass(); let html=`${esc(t('sh.savesFromClass'))} <b>${c.saves.map(s=>esc(tr(ABIL_UA[s]))).join(", ")}</b>`;
+  if(allChosenFeats().includes("Стійкий")) html+=` &nbsp;·&nbsp; ${esc(t('sh.savesResilient').replace("{f}", tr("Стійкий")))}`;
+  $("savesInfo").innerHTML=html;
 }
 
 /* =========================================================================
@@ -2878,7 +3046,7 @@ function recalc(){
     const mv=has?mod(sc[ab]):null;
     f.textContent=has?sc[ab]:"–"; m.textContent=has?fmt(mv):"–";
     m.className="mod"+(mv==null?"":(mv>0?" pos":mv<0?" neg":" zero")); });
-  if(S.method==="pointbuy") $("methodHint").textContent=`Point buy: залишилось ${27-pointsUsed(S.base)} з 27 очок.`;
+  if(S.method==="pointbuy") $("methodHint").textContent=t("sh.pbLeft").replace("{n}", 27-pointsUsed(S.base));
 }
 
 /* =========================================================================
@@ -2971,7 +3139,7 @@ const CLASS_EQUIP = {
     { t:"Обладунок", from:[{a:"scalemail"},{a:"leather"}] },
     { t:"Зброя", from:[{g:[{w:"shortsword"},{w:"shortsword"}]},{g:[{any:"simple-melee"},{any:"simple-melee"}]}] },
     { t:"Похідний набір", from:[{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
-  "Пройдисвіт": { fixed:[{a:"leather"},{w:"dagger",qty:2},{text:"Злодійські інструменти"}], choose:[
+  "Плут": { fixed:[{a:"leather"},{w:"dagger",qty:2},{text:"Злодійські інструменти"}], choose:[
     { t:"Зброя", from:[{w:"rapier"},{w:"shortsword"}] },
     { t:"Друга зброя", from:[{w:"shortbow",extra:"20 стріл"},{w:"shortsword"}] },
     { t:"Похідний набір", from:[{pack:"Набір грабіжника"},{pack:"Набір дослідника підземель"},{pack:"Набір мандрівника"}] } ] },
@@ -3047,7 +3215,7 @@ function computeAttacks(keys,mods,pb,tags){
     const w=WEAPONS[k]; if(!w) return null;
     const ab=weaponAbility(w,mods); const prof=isWeaponProf(w,tags)||kit.has(k);
     const bonus=mods[ab];
-    return { name:w.name, atk:bonus+(prof?pb:0), dmg:`${w.dmg}${bonus?fmt(bonus):""} ${w.type}`,
+    return { name:tr(w.name), atk:bonus+(prof?pb:0), dmg:`${w.dmg}${bonus?fmt(bonus):""} ${tr(w.type)}`,
              ability:ab, prof, versatile:w.versatile||null, ranged:!!w.ranged };
   }).filter(Boolean);
 }
@@ -3082,21 +3250,23 @@ function computeAC(mods,ctx){
   const cands=[];
   if(A){
     const dexPart=A.addDex?Math.min(mods.dex,A.maxDex):0;
-    let v=A.base+dexPart, lbl=`${A.name} ${A.base}`+(A.addDex?` + Спр ${fmt(dexPart)}${A.cat==="medium"?" (макс +2)":""}`:"");
-    if(ctx.defenseStyle){ v+=1; lbl+=" + Оборона 1"; }
+    const dxa=t('eq.dex'); // "+ Спр"
+    let v=A.base+dexPart, lbl=`${tr(A.name)} ${A.base}`+(A.addDex?` ${dxa} ${fmt(dexPart)}${A.cat==="medium"?" "+t('eq.max2'):""}`:"");
+    if(ctx.defenseStyle){ v+=1; lbl+=` + ${tr("Оборона")} 1`; }
     cands.push({val:v,label:lbl,shieldOK:true});
   } else {
-    cands.push({val:10+mods.dex,label:`Без обладунку 10 + Спр ${fmt(mods.dex)}`,shieldOK:true});
-    if(ctx.barbUnarmored) cands.push({val:10+mods.dex+mods.con,label:`Захист без броні 10 + Спр ${fmt(mods.dex)} + Стат ${fmt(mods.con)}`,shieldOK:true});
-    if(ctx.monkUnarmored && !ctx.shield) cands.push({val:10+mods.dex+mods.wis,label:`Захист без броні 10 + Спр ${fmt(mods.dex)} + Мдр ${fmt(mods.wis)}`,shieldOK:false});
-    if(ctx.dracoUnarmored) cands.push({val:13+mods.dex,label:`Стійкість дракона 13 + Спр ${fmt(mods.dex)}`,shieldOK:true});
-    (ctx.natural&&ctx.natural.cands||[]).forEach(v=>cands.push({val:v,label:`Природна броня ${v}`,shieldOK:true}));
+    const dxa=t('eq.dex');
+    cands.push({val:10+mods.dex,label:`${tr("Без обладунку")} 10 ${dxa} ${fmt(mods.dex)}`,shieldOK:true});
+    if(ctx.barbUnarmored) cands.push({val:10+mods.dex+mods.con,label:`${t('eq.unarmDef')} 10 ${dxa} ${fmt(mods.dex)} + ${t('cd.conAbbr')} ${fmt(mods.con)}`,shieldOK:true});
+    if(ctx.monkUnarmored && !ctx.shield) cands.push({val:10+mods.dex+mods.wis,label:`${t('eq.unarmDef')} 10 ${dxa} ${fmt(mods.dex)} + ${abShort("wis")} ${fmt(mods.wis)}`,shieldOK:false});
+    if(ctx.dracoUnarmored) cands.push({val:13+mods.dex,label:`${t('eq.dracoRes')} 13 ${dxa} ${fmt(mods.dex)}`,shieldOK:true});
+    (ctx.natural&&ctx.natural.cands||[]).forEach(v=>cands.push({val:v,label:`${tr("Природна броня")} ${v}`,shieldOK:true}));
   }
   let best=cands[0];
   cands.forEach(c=>{ if(c.val+(c.shieldOK?shield:0) > best.val+(best.shieldOK?shield:0)) best=c; });
-  let ac=best.val+(best.shieldOK?shield:0), label=best.label+(best.shieldOK&&shield?" + Щит +2":"");
+  let ac=best.val+(best.shieldOK?shield:0), label=best.label+(best.shieldOK&&shield?` + ${tr("Щит")} +2`:"");
   const flat=(ctx.natural&&ctx.natural.flat)||0;
-  if(flat){ ac+=flat; label+=` + вбудований +${flat}`; }
+  if(flat){ ac+=flat; label+=` + ${t('eq.integrated')} +${flat}`; }
   return {ac,label};
 }
 // Автопідбір із плоского c.equip (fallback, якщо для класу немає CLASS_EQUIP)
@@ -3170,12 +3340,12 @@ function ensureEquipment(){
 }
 function buildEquipmentList(){
   const out=[];
-  if(S.armor && S.armor!=="none" && ARMORS[S.armor]) out.push(ARMORS[S.armor].name);
-  if(S.shield) out.push("Щит");
-  (S.weapons||[]).forEach(k=>{ if(WEAPONS[k]){ let n=WEAPONS[k].name;
+  if(S.armor && S.armor!=="none" && ARMORS[S.armor]) out.push(tr(ARMORS[S.armor].name));
+  if(S.shield) out.push(tr("Щит"));
+  (S.weapons||[]).forEach(k=>{ if(WEAPONS[k]){ let n=tr(WEAPONS[k].name);
     const q=(S.equipQty||{})[k], am=(S.equipAmmo||{})[k];
-    if(q>1) n+=` ×${q}`; if(am) n+=` + ${am}`; out.push(n); } });
-  (S.equipExtra||[]).forEach(e=>{ if(!out.includes(e)) out.push(e); });
+    if(q>1) n+=` ×${q}`; if(am) n+=` + ${tr(am)}`; out.push(n); } });
+  (S.equipExtra||[]).forEach(e=>{ const te=tr(e); if(!out.includes(te)) out.push(te); });
   return out;
 }
 /* ---- екран Спорядження ---- */
@@ -3197,7 +3367,7 @@ function renderEquipModeToggle(){
 function buildEquipment(){
   ensureEquipment();
   const c=currentClass(); const st=$("eqStarter");
-  if(st) st.textContent = "Стартовий набір класу: "+(((c&&c.equip)||[]).join(" · ")||"—");
+  if(st) st.textContent = t('eq.starterKit')+" "+(((c&&c.equip)||[]).map(tr).join(" · ")||"—");
   renderShowAll(); renderEquipModeToggle();
   if(S.equipMode==="custom"){ renderArmorSelect(); renderShield(); renderWeaponList(); }
   else { applyStandardToGear(); renderStandard(); }
@@ -3205,57 +3375,57 @@ function buildEquipment(){
 }
 /* рендер стандартних виборів */
 function grantLabel(x){
-  if(x.w) return WEAPONS[x.w].name+(x.qty>1?` ×${x.qty}`:"")+(x.extra?` + ${x.extra}`:"");
-  if(x.a) return ARMORS[x.a].name;
-  if(x.shield) return x.text||"Щит";
-  if(x.any) return {simple:"Будь-яка проста зброя","simple-melee":"Будь-яка проста ближня зброя",martial:"Будь-яка військова зброя","martial-melee":"Будь-яка військова ближня зброя"}[x.any]||"Будь-яка зброя";
-  if(x.pack) return x.pack;
-  if(x.text) return x.text;
+  if(x.w) return tr(WEAPONS[x.w].name)+(x.qty>1?` ×${x.qty}`:"")+(x.extra?` + ${tr(x.extra)}`:"");
+  if(x.a) return tr(ARMORS[x.a].name);
+  if(x.shield) return x.text?tr(x.text):tr("Щит");
+  if(x.any) return tr({simple:"Будь-яка проста зброя","simple-melee":"Будь-яка проста ближня зброя",martial:"Будь-яка військова зброя","martial-melee":"Будь-яка військова ближня зброя"}[x.any]||"Будь-яка зброя");
+  if(x.pack) return tr(x.pack);
+  if(x.text) return tr(x.text);
   return "";
 }
-function catNoun(cat){ return {simple:"прості зброї","simple-melee":"прості ближні зброї",martial:"військові зброї","martial-melee":"військові ближні зброї"}[cat]||"зброї"; }
+function catNoun(cat){ return tr({simple:"прості зброї","simple-melee":"прості ближні зброї",martial:"військові зброї","martial-melee":"військові ближні зброї"}[cat]||"зброї"); }
 function optLabel(opt){
   const gs=optGrants(opt);
   const ws=gs.filter(g=>g.w), anys=gs.filter(g=>g.any);
-  if(gs.length>1 && ws.length===gs.length && ws.every(w=>w.w===ws[0].w)) return WEAPONS[ws[0].w].name+" ×"+gs.length;
-  if(gs.length>1 && anys.length===gs.length && anys.every(a=>a.any===anys[0].any)) return (gs.length===2?"Дві ":gs.length+"× ")+catNoun(anys[0].any);
+  if(gs.length>1 && ws.length===gs.length && ws.every(w=>w.w===ws[0].w)) return tr(WEAPONS[ws[0].w].name)+" ×"+gs.length;
+  if(gs.length>1 && anys.length===gs.length && anys.every(a=>a.any===anys[0].any)) return (gs.length===2?tr("Дві "):gs.length+"× ")+catNoun(anys[0].any);
   return gs.map(grantLabel).join(" + ");
 }
 function optDesc(opt){
   const parts=[];
   optGrants(opt).forEach(x=>{
-    if(x.w){ const w=WEAPONS[x.w]; parts.push(`${w.dmg} ${w.type}${w.finesse?" · фінт":""}${w.ranged?" · дальня":""}`); }
-    if(x.a){ const a=ARMORS[x.a]; const cc={light:"легка",medium:"середня",heavy:"важка"}[a.cat];
-      parts.push(`${cc} · КБ ${a.base}${a.addDex?(a.cat==="medium"?" + Спр (макс +2)":" + Спр"):""}`); }
+    if(x.w){ const w=WEAPONS[x.w]; parts.push(`${w.dmg} ${tr(w.type)}${w.finesse?" · "+tr("фінт"):""}${w.ranged?" · "+tr("дальня"):""}`); }
+    if(x.a){ const a=ARMORS[x.a]; const cc={light:tr("легка"),medium:tr("середня"),heavy:tr("важка")}[a.cat];
+      parts.push(`${cc} · ${t('eq.acShort')} ${a.base}${a.addDex?(a.cat==="medium"?" "+t('eq.dexMax2'):" "+t('eq.dex')):""}`); }
   });
   return parts.length?`<div class="od">${esc(parts.join(" · "))}</div>`:"";
 }
 function weaponOptions(cat,cur){
   return Object.keys(WEAPONS).filter(k=>catMatch(WEAPONS[k],cat))
-    .map(k=>`<option value="${k}" ${k===cur?"selected":""}>${esc(WEAPONS[k].name)} (${WEAPONS[k].dmg})</option>`).join("");
+    .map(k=>`<option value="${k}" ${k===cur?"selected":""}>${esc(tr(WEAPONS[k].name))} (${WEAPONS[k].dmg})</option>`).join("");
 }
 function fixedGrantLabels(def){ const out=[]; (def.fixed||[]).forEach(o=>optGrants(o).forEach(x=>out.push(grantLabel(x)))); return out; }
 function renderStandard(){
   const box=$("eqStandard"); if(!box) return;
   const def=CLASS_EQUIP[S.class];
-  if(!def){ box.innerHTML='<div class="card"><p class="sub" style="margin:0">Для цього класу набір задано напряму — скористайся Кастомним режимом.</p></div>'; return; }
+  if(!def){ box.innerHTML=`<div class="card"><p class="sub" style="margin:0">${esc(tr("Для цього класу набір задано напряму — скористайся Кастомним режимом."))}</p></div>`; return; }
   const tags=classProfTags(); const mods=curMods(); let html="";
   (def.choose||[]).forEach((grp,gi)=>{
-    html+=`<div class="card"><div class="grp-head"><span class="n">${gi+1}</span><span class="t">${esc(grp.t)}</span><span class="pick">обери 1</span></div>`;
+    html+=`<div class="card"><div class="grp-head"><span class="n">${gi+1}</span><span class="t">${esc(tr(grp.t))}</span><span class="pick">${esc(tr("обери 1"))}</span></div>`;
     grp.from.forEach((opt,oi)=>{
       const miss=optNeedsMissingProf(opt,tags), sel=S.equipPick[gi]===oi;
       if(miss && !S.showAllGear && !sel) return;
-      html+=`<div class="opt ${sel?"sel":""}" onclick="pickStd(${gi},${oi})"><div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(optLabel(opt))}${miss?' <span class="eq-noprof">без володіння</span>':""}</span></div>${optDesc(opt)}`;
+      html+=`<div class="opt ${sel?"sel":""}" onclick="pickStd(${gi},${oi})"><div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(optLabel(opt))}${miss?` <span class="eq-noprof">${esc(tr("без володіння"))}</span>`:""}</span></div>${optDesc(opt)}`;
       if(sel){ const anyG=optGrants(opt).map((x,j)=>({x,j})).filter(o=>o.x.any);
         anyG.forEach(({x,j},idx)=>{ const key=gi+"_"+j; const cur=S.anyPick[key]||bestWeaponFor(x.any,mods);
-          const lbl=anyG.length>1?`<div style="font-size:11px;color:var(--hint);margin-bottom:4px">Зброя ${idx+1}</div>`:"";
+          const lbl=anyG.length>1?`<div style="font-size:11px;color:var(--hint);margin-bottom:4px">${esc(t('eq.wpnN').replace("{n}", idx+1))}</div>`:"";
           html+=`<div class="anybox">${lbl}<select onclick="event.stopPropagation()" onchange="pickAny('${key}',this.value)">${weaponOptions(x.any,cur)}</select></div>`; }); }
       html+=`</div>`;
     });
     html+=`</div>`;
   });
   const fx=fixedGrantLabels(def);
-  if(fx.length) html+=`<div class="card"><div class="grp-head"><span class="t">Отримуєш завжди</span></div><div class="fixed-row">${fx.map(n=>`<span class="pill">🔒 ${esc(n)}</span>`).join("")}</div></div>`;
+  if(fx.length) html+=`<div class="card"><div class="grp-head"><span class="t">${esc(tr("Отримуєш завжди"))}</span></div><div class="fixed-row">${fx.map(n=>`<span class="pill">🔒 ${esc(n)}</span>`).join("")}</div></div>`;
   box.innerHTML=html;
 }
 function pickStd(gi,oi){
@@ -3271,8 +3441,8 @@ function toggleShowAll(ev){ if(ev) ev.preventDefault(); S.showAllGear=!S.showAll
 function renderArmorSelect(){
   const sel=$("eqArmor"); if(!sel) return;
   const tags=classProfTags(); const catProf={light:tags.lightA,medium:tags.mediumA,heavy:tags.heavyA};
-  const cats=[["light","Легка броня"],["medium","Середня броня"],["heavy","Важка броня"]];
-  let html=`<option value="none">Без обладунку</option>`;
+  const cats=[["light",tr("Легка броня")],["medium",tr("Середня броня")],["heavy",tr("Важка броня")]];
+  let html=`<option value="none">${esc(tr("Без обладунку"))}</option>`;
   cats.forEach(([cat,label])=>{
     const keys=Object.keys(ARMORS).filter(k=>ARMORS[k].cat===cat
       && (S.showAllGear || catProf[cat] || S.armor===k));   // ховаємо броню без володіння
@@ -3285,15 +3455,15 @@ function renderArmorSelect(){
 function updateArmorDesc(){
   const tags=classProfTags();
   const A=(S.armor&&S.armor!=="none")?ARMORS[S.armor]:null;
-  if(!A){ $("eqArmorDesc").textContent="Без обладунку: КБ = 10 + Спритність (плюс класові/расові бонуси)."; $("eqArmorProf").textContent=""; return; }
-  const catUA={light:"Легка",medium:"Середня",heavy:"Важка"}[A.cat];
-  let d=`${catUA} броня · база КБ ${A.base}`;
-  d+= A.addDex ? (A.cat==="medium"?" + Спр (макс +2)":" + Спр") : " (Спр не додається)";
-  if(A.strReq) d+=` · потрібна Сила ${A.strReq}`;
-  if(A.stealth) d+=" · перешкода на Скритність";
+  if(!A){ $("eqArmorDesc").textContent=tr("Без обладунку: КБ = 10 + Спритність (плюс класові/расові бонуси)."); $("eqArmorProf").textContent=""; return; }
+  const catUA={light:tr("Легка"),medium:tr("Середня"),heavy:tr("Важка")}[A.cat];
+  let d=t('eq.armorDescTpl').replace("{cat}", catUA).replace("{n}", A.base);
+  d+= A.addDex ? (A.cat==="medium"?" "+t('eq.dexMax2'):" "+t('eq.dex')) : " "+t('eq.noDex');
+  if(A.strReq) d+=` · ${t('eq.strReq').replace("{n}", A.strReq)}`;
+  if(A.stealth) d+=" · "+tr("перешкода на Скритність");
   $("eqArmorDesc").textContent=d;
   const prof=A.cat==="light"?tags.lightA:A.cat==="medium"?tags.mediumA:tags.heavyA;
-  $("eqArmorProf").innerHTML=prof?"володіння: є":'<span class="eq-noprof">володіння: немає</span>';
+  $("eqArmorProf").innerHTML=prof?esc(tr("володіння: є")):`<span class="eq-noprof">${esc(tr("володіння: немає"))}</span>`;
 }
 function onArmorChange(){ S.armor=$("eqArmor").value; updateArmorDesc(); renderShield(); renderEquipmentPreview(); }
 function renderShield(){
@@ -3303,31 +3473,31 @@ function renderShield(){
   if(row) row.style.display=(S.showAllGear||tags.shieldA||S.shield)?"":"none"; // щит без володіння ховаємо
   box.parentElement.classList.toggle("on",!!S.shield);
   box.textContent=S.shield?"✓":"";
-  const notes=[]; if(!tags.shieldA) notes.push('<span class="eq-noprof">без володіння</span>');
-  if(S.class==="Монах"&&S.shield) notes.push('<span class="eq-noprof">вимикає Захист без броні монаха</span>');
-  $("eqShieldNote").innerHTML="+2 до КБ"+(notes.length?" · "+notes.join(" · "):"");
+  const notes=[]; if(!tags.shieldA) notes.push(`<span class="eq-noprof">${esc(tr("без володіння"))}</span>`);
+  if(S.class==="Монах"&&S.shield) notes.push(`<span class="eq-noprof">${esc(tr("вимикає Захист без броні монаха"))}</span>`);
+  $("eqShieldNote").innerHTML=t('eq.plus2ac')+(notes.length?" · "+notes.join(" · "):"");
 }
 function toggleShield(ev){ if(ev) ev.preventDefault(); S.shield=!S.shield; renderShield(); renderEquipmentPreview(); }
 function renderWeaponList(){
   const tags=classProfTags(); const kit=classKitWeaponKeys(); let html="";
-  [["simple","Проста зброя"],["martial","Військова зброя"]].forEach(([cat,label])=>{
+  [["simple",tr("Проста зброя")],["martial",tr("Військова зброя")]].forEach(([cat,label])=>{
     const keys=Object.keys(WEAPONS).filter(k=>WEAPONS[k].cat===cat
       && (S.showAllGear || isWeaponProf(WEAPONS[k],tags) || kit.has(k) || (S.weapons||[]).includes(k))); // ховаємо без володіння
     if(!keys.length) return;
-    html+=`<div class="eq-group-head">${label}</div>`;
+    html+=`<div class="eq-group-head">${esc(label)}</div>`;
     keys.forEach(k=>{
       const w=WEAPONS[k], on=(S.weapons||[]).includes(k), prof=isWeaponProf(w,tags)||kit.has(k);
       const props=[];
-      if(w.ranged) props.push("дальня"); if(w.finesse) props.push("фінт");
-      if(w.versatile) props.push("універс. "+w.versatile); if(w.thrown) props.push("метальна");
-      if(w.twoH) props.push("дворучна"); if(w.heavy) props.push("важка");
-      if(w.light&&!w.ranged) props.push("легка"); if(w.reach) props.push("досяжність");
-      const sub=`${w.dmg} ${w.type}${props.length?" · "+props.join(" · "):""}`+(prof?"":' · <span class="eq-noprof">без володіння</span>');
-      html+=`<label class="eq-item ${on?"on":""}" onclick="toggleWeapon('${q(k)}',event)"><span class="eq-cbx">${on?"✓":""}</span><span class="eq-main"><b>${esc(w.name)}</b><small>${sub}</small></span></label>`;
+      if(w.ranged) props.push(tr("дальня")); if(w.finesse) props.push(tr("фінт"));
+      if(w.versatile) props.push(t('eq.versatShort')+" "+w.versatile); if(w.thrown) props.push(tr("метальна"));
+      if(w.twoH) props.push(tr("дворучна")); if(w.heavy) props.push(tr("важка"));
+      if(w.light&&!w.ranged) props.push(tr("легка")); if(w.reach) props.push(tr("досяжність"));
+      const sub=`${w.dmg} ${tr(w.type)}${props.length?" · "+props.join(" · "):""}`+(prof?"":` · <span class="eq-noprof">${esc(tr("без володіння"))}</span>`);
+      html+=`<label class="eq-item ${on?"on":""}" onclick="toggleWeapon('${q(k)}',event)"><span class="eq-cbx">${on?"✓":""}</span><span class="eq-main"><b>${esc(tr(w.name))}</b><small>${sub}</small></span></label>`;
     });
   });
   $("eqWeapons").innerHTML=html;
-  $("eqWeaponCount").textContent=`${(S.weapons||[]).length} обрано`;
+  $("eqWeaponCount").textContent=t('eq.chosen').replace("{n}", (S.weapons||[]).length);
 }
 function toggleWeapon(k,ev){ if(ev) ev.preventDefault();
   if(!S.weapons) S.weapons=[];
@@ -3338,16 +3508,16 @@ function renderEquipmentPreview(){
   const scores=finalScores(); const mods={}; ABILS.forEach(a=>mods[a]=mod(scores[a]));
   const pb=profBonus(S.level);
   const {ac,label}=computeAC(mods,acContext(mods));
-  $("eqAcNum").textContent=ac; $("eqAcFormula").textContent="Клас Броні = "+ac; $("eqAcDetail").textContent=label;
+  $("eqAcNum").textContent=ac; $("eqAcFormula").textContent=t('eq.acEq')+ac; $("eqAcDetail").textContent=label;
   const tags=classProfTags(); const atks=computeAttacks(S.weapons,mods,pb,tags);
-  if(!atks.length){ $("eqAttacks").innerHTML='<span class="muted" style="font-size:13px">Не обрано зброї.</span>'; $("eqAttackNote").textContent=""; return; }
+  if(!atks.length){ $("eqAttacks").innerHTML=`<span class="muted" style="font-size:13px">${esc(tr("Не обрано зброї."))}</span>`; $("eqAttackNote").textContent=""; return; }
   let anyNoProf=false;
   const rows=atks.map(a=>{ if(!a.prof) anyNoProf=true;
-    return `<tr><td class="nm"><b>${esc(a.name)}</b><br><small>${ABIL_UA[a.ability]}${a.prof?"":" · без володіння"}</small></td><td class="b">${fmt(a.atk)}</td><td class="d">${esc(a.dmg)}${a.versatile?` <small>(${a.versatile} дв.)</small>`:""}</td></tr>`;
+    return `<tr><td class="nm"><b>${esc(tr(a.name))}</b><br><small>${esc(tr(ABIL_UA[a.ability]))}${a.prof?"":" · "+esc(tr("без володіння"))}</small></td><td class="b">${fmt(a.atk)}</td><td class="d">${esc(tr(a.dmg))}${a.versatile?` <small>${esc(t('eq.versat').replace("{v}", a.versatile))}</small>`:""}</td></tr>`;
   }).join("");
-  $("eqAttacks").innerHTML=`<table class="atk-tbl"><tr><th>Назва</th><th style="text-align:center">Влуч.</th><th>Шкода / тип</th></tr>${rows}</table>`;
-  const notes=[]; if(anyNoProf) notes.push("Без володіння — на влучання без бонусу майстерності.");
-  const A=(S.armor&&S.armor!=="none")?ARMORS[S.armor]:null; if(A&&A.stealth) notes.push("Обладунок дає перешкоду на Скритність.");
+  $("eqAttacks").innerHTML=`<table class="atk-tbl"><tr><th>${esc(tr("Назва"))}</th><th style="text-align:center">${esc(tr("Влуч."))}</th><th>${esc(tr("Шкода / тип"))}</th></tr>${rows}</table>`;
+  const notes=[]; if(anyNoProf) notes.push(tr("Без володіння — на влучання без бонусу майстерності."));
+  const A=(S.armor&&S.armor!=="none")?ARMORS[S.armor]:null; if(A&&A.stealth) notes.push(tr("Обладунок дає перешкоду на Скритність."));
   $("eqAttackNote").textContent=notes.join(" ");
 }
 
@@ -3382,41 +3552,41 @@ function computeCharacter(){
   if(c.spell) spellcasting={ability:c.spell,saveDC:8+pb+mods[c.spell],attackBonus:pb+mods[c.spell],spells:[]};
 
   // Риси у форматі {name, desc} — опис показується в PDF-чарнику.
-  const fdesc=(n)=>FEATURE_DESC[n]||"";
+  const fdesc=(n)=>tr(FEATURE_DESC[n]||"");
   const features=[];
-  (c.features||[]).forEach(n=>features.push({name:n, desc:fdesc(n)}));
+  (c.features||[]).forEach(n=>features.push({name:tr(n), desc:fdesc(n)}));
   let subForProf=null;
   if(c.subs&&subclassActive()){
     const sub=(c.subs||[]).find(s=>s.name===S.subclass); subForProf=sub;
-    features.push({name:`${c.subLabel}: ${S.subclass}`, desc: sub?sub.desc||"":""});
+    features.push({name:`${tr(c.subLabel)}: ${tr(S.subclass)}`, desc: sub?tr(sub.desc||""):""});
     if(sub&&sub.feats) Object.keys(sub.feats).forEach(lv=>{
       if(+lv<=level) sub.feats[lv].forEach(f=>{
-        const p=String(f).split(" — ");
-        features.push({name:`${S.subclass}: ${p[0]}`, desc:p.slice(1).join(" — ")});
+        const p=tr(String(f)).split(" — ");
+        features.push({name:`${tr(S.subclass)}: ${p[0]}`, desc:p.slice(1).join(" — ")});
       });
     });
   }
   if(FS_CONFIG[S.class] && level>=FS_CONFIG[S.class].level && S.fightingStyle)
-    features.push({name:"Бойовий стиль: "+S.fightingStyle, desc:fdesc(S.fightingStyle)});
-  (r.baseTraits||[]).forEach(t=>features.push({name:t.name, desc:t.desc||""}));
-  if(sr&&sr.traits) sr.traits.forEach(t=>features.push({name:t.name, desc:t.desc||""}));
-  features.push({name:"Передісторія: "+bg.feature.name, desc:bg.feature.desc||""});
-  feats.forEach(fn=>features.push({name:"Черта: "+fn, desc:(FEATS[fn]&&FEATS[fn].desc)||""}));
+    features.push({name:t('rv.pfxFightStyle')+tr(S.fightingStyle), desc:fdesc(S.fightingStyle)});
+  (r.baseTraits||[]).forEach(t=>features.push({name:tr(t.name), desc:tr(t.desc||"")}));
+  if(sr&&sr.traits) sr.traits.forEach(t=>features.push({name:tr(t.name), desc:tr(t.desc||"")}));
+  features.push({name:t('rv.pfxBg')+tr(bg.feature.name), desc:tr(bg.feature.desc||"")});
+  feats.forEach(fn=>features.push({name:t('rv.pfxFeat')+tr(fn), desc:tr((FEATS[fn]&&FEATS[fn].desc)||"")}));
   if(S.optionalFeats && OPT_FEATS[S.class]){
     Object.entries(OPT_FEATS[S.class]).forEach(([lv,arr])=>{
       if(+lv<=level) arr.forEach(f=>{
-        const p=f.split(" — "); features.push({name:"Опц.: "+p[0], desc:p.slice(1).join(" — ")});
+        const p=tr(f).split(" — "); features.push({name:t('rv.pfxOpt')+p[0], desc:p.slice(1).join(" — ")});
       });
     });
   }
 
-  const profList=[...(c.prof||[]), ...((subForProf&&subForProf.prof)||[]), "Мови: "+(r.langs||[]).join(", ")];
-  if(bg.tools&&bg.tools.length) profList.push("Інструменти: "+bg.tools.join(", "));
+  const profList=[...(c.prof||[]).map(x=>tr(x)), ...((subForProf&&subForProf.prof)||[]).map(x=>tr(x)), t('rv.pfxLangs')+(r.langs||[]).map(x=>tr(x)).join(", ")];
+  if(bg.tools&&bg.tools.length) profList.push(t('rv.pfxTools')+bg.tools.map(x=>tr(x)).join(", "));
 
-  const raceLabel=S.subrace?(S.subrace.includes("(")?`${S.race} — ${S.subrace}`:`${S.race} (${S.subrace})`):S.race;
-  const classLabel=(c.subs&&subclassActive())?`${S.class} — ${S.subclass}`:S.class;
+  const raceLabel=S.subrace?(S.subrace.includes("(")?`${tr(S.race)} — ${tr(S.subrace)}`:`${tr(S.race)} (${tr(S.subrace)})`):tr(S.race);
+  const classLabel=(c.subs&&subclassActive())?`${tr(S.class)} — ${tr(S.subclass)}`:tr(S.class);
 
-  return { name:$("name").value.trim(), player:"", race:raceLabel, class:classLabel, level, background:bgName, alignment:getSel("alignment"),
+  return { name:$("name").value.trim(), player:"", race:raceLabel, class:classLabel, level, background:tr(bgName), alignment:tr(getSel("alignment")),
     abilities:scores, modifiers:mods, proficiencyBonus:pb, maxHp, ac, initiative:initv, speed, hitDice:`${level}d${c.hd}`, passivePerception:pp,
     savingThrows:saves, skills, proficiencies_list:profList, features, equipment:buildEquipmentList(), attacks, acDetail:acRes.label, spellcasting, notes:"" };
 }
@@ -3426,17 +3596,17 @@ function computeCharacter(){
    ========================================================================= */
 function fail(msg){ const e=$("formErr"); e.textContent=msg; e.classList.remove("hidden"); return false; }
 function validate(){
-  if(!$("name").value.trim()) return fail("Введи ім'я персонажа.");
-  if(!S.background) return fail("Обери передісторію.");
+  if(!$("name").value.trim()) return fail(t("err.needName"));
+  if(!S.background) return fail(t("err.needBg"));
   if(S.mode==="full"){
     const cl=currentClass();
-    if(S.classSkillPick.size!==cl.skillCount) return fail(`Обери рівно ${cl.skillCount} навичок(и) від класу.`);
+    if(S.classSkillPick.size!==cl.skillCount) return fail(t("err.classSkills").replace("{n}",cl.skillCount));
     const rdef=raceSkillChoiceDef();
-    if(rdef&&S.raceSkillPick.size!==rdef.count) return fail(`Обери ${rdef.count} навичок(и) від раси.`);
+    if(rdef&&S.raceSkillPick.size!==rdef.count) return fail(t("err.raceSkills").replace("{n}",rdef.count));
     const adef=raceAsiChoiceDef();
-    if(adef&&S.raceAsiPick.filter(Boolean).length!==adef.count) return fail(`Обери ${adef.count} характеристик(и) для бонусу раси.`);
-    if((S.method==="array"||S.method==="roll")&&ABILS.some(a=>S.base[a]==null)) return fail("Розподіли всі значення характеристик.");
-    if(S.method==="pointbuy"&&pointsUsed(S.base)>27) return fail("Перевищено бюджет очок (27).");
+    if(adef&&S.raceAsiPick.filter(Boolean).length!==adef.count) return fail(t("err.raceAsi").replace("{n}",adef.count));
+    if((S.method==="array"||S.method==="roll")&&ABILS.some(a=>S.base[a]==null)) return fail(t("err.needAbilities"));
+    if(S.method==="pointbuy"&&pointsUsed(S.base)>27) return fail(t("err.pbOver"));
   }
   $("formErr").classList.add("hidden"); return true;
 }
@@ -3448,28 +3618,28 @@ function showReview(){
 }
 function renderReview(ch){
   $("r-name").textContent=ch.name;
-  $("r-line").textContent=`${ch.race} · ${ch.class} ${ch.level} рів. · ${ch.background} · ${ch.alignment}`;
+  $("r-line").textContent=`${ch.race} · ${ch.class} ${ch.level} ${t('rv.lvlAbbr')} · ${ch.background} · ${ch.alignment}`;
   $("r-ac").textContent=ch.ac; $("r-hp").textContent=ch.maxHp; $("r-init").textContent=fmt(ch.initiative);
   $("r-speed").textContent=ch.speed; $("r-pb").textContent=fmt(ch.proficiencyBonus); $("r-pp").textContent=ch.passivePerception;
   const ab=$("r-abilities"); ab.innerHTML="";
   ABILS.forEach(a=>{ const d=document.createElement("div"); d.className="stat";
-    d.innerHTML=`<div class="v">${fmt(ch.modifiers[a])}</div><div class="k">${ABIL_SHORT[a]} ${ch.abilities[a]}</div>`; ab.appendChild(d); });
+    d.innerHTML=`<div class="v">${fmt(ch.modifiers[a])}</div><div class="k">${abShort(a)} ${ch.abilities[a]}</div>`; ab.appendChild(d); });
   const sv=$("r-saves"); sv.innerHTML="";
   ABILS.forEach(a=>{ const s=ch.savingThrows[a]; const d=document.createElement("div"); d.className="kv";
-    d.innerHTML=`<span class="k">${s.prof?"● ":"○ "}${ABIL_UA[a]}</span><span>${fmt(s.value)}</span>`; sv.appendChild(d); });
+    d.innerHTML=`<span class="k">${s.prof?"● ":"○ "}${esc(tr(ABIL_UA[a]))}</span><span>${fmt(s.value)}</span>`; sv.appendChild(d); });
   const sk=Object.entries(ch.skills).filter(([,v])=>v.prof).map(([n])=>n);
-  $("r-skills").innerHTML=sk.length?sk.map(s=>`● ${esc(s)}`).join("&nbsp;&nbsp; "):'<span class="muted">немає</span>';
+  $("r-skills").innerHTML=sk.length?sk.map(s=>`● ${esc(tr(s))}`).join("&nbsp;&nbsp; "):`<span class="muted">${t('rv.none')}</span>`;
   const atkBox=$("r-attacks");
   if(ch.attacks&&ch.attacks.length){
-    const rows=ch.attacks.map(a=>`<tr><td class="nm"><b>${esc(a.name)}</b><br><small>${ABIL_UA[a.ability]}${a.prof?"":" · без володіння"}</small></td><td class="b">${fmt(a.atk)}</td><td class="d">${esc(a.dmg)}${a.versatile?` <small>(${a.versatile} дв.)</small>`:""}</td></tr>`).join("");
-    atkBox.innerHTML=`<table class="atk-tbl"><tr><th>Назва</th><th style="text-align:center">Влуч.</th><th>Шкода / тип</th></tr>${rows}</table>`;
-  } else atkBox.innerHTML='<span class="muted" style="font-size:13px">Атак немає.</span>';
+    const rows=ch.attacks.map(a=>`<tr><td class="nm"><b>${esc(a.name)}</b><br><small>${esc(tr(ABIL_UA[a.ability]))}${a.prof?"":" · "+t('rv.noProfShort')}</small></td><td class="b">${fmt(a.atk)}</td><td class="d">${esc(a.dmg)}${a.versatile?` <small>(${a.versatile} ${t('rv.versAbbr')})</small>`:""}</td></tr>`).join("");
+    atkBox.innerHTML=`<table class="atk-tbl"><tr><th>${t('rv.atkName')}</th><th style="text-align:center">${t('rv.atkHit')}</th><th>${t('rv.atkDmg')}</th></tr>${rows}</table>`;
+  } else atkBox.innerHTML=`<span class="muted" style="font-size:13px">${t('rv.noAttacks')}</span>`;
   $("r-equip").innerHTML=(ch.equipment||[]).map(e=>esc(e)).join("&nbsp;&nbsp;· ");
   const sp=$("r-spell-card");
   if(ch.spellcasting){ sp.classList.remove("hidden");
-    let h=`<div class="kv"><span class="k">Базова характеристика</span><span>${ABIL_UA[ch.spellcasting.ability]}</span></div>
-      <div class="kv"><span class="k">Складність порятунку (DC)</span><span>${ch.spellcasting.saveDC}</span></div>
-      <div class="kv"><span class="k">Бонус атаки закляттям</span><span>${fmt(ch.spellcasting.attackBonus)}</span></div>`;
+    let h=`<div class="kv"><span class="k">${t('rv.spellAbil')}</span><span>${esc(tr(ABIL_UA[ch.spellcasting.ability]))}</span></div>
+      <div class="kv"><span class="k">${t('rv.spellDC')}</span><span>${ch.spellcasting.saveDC}</span></div>
+      <div class="kv"><span class="k">${t('rv.spellAtk')}</span><span>${fmt(ch.spellcasting.attackBonus)}</span></div>`;
     spellSummaryRows(ch).forEach(r=>{ h+=`<div class="kv"><span class="k">${esc(r.k)}</span><span>${esc(r.v)}</span></div>`; });
     $("r-spell").innerHTML=h;
   } else sp.classList.add("hidden");
