@@ -426,6 +426,7 @@
     }
 
     // --- ПРАВОРУЧ: ОСОБИСТІСТЬ + РИСИ -------------------------------------
+    // Повертає риси, які не влізли — вони йдуть на окрему сторінку-продовження.
     drawRightRegion(x, top, w, bottom) {
       const gap = 7;
       const boxes = [[T("pdf.personality"), 66], [T("pdf.ideals"), 52], [T("pdf.bonds"), 52], [T("pdf.flaws"), 52]];
@@ -435,27 +436,96 @@
         this.footLabel(x, y - b[1], w, b[0]);
         y -= b[1] + gap;
       }
-      this.drawFeatures(x, y, w, y - bottom);
+      return this.drawFeatures(x, y, w, y - bottom);
+    }
+
+    /* Один блок «риса»: маркер, назва (з рівнем, якщо відомий) та опис.
+       Малює, лише якщо влазить цілком, і повертає нове y або null. */
+    featureBlock(f, x, y, w, limit) {
+      const nd = featND(f); const nm = nd[0], ds = nd[1];
+      const lvl = (f && typeof f === "object" && f.lvl) ? f.lvl : null;
+      const lvlTxt = lvl ? T("pdf.lvlShort").replace("{n}", lvl) : "";
+      const lvlW = lvlTxt ? this.sw(lvlTxt, 6, true) + 4 : 0;
+      const chunks = this.wrap(ds, w - 16, 6.5);
+      const need = 10 + (ds ? chunks.length * 8 : 0) + 3;
+      if (y - need < limit) return null;
+      this.circle(x + 8, y + 2.5, 1.5, { fill: ACCENT });
+      this.fitText(x + 13, y, nm, w - 18 - lvlW, 8, { bold: true });
+      if (lvlTxt) this.text(x + w - 6, y, lvlTxt, { size: 6, bold: true, color: MUTED, right: true });
+      y -= 10;
+      if (ds) for (const chunk of chunks) { this.text(x + 13, y, chunk, { size: 6.5, color: MUTED }); y -= 8; }
+      return y - 3;
     }
 
     drawFeatures(x, top, w, h) {
       this.box(x, top - h, w, h, { radius: 8 });
       let y = top - 9;
       const limit = top - h + 12;
-      for (const f of (this.char.features || [])) {
-        const nd = featND(f); const nm = nd[0], ds = nd[1];
-        if (y < limit) break;
-        this.circle(x + 8, y + 2.5, 1.5, { fill: ACCENT });
-        this.fitText(x + 13, y, nm, w - 18, 8, { bold: true });
-        y -= 10;
-        for (const chunk of this.wrap(ds, w - 16, 6.5)) {
-          if (y < limit) break;
-          this.text(x + 13, y, chunk, { size: 6.5, color: MUTED });
-          y -= 8;
-        }
-        y -= 3;
+      const all = this.char.features || [];
+      const rest = [];
+      for (let i = 0; i < all.length; i++) {
+        if (rest.length) { rest.push(all[i]); continue; }   // далі — усе на наступну сторінку
+        const ny = this.featureBlock(all[i], x, y, w, limit);
+        if (ny == null) { rest.push(all[i]); continue; }
+        y = ny;
       }
+      if (rest.length) this.text(x + w - 6, limit - 2, T("pdf.contNextPage"), { size: 5.5, bold: true, color: MUTED, right: true });
       this.footLabel(x, top - h, w, T("pdf.featuresTraits"));
+      return rest;
+    }
+
+    /* --- Сторінка-продовження: решта рис + артефакти й особливе спорядження --- */
+    drawExtrasPage(rest) {
+      const arts = this.char.artifacts || [];
+      if (!rest.length && !arts.length) return;
+      const d = this.d, M = this.MARGIN;
+      d.addPage();
+      const w = this.PAGE_W - 2 * M;
+      const bottom = M + 6;
+      const pageTop = this.PAGE_H - M;
+      const colw = (w - 16) / 2;
+      const cols = [M, M + colw + 16];
+      let top = pageTop, ci = 0, y = pageTop;
+
+      if (rest.length) {
+        this.text(M, top - 8, T("pdf.featuresTraits"), { size: 15, bold: true, color: ACCENT });
+        top -= 24; y = top;
+        // Дві колонки: заповнюємо ліву, потім праву, далі — нова сторінка
+        for (const f of rest) {
+          let ny = this.featureBlock(f, cols[ci], y, colw, bottom);
+          if (ny == null && ci === 0) { ci = 1; y = top; ny = this.featureBlock(f, cols[ci], y, colw, bottom); }
+          if (ny == null) {
+            d.addPage(); top = pageTop; ci = 0; y = top;
+            ny = this.featureBlock(f, cols[ci], y, colw, bottom);
+            if (ny == null) continue;      // одна риса довша за сторінку — пропускаємо
+          }
+          y = ny;
+        }
+      }
+      if (!arts.length) return;
+
+      /* Артефакти — на всю ширину. Якщо риси зайняли лише ліву колонку і місця
+         під нею вистачає, лишаємось на цій сторінці; інакше — нова. */
+      let ax = M, aw = w;
+      if (rest.length) {
+        if (ci === 0 && y > bottom + 130) { ax = cols[0]; aw = colw; }
+        else { d.addPage(); y = pageTop; }
+      } else { y = pageTop; }
+      this.text(ax, y - 10, T("pdf.artifacts"), { size: 13, bold: true, color: ACCENT });
+      y -= 26;
+      for (const a of arts) {
+        const head = a.meta ? a.name + "  ·  " + a.meta : a.name;
+        if (y < bottom + 16) { d.addPage(); y = pageTop; ax = M; aw = w; }
+        this.circle(ax + 4, y + 2.5, 1.6, { fill: ACCENT });
+        this.fitText(ax + 11, y, head, aw - 15, 8.5, { bold: true });
+        y -= 11;
+        for (const chunk of this.wrap(a.desc || "", aw - 15, 7)) {
+          if (y < bottom) { d.addPage(); y = pageTop; ax = M; aw = w; }
+          this.text(ax + 11, y, chunk, { size: 7, color: MUTED });
+          y -= 9;
+        }
+        y -= 5;
+      }
     }
 
     // --- Закляття (2-га сторінка) -----------------------------------------
@@ -586,9 +656,10 @@
 
       // Центр і право
       this.drawCenterRegion(cx, top, CW, bottom);
-      this.drawRightRegion(rx, top, RW, bottom);
+      const restFeatures = this.drawRightRegion(rx, top, RW, bottom);
 
       this.drawSpellPage();
+      this.drawExtrasPage(restFeatures);
     }
   }
 
