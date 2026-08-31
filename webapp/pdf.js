@@ -127,7 +127,13 @@
       d.circle(cx, this.Y(cy), r, style || "S");
     }
 
-    profDot(cx, cy, filled) {
+    /* Маркер володіння: ○ — немає, ● — володіє, ◉ — експертиза (подвоєний бонус). */
+    profDot(cx, cy, filled, expert) {
+      if (expert) {
+        this.circle(cx, cy, 2.9, { stroke: INK, fill: WHITE, lineW: 0.8 });
+        this.circle(cx, cy, 1.5, { stroke: INK, fill: INK, lineW: 0.4 });
+        return;
+      }
       this.circle(cx, cy, 2.6, { stroke: INK, fill: filled ? INK : WHITE, lineW: 0.8 });
     }
 
@@ -247,9 +253,10 @@
         const name = UA_SKILLS[i][0], abil = UA_SKILLS[i][1];
         const s = skills[name] || {};
         const prof = !!s.prof;
+        const expert = !!s.expert;
         const val = s.value == null ? mods[abil] : s.value;
         const ab = s.ability || abil;
-        this.profDot(x + 10, ry + 3, prof);
+        this.profDot(x + 10, ry + 3, prof, expert);
         this.text(x + 19, ry, fmtMod(val), { size: 8, bold: true });
         this.fitText(x + 35, ry, TR(name), w - 35 - abbrW, 8, { bold: prof });
         this.text(x + w - 6, ry, ABBR(ab), { size: 6, color: MUTED, right: true });
@@ -452,6 +459,9 @@
     }
 
     // --- Закляття (2-га сторінка) -----------------------------------------
+    /* Шапка: базова характеристика, DC, бонус атаки + скільки заговорів,
+       відомих/готових заклять. Далі — комірки заклять із квадратиками
+       (стільки, скільки їх реально є на цьому рівні) і рядки для запису. */
     drawSpellPage() {
       const sc = this.char.spellcasting;
       if (!sc) return;
@@ -460,33 +470,67 @@
       const top = this.PAGE_H - M;
       const w = this.PAGE_W - 2 * M;
       this.text(M, top - 8, T("pdf.spells"), { size: 15, bold: true, color: ACCENT });
+      if (sc.source) this.text(M + w, top - 8, sc.source, { size: 8, color: MUTED, right: true });
+
+      // Плитки шапки: характеристика / DC / атака + лічильники заклять
       const info = [
         [T("pdf.spellAbil"), TR(ABILITY_UA[sc.ability]) || sc.ability || "—"],
         [T("pdf.spellDC"), sc.saveDC == null ? "—" : sc.saveDC],
         [T("pdf.spellAtk"), fmtMod(sc.attackBonus)],
       ];
-      const cw = w / 3;
+      if (sc.cantrips > 0) info.push([T("pdf.cantripsKnown"), sc.cantrips]);
+      if (sc.known != null && sc.known > 0) info.push([T("pdf.spellsKnown"), sc.known]);
+      if (sc.prepared != null) info.push([T("pdf.spellsPrepared"), sc.prepared]);
+      if (sc.spellbook != null) info.push([T("pdf.spellbook"), sc.spellbook]);
+
+      const perRow = 3, tileH = 30, tgap = 6;
       let y = top - 24;
       for (let i = 0; i < info.length; i++) {
-        const bx = M + i * cw;
-        this.box(bx, y - 30, cw - 6, 30, { fill: PANEL });
-        this.text(bx + (cw - 6) / 2, y - 16, String(info[i][1]), { size: 14, bold: true, center: true });
-        this.text(bx + (cw - 6) / 2, y - 26, String(info[i][0]).toUpperCase(), { size: 5, bold: true, color: MUTED, center: true });
+        const col = i % perRow, row = Math.floor(i / perRow);
+        const cw = w / perRow;
+        const bx = M + col * cw;
+        const by = y - row * (tileH + tgap);
+        this.box(bx, by - tileH, cw - tgap, tileH, { fill: PANEL });
+        this.text(bx + (cw - tgap) / 2, by - 16, String(info[i][1]), { size: 14, bold: true, center: true });
+        this.fitText(bx + 3, by - 26, String(info[i][0]).toUpperCase(), cw - tgap - 6, 5,
+          { bold: true, color: MUTED });
       }
-      y -= 46;
-      const charLevel = this.char.level || 1;
-      const maxLvl = Math.max(1, Math.min(9, Math.floor((charLevel + 1) / 2)));
+      y -= Math.ceil(info.length / perRow) * (tileH + tgap) + 8;
+
+      // Примітки: обмеження шкіл (Таємний трюкач / Лицар-маг), пакт-магія тощо
+      for (const n of (sc.notes || [])) {
+        for (const chunk of this.wrap("• " + n, w, 7.5)) {
+          this.text(M, y, chunk, { size: 7.5, color: MUTED });
+          y -= 9.5;
+        }
+      }
+      if ((sc.notes || []).length) y -= 4;
+
+      // Комірки заклять за рівнями: заголовок + квадратики під витрати
+      const slots = sc.slots || [];
+      const byLevel = {};
+      slots.forEach(sl => { byLevel[sl.level] = sl; });
+      const maxLvl = Math.max(sc.maxLevel || 0, ...slots.map(sl => sl.level), 0);
       const colw = (w - 16) / 2;
       const cols = [M, M + colw + 16];
-      let colI = 0;
       const ys = [y, y];
-      for (let lvl = 0; lvl <= maxLvl; lvl++) {
+      let colI = 0;
+      const drawSection = (title, count, lines, pact) => {
         const ci = colI % 2;
         let cy = ys[ci];
-        const title = lvl === 0 ? T("pdf.cantrips") : T("pdf.levelPrefix") + lvl;
         this.text(cols[ci], cy, title, { size: 9, bold: true, color: ACCENT });
-        cy -= 6;
-        const lines = lvl === 0 ? 6 : 5;
+        // Квадратики = кількість комірок цього рівня
+        if (count > 0) {
+          const bs = 7, bgap = 2.5;
+          let bx = cols[ci] + colw - count * (bs + bgap);
+          const label = pact ? T("pdf.pactSlots") : T("pdf.slotsShort");
+          this.text(bx - 4, cy, label + " " + count, { size: 6.5, color: MUTED, right: true });
+          for (let k = 0; k < count; k++) {
+            this.box(bx, cy - 1, bs, bs, { radius: 1.5, lineW: 0.6, stroke: LINE });
+            bx += bs + bgap;
+          }
+        }
+        cy -= 8;
         for (let k = 0; k < lines; k++) {
           this.line(cols[ci] + 4, cy - 4, cols[ci] + colw, cy - 4, LINE, 0.5);
           cy -= 13;
@@ -494,6 +538,15 @@
         cy -= 6;
         ys[ci] = cy;
         colI++;
+      };
+
+      if (sc.cantrips > 0) drawSection(T("pdf.cantrips"), 0, Math.max(4, sc.cantrips + 1), false);
+      const pact = slots.length && slots[0].pact;
+      // Комірок ще немає (напр. паладин 1-го рівня) — рядків для заклять не малюємо
+      for (let lvl = 1; lvl <= maxLvl; lvl++) {
+        const sl = byLevel[lvl];
+        if (pact && !sl) continue;          // чорнокнижник має комірки лише одного рівня
+        drawSection(T("pdf.levelPrefix") + lvl, sl ? sl.count : 0, 5, !!(sl && sl.pact));
       }
     }
 

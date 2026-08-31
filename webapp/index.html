@@ -502,7 +502,7 @@
   </div>
 
   <div class="card hidden" id="asiSummaryCard">
-    <div class="pick-head"><h2 style="margin:0" data-i18n="sh.asiTitle">Підвищення / черти<span class="pick-count" id="asiCount"></span></h2>
+    <div class="pick-head"><h2 style="margin:0"><span data-i18n="sh.asiTitle">Підвищення / черти</span><span class="pick-count" id="asiCount"></span></h2>
       <button class="change" onclick="editAsi()" data-i18n="sh.configure">налаштувати</button></div>
     <div id="asiSummary"></div>
   </div>
@@ -537,6 +537,16 @@
     <div id="skills"></div>
     <div class="conflict-note hidden" id="skillConflict"></div>
     <div class="saves-info" id="savesInfo"></div>
+  </div>
+
+  <div class="card full-only hidden" id="classChoicesCard">
+    <h2><span data-i18n="sh.classChoices">Вибори класу</span><span class="pick-count" id="classChoicesCount"></span></h2>
+    <div id="classChoices"></div>
+  </div>
+
+  <div class="card full-only hidden" id="spellPlanCard">
+    <h2 data-i18n="sh.spellPlan">Магія: скільки чого обирати</h2>
+    <div id="spellPlan"></div>
   </div>
 
   <div class="footer"><button class="btn btn-primary" onclick="showEquipment()" data-i18n="sh.next">Далі: Спорядження →</button></div>
@@ -1640,8 +1650,41 @@ const PREP_CASTER = {
   "Клірик":{abil:"wis",half:false}, "Друїд":{abil:"wis",half:false},
   "Чарівник":{abil:"int",half:false}, "Паладин":{abil:"cha",half:true}
 };
+/* --- Підкласи-заклиначі («третина» прогресії): Таємний трюкач і Лицар-маг ---
+   Вони не мають магії в CLASSES (spell:null), тож комірки, замовляння та
+   відомі закляття рахуємо окремо — і обов'язково з обмеженням шкіл. */
+const THIRD_SLOTS = {3:[2],4:[3],5:[3],6:[3],7:[4,2],8:[4,2],9:[4,2],10:[4,3],11:[4,3],12:[4,3],
+  13:[4,3,2],14:[4,3,2],15:[4,3,2],16:[4,3,3],17:[4,3,3],18:[4,3,3],19:[4,3,3,1],20:[4,3,3,1]};
+const THIRD_KNOWN = {3:3,4:4,5:4,6:4,7:5,8:6,9:6,10:7,11:8,12:8,13:9,14:10,15:10,16:11,17:11,18:11,19:12,20:13};
+const SUBCLASS_CASTERS = {
+  // Плут: 3 замовляння (одне з них — Рука мага) на 3-му, 4 на 10-му
+  "Таємний трюкач":{ cls:"Плут", abil:"int", list:"чарівника", cantripAt3:3, cantripAt10:4,
+    schools:["ілюзії","зачарування"], fixedCantrip:"Рука мага" },
+  // Воїн: 2 замовляння на 3-му, 3 на 10-му
+  "Лицар-маг":{ cls:"Воїн", abil:"int", list:"чарівника", cantripAt3:2, cantripAt10:3,
+    schools:["ограждення","викликання"] }
+};
+// Активний підклас-заклинач (або null), рахуючи рівень персонажа
+function subclassCaster(cls, sub, L){
+  const cfg = sub ? SUBCLASS_CASTERS[sub] : null;
+  return (cfg && cfg.cls===cls && L>=3) ? cfg : null;
+}
+function thirdCantrips(cfg,L){ return L>=10 ? cfg.cantripAt10 : cfg.cantripAt3; }
+/* Скільки з відомих заклять можна взяти БУДЬ-ЯКОЇ школи: одне на 3-му рівні
+   плюс по одному на 8/14/20 — решта мусить бути з двох «своїх» шкіл. */
+function thirdFreePicks(L){ return 1 + (L>=8?1:0) + (L>=14?1:0) + (L>=20?1:0); }
+// Текст-обмеження на кшталт «з 3 — щонайменше 2 зі шкіл ілюзії або зачарування»
+function schoolLimitText(cfg,L){
+  const known=THIRD_KNOWN[L]||0; if(!known) return "";
+  const restricted=Math.max(0, known - thirdFreePicks(L));
+  if(!restricted) return "";
+  return t('spell.schoolLimit')
+    .replace("{n}", known).replace("{k}", restricted)
+    .replace("{s}", cfg.schools.map(x=>tr(x)).join(t('spell.orJoin')));
+}
+
 // Рядки «скільки заклять знаєш/готуєш» для рівня L
-function spellCountLines(name,L){
+function spellCountLines(name,L,sub){
   const lines=[];
   const cc=cantripsKnown(name,L);
   if(cc>0) lines.push({label:"Заговори", value:`${cc}`,
@@ -1661,33 +1704,51 @@ function spellCountLines(name,L){
         hint:"6 на 1-му рівні, +2 за кожен новий рівень; готуєш закляття саме з книги"});
     }
   }
+  // Підклас-заклинач (Таємний трюкач / Лицар-маг): свої замовляння, закляття й школи
+  const scfg=subclassCaster(name, sub===undefined?S.subclass:sub, L);
+  if(scfg){
+    lines.push({label:"Заговори", value:`${thirdCantrips(scfg,L)}`,
+      hint:"закляття 0-го рівня зі списку чарівника — чаклуються без витрати комірок"});
+    const known=THIRD_KNOWN[L]||0;
+    if(known) lines.push({label:"Відомі закляття", value:`${known}`, hint:schoolLimitText(scfg,L)});
+  }
   return lines;
 }
+/* Комірки заклять як список {level, count} — і для звичайних класів, і для
+   пакт-магії, і для підкласів-заклиначів. Порожній масив = магії ще немає. */
+function spellSlotList(name,L,sub){
+  const ex=CLASS_EXTRA[name]||{};
+  const fromArr=(a)=>(a||[]).map((n,i)=>({level:i+1, count:n})).filter(x=>x.count>0);
+  if(ex.caster==="full") return fromArr(FULL_SLOTS[L]);
+  if(ex.caster==="half") return fromArr(HALF_SLOTS[L]);
+  if(ex.caster==="pact"){ const a=WARLOCK_SLOTS[L]; return a?[{level:a[1], count:a[0], pact:true}]:[]; }
+  if(subclassCaster(name, sub===undefined?S.subclass:sub, L)) return fromArr(THIRD_SLOTS[L]);
+  return [];
+}
+// Тайні звороти чорнокнижника та Містичний арканум — теж «скільки заклять»
+const INVOCATIONS = {1:0,2:2,3:2,4:2,5:3,6:3,7:4,8:4,9:5,10:5,11:5,12:6,13:6,14:6,15:7,16:7,17:7,18:8,19:8,20:8};
+function mysticArcanum(L){ const out=[]; if(L>=11) out.push(6); if(L>=13) out.push(7); if(L>=15) out.push(8); if(L>=17) out.push(9); return out; }
 // Найвищий рівень заклять, доступний класу на рівні L (0 — не заклинач)
-function maxSpellLevel(name,L){
+function maxSpellLevel(name,L,sub){
   const ex=CLASS_EXTRA[name]||{};
   if(ex.caster==="full"){ const a=FULL_SLOTS[L]; return a?a.length:0; }
   if(ex.caster==="half"){ const a=HALF_SLOTS[L]; return a?a.length:0; }
   if(ex.caster==="pact"){ const a=WARLOCK_SLOTS[L]; return a?a[1]:0; }
+  if(subclassCaster(name, sub===undefined?S.subclass:sub, L)){ const a=THIRD_SLOTS[L]; return a?a.length:0; }
   return 0;
 }
-// Рядки «магія» для екрана-перевірки (характеристики вже відомі → конкретні числа)
+/* Рядки «магія» для екрана-перевірки. Джерело правди — ch.spellcasting,
+   який зібрав computeCharacter(): і комірки, і кількість заговорів/заклять. */
 function spellSummaryRows(ch){
-  const name=S.class, L=ch.level, rows=[];
-  const cc=cantripsKnown(name,L);
-  if(cc>0) rows.push({k:t('rv.cantrips'), v:`${cc}`});
-  const sk=SPELLS_KNOWN[name];
-  if(sk){ if(sk[L]>0) rows.push({k:t('rv.spellsKnown'), v:`${sk[L]}`}); }
-  else if(PREP_CASTER[name]){
-    const p=PREP_CASTER[name];
-    if(!(p.half && L<2)){
-      const n=Math.max(1, ch.modifiers[p.abil] + (p.half?Math.floor(L/2):L));
-      rows.push({k:t('rv.prepPerDay'), v:`${n}`});
-      if(name==="Чарівник") rows.push({k:t('rv.spellbook'), v:`${6+(L-1)*2}`});
-    }
-  }
-  const mx=maxSpellLevel(name,L);
-  if(mx>0) rows.push({k:t('rv.maxSpellLvl'), v:t('rv.spellLvlVal').replace("{n}",mx)});
+  const sc=ch.spellcasting; if(!sc) return [];
+  const rows=[];
+  if(sc.cantrips>0) rows.push({k:t('rv.cantrips'), v:`${sc.cantrips}`});
+  if(sc.known!=null&&sc.known>0) rows.push({k:t('rv.spellsKnown'), v:`${sc.known}`});
+  if(sc.prepared!=null) rows.push({k:t('rv.prepPerDay'), v:`${sc.prepared}`});
+  if(sc.spellbook!=null) rows.push({k:t('rv.spellbook'), v:`${sc.spellbook}`});
+  if((sc.slots||[]).length) rows.push({k: sc.slots[0].pact?t('rv.pactSlots'):t('rv.slots'),
+    v: sc.slots.map(x=>t('rv.slotTpl').replace("{lvl}",x.level).replace("{n}",x.count)).join(" · ")});
+  if(sc.maxLevel>0) rows.push({k:t('rv.maxSpellLvl'), v:t('rv.spellLvlVal').replace("{n}",sc.maxLevel)});
   return rows;
 }
 
@@ -1825,7 +1886,7 @@ const OPT_FEATS = {
   "Воїн":{1:["Нові бойові стилі — Перехоплення, Кулачний бій, Вища техніка тощо"]},
   "Монах":{2:["Улюблена зброя — робиш обрану просту/військову зброю монашою"],3:["Атака за Ці — витративши Ці на прийом, отримуєш беззбройну атаку"]},
   "Паладин":{3:["Спрямувати божественну силу — за Божественний канал відновлюєш комірку заклять"]},
-  "Слідопит":{1:["Спритний дослідник — заміна Улюбленому ворогу: дві навички + експертиза","Улюблений противник — за концентрацію додаєш шкоду обраній цілі"]},
+  "Слідопит":{1:["Спритний дослідник — заміна Природному досліднику: експертиза в одній навичці + 2 мови","Улюблений противник — за концентрацію додаєш шкоду обраній цілі"]},
   "Плут":{3:["Стійкий приціл — бонусною дією перевага на атаку, якщо не рухаєшся цей хід"]},
   "Чаклун":{5:["Магічне керівництво — за очко чарів перекидаєш провалену перевірку характеристики"]},
   "Чорнокнижник":{1:["Гнучкість зворотів — при підвищенні можеш заміняти обрані тайні звороти"]},
@@ -1855,6 +1916,62 @@ const FS_CONFIG = {
     opt:["Благословенний воїн","Перехоплення","Вища техніка"]},
   "Слідопит":{level:2, styles:["Оборона","Дуелінг","Стрільба","Два клинки"],
     opt:["Перехоплення","Метання зброї","Вища техніка"]}
+};
+
+/* =========================================================================
+   ЕКСПЕРТИЗА (подвоєний бонус майстерності) та вибори 1-го рівня Слідопита
+   ========================================================================= */
+/* Скільки НОВИХ експертиз клас дає на кожному рівні. Плут — 2 на 1-му і ще 2
+   на 6-му; Бард — 2 на 3-му і ще 2 на 10-му. Слідопит отримує 1 від опційного
+   «Спритного дослідника» (Tasha), тож він рахується окремо. */
+const EXPERTISE_PROG = {
+  "Плут":{1:2, 6:2},
+  "Бард":{3:2, 10:2}
+};
+/* Що ще, крім навичок, можна взяти в експертизу (плут — злодійські інструменти). */
+const EXPERTISE_TOOLS = { "Плут":["Злодійські інструменти"] };
+// Скільки експертиз доступно персонажу на його рівні
+function expertiseSlots(cls, L, opts){
+  const prog=EXPERTISE_PROG[cls]||{};
+  let n=0; Object.keys(prog).forEach(lv=>{ if(L>=+lv) n+=prog[lv]; });
+  if(cls==="Слідопит" && L>=1 && (opts&&opts.deft)) n+=1;   // Спритний дослідник (Canny)
+  return n;
+}
+// Рівні, на яких з’являється нова експертиза (для сторінки класу)
+function expertiseLevels(cls){ return Object.keys(EXPERTISE_PROG[cls]||{}).map(Number).sort((a,b)=>a-b); }
+// Кандидати в експертизу: навички, якими вже володієш, + інструменти класу
+function expertiseOptions(cls){
+  const skills=Object.keys(skillSources());
+  return [...skills.map(n=>({key:n, kind:"skill"})), ...((EXPERTISE_TOOLS[cls]||[]).map(n=>({key:n, kind:"tool"})))];
+}
+
+/* Улюблені вороги слідопита (PHB): тип істот + мова, пов’язана з ними. */
+const FAVORED_ENEMIES = [
+  {name:"Аберації", lang:"Глибинна мова"},
+  {name:"Звірі", lang:"—"},
+  {name:"Небожителі", lang:"Небесна"},
+  {name:"Конструкти", lang:"—"},
+  {name:"Дракони", lang:"Драконяча"},
+  {name:"Елементалі", lang:"Первинна"},
+  {name:"Феї", lang:"Сильван"},
+  {name:"Виплодки", lang:"Інфернальна"},
+  {name:"Велетні", lang:"Велетенська"},
+  {name:"Монстри", lang:"—"},
+  {name:"Слизі", lang:"—"},
+  {name:"Рослини", lang:"—"},
+  {name:"Нежить", lang:"—"},
+  {name:"Два види гуманоїдів", lang:"мови обох видів"}
+];
+/* Улюблені ландшафти (Природний дослідник, PHB). */
+const FAVORED_TERRAINS = ["Арктика","Узбережжя","Пустеля","Ліс","Луки","Гори","Болото","Підземелля"];
+
+/* Опційні заміни 1-го рівня Слідопита (Tasha) — вмикаються, лише якщо
+   увімкнено «опційні вміння класів». */
+const RANGER_OPTIONS = {
+  foe:{ name:"Улюблений противник", replaces:"Улюблений ворог",
+    desc:"За концентрацію позначаєш ціль: +1d4 шкоди їй раз за хід (кубик росте з рівнем)." },
+  deft:{ name:"Спритний дослідник", replaces:"Природний дослідник",
+    desc:"Кмітливість: обираєш навичку з подвоєним бонусом майстерності і вивчаєш 2 мови." }
 };
 
 /* Короткі описи базових класових рис і бойових стилів (для PDF-чарника). */
@@ -1903,11 +2020,25 @@ function resourceInfo(name, L){
   return null;
 }
 // Усі ресурси класу на рівні L (може бути кілька: напр. Чаклун має і комірки заклять, і очки чарів)
-function resourceLines(name, L){
+function resourceLines(name, L, sub){
   const out=[];
   const r=resourceInfo(name,L);
   if(r) out.push(r);
   if(name==="Чаклун"&&L>=2) out.push({label:"Очки чарів",value:`${L}`,hint:"перетворюєш на комірки заклять і назад; живлять метамагію"});
+  if(name==="Чорнокнижник"){
+    if(INVOCATIONS[L]) out.push({label:"Тайні звороти",value:`${INVOCATIONS[L]}`,hint:"постійні магічні вміння на вибір; при підвищенні можна замінити один"});
+    const ar=mysticArcanum(L);
+    if(ar.length) out.push({label:"Містичний арканум",value:ar.map(x=>t('res.arcanumTpl').replace("{lvl}",x)).join(", "),
+      hint:"по одному закляттю кожного з цих рівнів — 1 раз на тривалий відпочинок, без комірки"});
+  }
+  // Комірки підкласу-заклинача (Таємний трюкач / Лицар-маг) — у класі їх немає
+  const scfg=subclassCaster(name, sub===undefined?S.subclass:sub, L);
+  if(scfg){
+    const a=THIRD_SLOTS[L];
+    if(a&&a.length) out.push({label:"Комірки заклять",
+      value:a.map((n,i)=>`${i+1}${t('res.lvlAbbr')}×${n}`).join("  "),
+      hint:"скільки заклять кожного рівня можеш накласти до тривалого відпочинку (Nр×К = рівень×кількість)"});
+  }
   return out;
 }
 
@@ -2013,6 +2144,8 @@ const S = {
   slots:{}, humanFeat:{ feat:"", featAbil:"" },
   asiQueue:[], asiIdx:0, asiAfter:null,
   optionalFeats:true, raceFilter:null, fightingStyle:null,
+  expertise:[],                                  // навички/інструменти з подвоєним бонусом
+  ranger:{ enemy:"", terrain:"", foe:false, deft:false },  // вибори слідопита на 1-му рівні
   lang:"uk",
   _ready:false
 };
@@ -2557,6 +2690,12 @@ function renderClassLevels(){
       inner+=`<div class="lvl-feat">${esc(nm)}</div>`;
     });
     if(fs && L===fs.level) inner+=fsPickHtml(name);
+    // Позначаємо рівні, де є вибір, який робиться далі — у чарнику
+    const expNew=(EXPERTISE_PROG[name]||{})[L];
+    if(expNew) inner+=`<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>`+
+      `${esc(t('cd.expertisePick').replace("{n}", expNew))}</div>`;
+    if(name==="Слідопит" && L===1) inner+=`<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>`+
+      `${esc(t('cd.rangerPick'))}</div>`;
     if(L===c.subLevel && c.subs){ inner+=subPickHtml(c); inner+=subFeatHtml(c,L,true,featItems); }
     else if(subFeat.has(L)) inner+=subFeatHtml(c,L,false,featItems);
     if(asiSet.has(L)) inner+=`<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(t('cd.asiOrFeat'))}</div>`;
@@ -2586,6 +2725,7 @@ function selectSubclass(name){ S.subclass=name; renderClassLevels(); }
 
 function chooseClass(){
   S.class=S.detailClass; S.level=S.detailLevel; S.classSkillPick.clear(); S.slots={};
+  S.expertise=[]; S.ranger={ enemy:"", terrain:"", foe:false, deft:false };
   startAsiWizard(()=>{ buildSheet(); showView("sheet"); });
 }
 function selectFightingStyle(name){ S.fightingStyle=name; renderClassLevels(); }
@@ -2674,6 +2814,8 @@ function buildSheet(){
   renderAsiSummary();
   if(!S._ready){ setMethod("array"); S._ready=true; } else buildAbilities();
   buildSkills();
+  renderClassChoices();
+  renderSpellPlan();
   setMode(S.mode);
   recalc();
 }
@@ -2714,6 +2856,7 @@ function setMode(m){
   S.mode=m;
   document.querySelectorAll(".mode-btn[data-mode]").forEach(b=>b.classList.toggle("active", b.dataset.mode===m));
   document.querySelectorAll(".full-only").forEach(el=>el.classList.toggle("hidden", m!=="full"));
+  if(m==="full"){ renderClassChoices(); renderSpellPlan(); }
   recalc();
 }
 
@@ -2812,6 +2955,138 @@ function renderRaceChoices(){
     row.appendChild(sel);
   }
   box.appendChild(row);
+}
+
+/* =========================================================================
+   ВИБОРИ КЛАСУ: експертиза + улюблений ворог/ландшафт слідопита
+   ========================================================================= */
+// Опції слідопита доступні лише коли увімкнено «опційні вміння класів»
+function rangerOptsOn(){ return S.class==="Слідопит" && S.optionalFeats; }
+// Скільки експертиз має персонаж зараз (з урахуванням опції «Спритний дослідник»)
+function expertiseMax(){ return expertiseSlots(S.class, S.level, S.ranger); }
+// Чистимо експертизу від того, чим персонаж більше не володіє / понад ліміт
+function pruneExpertise(){
+  const ok=new Set(expertiseOptions(S.class).map(o=>o.key));
+  S.expertise=S.expertise.filter(n=>ok.has(n)).slice(0, expertiseMax());
+}
+function toggleExpertise(name){
+  const i=S.expertise.indexOf(name);
+  if(i>=0) S.expertise.splice(i,1);
+  else { if(S.expertise.length>=expertiseMax()) return; S.expertise.push(name); }
+  renderClassChoices(); recalc();
+}
+function setRangerPick(field, val){ S.ranger[field]=val; renderClassChoices(); }
+function toggleRangerOpt(field){
+  S.ranger[field]=!S.ranger[field];
+  if(field==="deft" && !S.ranger.deft) pruneExpertise();
+  if(field==="foe" && S.ranger.foe) S.ranger.enemy="";
+  renderClassChoices(); recalc();
+}
+function renderClassChoices(){
+  const card=$("classChoicesCard"), box=$("classChoices");
+  if(!card||!box) return;
+  if(!S.class||S.mode!=="full"){ card.classList.add("hidden"); return; }
+  pruneExpertise();
+  const parts=[]; let need=0, done=0;
+
+  // --- Слідопит: улюблений ворог + улюблений ландшафт (1-й рівень) ---
+  if(S.class==="Слідопит"){
+    const optsOn=rangerOptsOn();
+    // Улюблений ворог або (Tasha) Улюблений противник
+    parts.push(`<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(tr("Улюблений ворог"))}</div>`);
+    if(optsOn){
+      parts.push(`<label class="skill" onclick="event.preventDefault();toggleRangerOpt('foe')">
+        <input type="checkbox" ${S.ranger.foe?"checked":""} onclick="event.preventDefault()"/>
+        <span>${esc(tr(RANGER_OPTIONS.foe.name))} <small class="src-tag">${esc(t('cd.opt'))}</small><br>
+        <small class="ab-tag">${esc(tr(RANGER_OPTIONS.foe.desc))}</small></span></label>`);
+    }
+    if(!S.ranger.foe){
+      need++; if(S.ranger.enemy) done++;
+      parts.push(`<div class="desc-line">${esc(t('sh.feHint'))}</div>`);
+      parts.push(`<select onchange="setRangerPick('enemy', this.value)"><option value="">—</option>`+
+        FAVORED_ENEMIES.map(e=>`<option value="${esc(e.name)}" ${S.ranger.enemy===e.name?"selected":""}>${esc(tr(e.name))}${e.lang!=="—"?` — ${esc(tr(e.lang))}`:""}</option>`).join("")+
+        `</select>`);
+    }
+    // Природний дослідник або (Tasha) Спритний дослідник
+    parts.push(`<div class="pick-lead" style="margin-top:14px"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(tr("Природний дослідник"))}</div>`);
+    if(optsOn){
+      parts.push(`<label class="skill" onclick="event.preventDefault();toggleRangerOpt('deft')">
+        <input type="checkbox" ${S.ranger.deft?"checked":""} onclick="event.preventDefault()"/>
+        <span>${esc(tr(RANGER_OPTIONS.deft.name))} <small class="src-tag">${esc(t('cd.opt'))}</small><br>
+        <small class="ab-tag">${esc(tr(RANGER_OPTIONS.deft.desc))}</small></span></label>`);
+    }
+    if(!S.ranger.deft){
+      need++; if(S.ranger.terrain) done++;
+      parts.push(`<div class="desc-line">${esc(t('sh.terrainHint'))}</div>`);
+      parts.push(`<select onchange="setRangerPick('terrain', this.value)"><option value="">—</option>`+
+        FAVORED_TERRAINS.map(x=>`<option value="${esc(x)}" ${S.ranger.terrain===x?"selected":""}>${esc(tr(x))}</option>`).join("")+
+        `</select>`);
+    }
+  }
+
+  // --- Експертиза (Плут / Бард / Слідопит зі Спритним дослідником) ---
+  const maxE=expertiseMax();
+  if(maxE>0){
+    need+=maxE; done+=S.expertise.length;
+    const lv=expertiseLevels(S.class).filter(l=>S.level>=l);
+    const src=lv.length ? t('sh.expFromLvl').replace("{lv}", lv.join(", ")) : tr(RANGER_OPTIONS.deft.name);
+    parts.push(`<div class="skill-group-head" style="margin-top:${S.class==="Слідопит"?"16px":"0"}">
+      <span>${esc(tr("Експертиза"))}</span>
+      <span class="counter${S.expertise.length===maxE?"":" warn"}">(${S.expertise.length}/${maxE})</span></div>`);
+    parts.push(`<div class="desc-line">${esc(t('sh.expHint'))} <span style="opacity:.75">${esc(src)}</span></div>`);
+    const opts=expertiseOptions(S.class);
+    if(!opts.length){
+      parts.push(`<div class="desc-line">${esc(t('sh.expNoSkills'))}</div>`);
+    } else {
+      const full=S.expertise.length>=maxE;
+      opts.forEach(o=>{
+        const on=S.expertise.includes(o.key);
+        const dis=!on&&full;
+        parts.push(`<label class="skill${dis?" locked":""}" onclick="event.preventDefault();${dis?"":`toggleExpertise('${q(o.key)}')`}">
+          <input type="checkbox" ${on?"checked":""} ${dis?"disabled":""} onclick="event.preventDefault()"/>
+          <span>${esc(tr(o.key))} ${o.kind==="tool"
+            ? `<small class="ab-tag">${esc(t('sh.expTool'))}</small>`
+            : `<small class="ab-tag">${abShort(SKILLS[o.key])}</small>`}</span></label>`);
+      });
+    }
+  }
+
+  if(!parts.length){ card.classList.add("hidden"); box.innerHTML=""; return; }
+  card.classList.remove("hidden");
+  box.innerHTML=parts.join("");
+  const cnt=$("classChoicesCount");
+  if(cnt) cnt.textContent = need ? t('sh.asiCountTpl').replace("{d}",done).replace("{t}",need) : "";
+}
+
+/* --- Картка «скільки заклять/заговорів обирати» на сторінці чарника --- */
+function renderSpellPlan(){
+  const card=$("spellPlanCard"), box=$("spellPlan");
+  if(!card||!box) return;
+  const c=currentClass();
+  if(!c||S.mode!=="full"){ card.classList.add("hidden"); return; }
+  const L=S.level, name=S.class;
+  const items=[...spellCountLines(name,L,S.subclass)];
+  const slots=spellSlotList(name,L,S.subclass);
+  if(slots.length){
+    const pact=slots[0]&&slots[0].pact;
+    items.unshift({ label: pact?"Пакт-магія":"Комірки заклять",
+      value: slots.map(x=>t('res.slotTpl').replace("{lvl}",x.level).replace("{n}",x.count)).join("  "),
+      hint: pact?"усі комірки одного рівня й відновлюються в короткий перепочинок"
+                :"скільки заклять кожного рівня можеш накласти до тривалого відпочинку"});
+  }
+  if(name==="Чорнокнижник"){
+    if(INVOCATIONS[L]) items.push({label:"Тайні звороти", value:`${INVOCATIONS[L]}`,
+      hint:"постійні магічні вміння на вибір зі списку чорнокнижника"});
+    const ar=mysticArcanum(L);
+    if(ar.length) items.push({label:"Містичний арканум", value:ar.map(x=>t('res.arcanumTpl').replace("{lvl}",x)).join(", "),
+      hint:"по одному закляттю кожного з цих рівнів — 1 раз на тривалий відпочинок"});
+  }
+  if(!items.length){ card.classList.add("hidden"); box.innerHTML=""; return; }
+  card.classList.remove("hidden");
+  box.innerHTML = `<div class="res-grid">`+items.map(it=>
+    `<div class="res-tile"><div class="rt-l">${esc(tr(it.label))}</div>`+
+    `<div class="rt-v">${esc(tr(it.value))}</div>`+
+    (it.hint?`<div class="rt-h">${esc(tr(it.hint))}</div>`:"")+`</div>`).join("")+`</div>`;
 }
 
 /* =========================================================================
@@ -3008,7 +3283,7 @@ function updateSkillStates(){
       else { cb.checked=S.raceSkillPick.has(cb.dataset.skill); cb.disabled=!cb.checked&&raceFull; }
       cb.closest(".skill").classList.toggle("locked", cb.disabled);
     }); }
-  updateSkillCounters(); renderConflictNote(sources); renderSaves();
+  updateSkillCounters(); renderConflictNote(sources); renderSaves(); renderClassChoices();
 }
 function updateSkillCounters(){
   const cl=currentClass(), def=raceSkillChoiceDef();
@@ -3048,6 +3323,18 @@ function autoFillQuick(){
   if(adef){ S.raceAsiPick=[]; const excl=adef.exclude||[];
     for(const ab of cl.priority){ if(S.raceAsiPick.length>=adef.count) break; if(!excl.includes(ab)&&!S.raceAsiPick.includes(ab)) S.raceAsiPick.push(ab); } }
   asiOpportunities().forEach(l=>{ S.slots[String(l)]={type:"asi",a1:cl.priority[0],a2:cl.priority[0],feat:"",featAbil:""}; });
+  // Вибори класу: слідопиту — ворог і ландшафт, решті — експертиза за списком
+  if(S.class==="Слідопит"){
+    if(!S.ranger.foe && !S.ranger.enemy) S.ranger.enemy=FAVORED_ENEMIES[0].name;
+    if(!S.ranger.deft && !S.ranger.terrain) S.ranger.terrain=FAVORED_TERRAINS[0];
+  }
+  const emax=expertiseMax();
+  S.expertise=S.expertise.filter(n=>expertiseOptions(S.class).some(o=>o.key===n));
+  for(const o of expertiseOptions(S.class)){
+    if(S.expertise.length>=emax) break;
+    if(!S.expertise.includes(o.key)) S.expertise.push(o.key);
+  }
+  S.expertise=S.expertise.slice(0, emax);
 }
 
 /* =========================================================================
@@ -3566,15 +3853,59 @@ function computeCharacter(){
     ? (S.humanFeat.feat==="Стійкий"?S.humanFeat.featAbil:(Object.values(S.slots).find(st=>st.feat==="Стійкий")||{}).featAbil):null;
   const saves={}; ABILS.forEach(a=>{ const p=c.saves.includes(a)||a===resilientAbil; saves[a]={prof:p,value:mods[a]+(p?pb:0)}; });
 
-  const skills={}; ALL_SKILLS.forEach(n=>{ const ab=SKILLS[n]; const p=isProf(n); skills[n]={prof:p,value:mods[ab]+(p?pb:0),ability:ab}; });
+  // Експертиза подвоює бонус майстерності для обраних навичок (та інструментів)
+  pruneExpertise();
+  const expertSet=new Set(S.expertise);
+  const skills={}; ALL_SKILLS.forEach(n=>{ const ab=SKILLS[n]; const p=isProf(n);
+    const ex=p&&expertSet.has(n);
+    skills[n]={prof:p,expert:ex,value:mods[ab]+(p?(ex?2*pb:pb):0),ability:ab}; });
+  // Пасивна уважність теж рахує подвоєний бонус
+  if(expertSet.has("Сприйняття")&&isProf("Сприйняття")) pp+=pb;
 
+  // Магія: клас або підклас-заклинач (Таємний трюкач / Лицар-маг)
   let spellcasting=null;
-  if(c.spell) spellcasting={ability:c.spell,saveDC:8+pb+mods[c.spell],attackBonus:pb+mods[c.spell],spells:[]};
+  const scfg=subclassCaster(S.class, S.subclass, level);
+  const spellAbil = c.spell || (scfg?scfg.abil:null);
+  if(spellAbil){
+    const slots=spellSlotList(S.class, level, S.subclass);
+    const notes=[];
+    let cantrips=cantripsKnown(S.class, level), known=null, prepared=null, spellbook=null;
+    const sk=SPELLS_KNOWN[S.class];
+    if(sk&&sk[level]) known=sk[level];
+    else if(PREP_CASTER[S.class]){
+      const pc=PREP_CASTER[S.class];
+      if(!(pc.half&&level<2)) prepared=Math.max(1, mods[pc.abil]+(pc.half?Math.floor(level/2):level));
+      if(S.class==="Чарівник") spellbook=6+(level-1)*2;
+    }
+    if(scfg){
+      cantrips=thirdCantrips(scfg, level);
+      known=THIRD_KNOWN[level]||0;
+      const lim=schoolLimitText(scfg, level);
+      if(lim) notes.push(lim);
+      if(scfg.fixedCantrip) notes.push(t('spell.fixedCantrip').replace("{s}", tr(scfg.fixedCantrip)));
+    }
+    if(S.class==="Чорнокнижник"){
+      if(INVOCATIONS[level]) notes.push(t('spell.invocationsNote').replace("{n}", INVOCATIONS[level]));
+      const ar=mysticArcanum(level);
+      if(ar.length) notes.push(t('spell.arcanumNote').replace("{s}", ar.map(x=>t('res.arcanumTpl').replace("{lvl}",x)).join(", ")));
+      notes.push(t('spell.pactNote'));
+    }
+    // Магія ще не почалась (паладин/слідопит 1-го рівня) — сторінки заклять не треба
+    const hasMagic = slots.length || cantrips>0 || (known!=null&&known>0) || prepared!=null;
+    if(hasMagic) spellcasting={ ability:spellAbil, saveDC:8+pb+mods[spellAbil], attackBonus:pb+mods[spellAbil],
+      spells:[], slots, cantrips, known, prepared, spellbook,
+      maxLevel:maxSpellLevel(S.class, level, S.subclass), notes,
+      source: scfg ? tr(S.subclass) : tr(S.class) };
+  }
 
   // Риси у форматі {name, desc} — опис показується в PDF-чарнику.
   const fdesc=(n)=>tr(FEATURE_DESC[n]||"");
   const features=[];
-  (c.features||[]).forEach(n=>features.push({name:tr(n), desc:fdesc(n)}));
+  // Ці риси дописуємо нижче з конкретикою (що саме обрано) — тут пропускаємо
+  const detailed=new Set();
+  if(S.class==="Слідопит") { detailed.add("Улюблений ворог"); detailed.add("Природний дослідник"); }
+  if(S.expertise.length) detailed.add("Експертиза");
+  (c.features||[]).forEach(n=>{ if(!detailed.has(n)) features.push({name:tr(n), desc:fdesc(n)}); });
   let subForProf=null;
   if(c.subs&&subclassActive()){
     const sub=(c.subs||[]).find(s=>s.name===S.subclass); subForProf=sub;
@@ -3588,12 +3919,31 @@ function computeCharacter(){
   }
   if(FS_CONFIG[S.class] && level>=FS_CONFIG[S.class].level && S.fightingStyle)
     features.push({name:t('rv.pfxFightStyle')+tr(S.fightingStyle), desc:fdesc(S.fightingStyle)});
+  // Вибори слідопита 1-го рівня (або їх опційні заміни з Tasha)
+  if(S.class==="Слідопит"){
+    if(S.ranger.foe && rangerOptsOn())
+      features.push({name:tr(RANGER_OPTIONS.foe.name), desc:tr(RANGER_OPTIONS.foe.desc)});
+    else if(S.ranger.enemy){
+      const fe=FAVORED_ENEMIES.find(e=>e.name===S.ranger.enemy);
+      features.push({name:`${tr("Улюблений ворог")}: ${tr(S.ranger.enemy)}`,
+        desc:(fe&&fe.lang!=="—")?t('rv.feLang').replace("{s}", tr(fe.lang)):fdesc("Улюблений ворог")});
+    }
+    if(S.ranger.deft && rangerOptsOn())
+      features.push({name:tr(RANGER_OPTIONS.deft.name), desc:tr(RANGER_OPTIONS.deft.desc)});
+    else if(S.ranger.terrain)
+      features.push({name:`${tr("Природний дослідник")}: ${tr(S.ranger.terrain)}`, desc:fdesc("Природний дослідник")});
+  }
+  // Експертиза — окремим рядком, щоб було видно, що саме подвоєно
+  if(S.expertise.length)
+    features.push({name:tr("Експертиза"), desc:t('rv.expertiseList').replace("{s}", S.expertise.map(x=>tr(x)).join(", "))});
   (r.baseTraits||[]).forEach(t=>features.push({name:tr(t.name), desc:tr(t.desc||"")}));
   if(sr&&sr.traits) sr.traits.forEach(t=>features.push({name:tr(t.name), desc:tr(t.desc||"")}));
   features.push({name:t('rv.pfxBg')+tr(bg.feature.name), desc:tr(bg.feature.desc||"")});
   feats.forEach(fn=>features.push({name:t('rv.pfxFeat')+tr(fn), desc:tr((FEATS[fn]&&FEATS[fn].desc)||"")}));
   if(S.optionalFeats && OPT_FEATS[S.class]){
     Object.entries(OPT_FEATS[S.class]).forEach(([lv,arr])=>{
+      // Опції слідопита 1-го рівня — це явний вибір вище, тут їх не повторюємо
+      if(S.class==="Слідопит" && +lv===1) return;
       if(+lv<=level) arr.forEach(f=>{
         const p=tr(f).split(" — "); features.push({name:t('rv.pfxOpt')+p[0], desc:p.slice(1).join(" — ")});
       });
@@ -3625,6 +3975,12 @@ function validate(){
     if(rdef&&S.raceSkillPick.size!==rdef.count) return fail(t("err.raceSkills").replace("{n}",rdef.count));
     const adef=raceAsiChoiceDef();
     if(adef&&S.raceAsiPick.filter(Boolean).length!==adef.count) return fail(t("err.raceAsi").replace("{n}",adef.count));
+    const maxE=expertiseMax();
+    if(maxE&&S.expertise.length!==maxE) return fail(t("err.expertise").replace("{n}",maxE));
+    if(S.class==="Слідопит"){
+      if(!(rangerOptsOn()&&S.ranger.foe) && !S.ranger.enemy) return fail(t("err.favEnemy"));
+      if(!(rangerOptsOn()&&S.ranger.deft) && !S.ranger.terrain) return fail(t("err.favTerrain"));
+    }
     if((S.method==="array"||S.method==="roll")&&ABILS.some(a=>S.base[a]==null)) return fail(t("err.needAbilities"));
     if(S.method==="pointbuy"&&pointsUsed(S.base)>27) return fail(t("err.pbOver"));
   }
@@ -3647,8 +4003,10 @@ function renderReview(ch){
   const sv=$("r-saves"); sv.innerHTML="";
   ABILS.forEach(a=>{ const s=ch.savingThrows[a]; const d=document.createElement("div"); d.className="kv";
     d.innerHTML=`<span class="k">${s.prof?"● ":"○ "}${esc(tr(ABIL_UA[a]))}</span><span>${fmt(s.value)}</span>`; sv.appendChild(d); });
-  const sk=Object.entries(ch.skills).filter(([,v])=>v.prof).map(([n])=>n);
-  $("r-skills").innerHTML=sk.length?sk.map(s=>`● ${esc(tr(s))}`).join("&nbsp;&nbsp; "):`<span class="muted">${t('rv.none')}</span>`;
+  const sk=Object.entries(ch.skills).filter(([,v])=>v.prof);
+  $("r-skills").innerHTML=sk.length
+    ? sk.map(([n,v])=>`${v.expert?"◉":"●"} ${esc(tr(n))}${v.expert?` <small style="opacity:.7">${esc(t('rv.expertShort'))}</small>`:""}`).join("&nbsp;&nbsp; ")
+    : `<span class="muted">${t('rv.none')}</span>`;
   const atkBox=$("r-attacks");
   if(ch.attacks&&ch.attacks.length){
     const rows=ch.attacks.map(a=>`<tr><td class="nm"><b>${esc(a.name)}</b><br><small>${esc(tr(ABIL_UA[a.ability]))}${a.prof?"":" · "+t('rv.noProfShort')}</small></td><td class="b">${fmt(a.atk)}</td><td class="d">${esc(a.dmg)}${a.versatile?` <small>(${a.versatile} ${t('rv.versAbbr')})</small>`:""}</td></tr>`).join("");
@@ -3661,6 +4019,7 @@ function renderReview(ch){
       <div class="kv"><span class="k">${t('rv.spellDC')}</span><span>${ch.spellcasting.saveDC}</span></div>
       <div class="kv"><span class="k">${t('rv.spellAtk')}</span><span>${fmt(ch.spellcasting.attackBonus)}</span></div>`;
     spellSummaryRows(ch).forEach(r=>{ h+=`<div class="kv"><span class="k">${esc(r.k)}</span><span>${esc(r.v)}</span></div>`; });
+    (ch.spellcasting.notes||[]).forEach(n=>{ h+=`<div class="desc-line">${esc(n)}</div>`; });
     $("r-spell").innerHTML=h;
   } else sp.classList.add("hidden");
   $("r-features").innerHTML=ch.features.map(f=>{
@@ -3845,6 +4204,18 @@ function generateRandomCharacter(){
     const pick=pool.slice(0, rdef.count); S.raceSkillPick=new Set(pick); pick.forEach(s=>taken.add(s)); }
   const cpool=rcShuffle(c.skills.filter(s=>!taken.has(s)));
   S.classSkillPick=new Set(cpool.slice(0, c.skillCount));
+
+  // ВИБОРИ СЛІДОПИТА (1-й рівень) — улюблений ворог і ландшафт
+  S.ranger={ enemy:"", terrain:"", foe:false, deft:false };
+  if(className==="Слідопит"){
+    S.ranger.enemy=rcPick(FAVORED_ENEMIES).name;
+    S.ranger.terrain=rcPick(FAVORED_TERRAINS);
+  }
+
+  // ЕКСПЕРТИЗА — з того, чим персонаж уже володіє
+  S.expertise=[];
+  const emax=expertiseSlots(className, level, S.ranger);
+  if(emax>0) S.expertise=rcShuffle(expertiseOptions(className).map(o=>o.key)).slice(0, emax);
 
   // ПІДВИЩЕННЯ / ЧЕРТИ на рівнях 4/8/…
   S.slots={};
