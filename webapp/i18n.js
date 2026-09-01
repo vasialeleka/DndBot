@@ -330,6 +330,7 @@
       "err.needSubclass": "Обери «{s}» у виборах класу.",
       "sh.lvlPickSub": "Обери «{s}» у виборах класу",
       "sh.lvlNow": "Макс. HP: {hp} · кості здоровʼя {hd} · бонус майстерності {pb}",
+      "sv.empty": "Тут зʼявляться збережені чарники. Створи персонажа й на екрані-перевірці натисни «Зберегти» — або просто згенеруй PDF, він теж збереже.",
       "pdf.docTitle": "Чарник",
     },
     en: {
@@ -640,6 +641,7 @@
       "err.needSubclass": "Choose your {s} in the class choices.",
       "sh.lvlPickSub": "Choose your {s} in the class choices",
       "sh.lvlNow": "Max HP: {hp} · hit dice {hd} · proficiency bonus {pb}",
+      "sv.empty": "Your saved characters will show up here. Build one and hit “Save” on the review screen — or just generate the PDF, that saves too.",
       "pdf.docTitle": "Character sheet",
     },
     be: {
@@ -950,6 +952,7 @@
       "err.needSubclass": "Выберы «{s}» у выбарах класа.",
       "sh.lvlPickSub": "Выберы «{s}» у выбарах класа",
       "sh.lvlNow": "Макс. HP: {hp} · косці здароўя {hd} · бонус майстэрства {pb}",
+      "sv.empty": "Тут зʼявяцца захаваныя чарнікі. Створы персанажа і на экране-праверцы націсні «Захаваць» — або проста згенеруй PDF, ён таксама захавае.",
       "pdf.docTitle": "Чарнік",
     },
     ru: {
@@ -1260,6 +1263,7 @@
       "err.needSubclass": "Выбери «{s}» в выборах класса.",
       "sh.lvlPickSub": "Выбери «{s}» в выборах класса",
       "sh.lvlNow": "Макс. HP: {hp} · кости здоровья {hd} · бонус мастерства {pb}",
+      "sv.empty": "Здесь появятся сохранённые чарники. Создай персонажа и на экране-проверке нажми «Сохранить» — или просто сгенерируй PDF, он тоже сохранит.",
       "pdf.docTitle": "Лист персонажа",
     },
   };
