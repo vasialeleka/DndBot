@@ -287,6 +287,21 @@
     padding:2px 6px; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
   .res-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
 
+  /* рівень персонажа */
+  .lvl-step { display:flex; align-items:center; gap:10px; }
+  .lvl-step button { width:34px; height:34px; border-radius:10px; border:1.5px solid var(--accent);
+    background:rgba(182,65,47,.14); color:var(--text); font-size:20px; font-weight:700; line-height:1; cursor:pointer; padding:0; }
+  .lvl-step button:disabled { opacity:.35; cursor:default; }
+  .lvl-step #lvlValue { min-width:32px; text-align:center; font-size:20px; font-weight:700; }
+  .lvl-delta { margin-top:10px; border:1px solid rgba(182,65,47,.35); border-radius:11px;
+    background:rgba(182,65,47,.10); padding:10px 12px; }
+  .lvl-delta.down { color:var(--hint); font-size:13px; }
+  .lvl-delta-h { font-size:13px; font-weight:700; color:var(--accent); }
+  .lvl-hp { color:var(--text); font-weight:700; }
+  .lvl-delta-list { margin:7px 0 4px; padding-left:0; list-style:none; }
+  .lvl-delta-list li { font-size:12.5px; line-height:1.4; margin-bottom:5px; color:var(--text); }
+  .lvl-delta-list li b { display:inline-block; min-width:20px; color:var(--accent); }
+
   /* збережені чарники */
   .sv-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); }
   .sv-row:last-child { border-bottom:none; }
@@ -536,6 +551,17 @@
       <button class="change" onclick="showView('class-list')" data-i18n="sh.change">змінити</button></div>
   </div></div>
 
+  <div class="card" id="levelCard">
+    <div class="pick-head"><h2 style="margin:0" data-i18n="sh.levelTitle">Рівень персонажа</h2>
+      <div class="lvl-step">
+        <button id="lvlMinus" onclick="stepLevel(-1)" aria-label="−">−</button>
+        <span id="lvlValue">1</span>
+        <button id="lvlPlus" onclick="stepLevel(1)" aria-label="+">+</button>
+      </div></div>
+    <div class="desc-line" data-i18n="sh.levelHint">Підвищив рівень — обери, що додалось, і збережи чарник знову.</div>
+    <div id="lvlDelta"></div>
+  </div>
+
   <div class="card">
     <label class="field" data-i18n="sh.charName">Ім'я персонажа</label>
     <input id="name" placeholder="напр. Тордек Камінь" data-i18n-ph="sh.charNamePh" />
@@ -689,7 +715,8 @@
   <div class="card"><h2 data-i18n="rv.gear">Спорядження та атаки</h2><div id="r-attacks"></div><div class="list-inline" id="r-equip" style="margin-top:8px"></div></div>
   <div class="card" id="r-spell-card"><h2 data-i18n="rv.magic">Магія</h2><div id="r-spell"></div></div>
   <div class="card"><h2 data-i18n="rv.features">Риси, здібності та черти</h2><div class="list-inline" id="r-features"></div></div>
-  <div class="card"><button class="btn btn-ghost" onclick="saveFromReview()" id="rvSaveBtn" data-i18n="sv.saveBtn">💾 Зберегти чарник у застосунку</button>
+  <div class="card"><button class="btn btn-ghost" onclick="showView('sheet')" style="margin-bottom:8px" data-i18n="rv.edit">✎ Редагувати / підвищити рівень</button>
+    <button class="btn btn-ghost" onclick="saveFromReview()" id="rvSaveBtn" data-i18n="sv.saveBtn">💾 Зберегти чарник у застосунку</button>
     <div class="desc-line" id="rvSaveNote" data-i18n="sv.saveHint">Зʼявиться у списку на першому екрані — можна відкрити й перегенерувати PDF.</div></div>
   <div class="footer"><button class="btn btn-primary" onclick="finish()" data-i18n="rv.finish">✅ Готово — зберегти PDF</button></div>
 </div>
@@ -2214,6 +2241,7 @@ const S = {
   equipRemoved:[],     // ключі згенерованих позицій, які прибрали з інвентаря
   cwDraft:null,        // чернетка форми «своя зброя»
   _savedId:null,       // id запису в «Моїх чарниках», якщо редагуємо збережений
+  _lvlDelta:null,      // діапазон останньої зміни рівня для панелі «що додалось»
   lang:"uk",
   _ready:false
 };
@@ -2795,7 +2823,7 @@ function selectSubclass(name){ S.subclass=name; renderClassLevels(); }
 
 function chooseClass(){
   S.class=S.detailClass; S.level=S.detailLevel; S.classSkillPick.clear(); S.slots={};
-  S.expertise=[]; S.ranger={ enemy:"", terrain:"", foe:false, deft:false };
+  S.expertise=[]; S.ranger={ enemy:"", terrain:"", foe:false, deft:false }; S._lvlDelta=null;
   startAsiWizard(()=>{ buildSheet(); showView("sheet"); });
 }
 function selectFightingStyle(name){ S.fightingStyle=name; renderClassLevels(); }
@@ -2886,6 +2914,7 @@ function buildSheet(){
   buildSkills();
   renderClassChoices();
   renderSpellPlan();
+  renderLevelCard();
   setMode(S.mode);
   recalc();
 }
@@ -2893,7 +2922,7 @@ function renderAsiSummary(){
   const card=$("asiSummaryCard"); const ops=asiOpportunities();
   if(!ops.length){ card.classList.add("hidden"); return; }
   card.classList.remove("hidden");
-  const filled=(st)=> !!st && (st.type==="asi" ? (st.a1&&st.a2) : !!st.feat);
+  const filled=asiSlotFilled;
   const row=(lvl,st)=>{
     // порожній рівень — заклик обрати
     if(!filled(st)){
@@ -2935,9 +2964,16 @@ function subclassActive(){ const c=currentClass(); return c && c.subs && S.level
 /* =========================================================================
    ПОПАП ASI: підвищення характеристик або черта (з екраном вибору черти)
    ========================================================================= */
-function startAsiWizard(after){
+// Слот підвищення вважається заповненим, якщо обрано або дві характеристики, або черту
+function asiSlotFilled(st){ return !!st && (st.type==="asi" ? !!(st.a1&&st.a2) : !!st.feat); }
+/* onlyUnfilled — для підвищення рівня: питаємо лише про нові рівні,
+   уже зроблені вибори не чіпаємо. */
+function startAsiWizard(after, onlyUnfilled){
   S.asiQueue=[];  // стартова черта Варіанта людини обирається на сторінці раси
-  asiOpportunities().forEach(l=>S.asiQueue.push(String(l)));
+  asiOpportunities().forEach(l=>{
+    if(onlyUnfilled && asiSlotFilled(S.slots[String(l)])) return;
+    S.asiQueue.push(String(l));
+  });
   S.asiIdx=0; S.asiAfter=after;
   if(!S.asiQueue.length){ after&&after(); return; }
   renderAsiStep();
@@ -3028,7 +3064,88 @@ function renderRaceChoices(){
 }
 
 /* =========================================================================
-   ВИБОРИ КЛАСУ: експертиза + улюблений ворог/ландшафт слідопита
+   ЗМІНА РІВНЯ ВЖЕ СТВОРЕНОГО ПЕРСОНАЖА
+
+   Повернутись на сторінку класу не можна: chooseClass() починає персонажа
+   з нуля (скидає навички, підвищення, експертизу). Тут рівень міняється
+   «на місці» — усе вже зроблене лишається, а питаємо тільки про нове.
+   ========================================================================= */
+function stepLevel(d){ setLevel(S.level+d); }
+function setLevel(next){
+  const c=currentClass(); if(!c) return;
+  const to=Math.max(1, Math.min(20, next|0)), from=S.level;
+  if(to===from) return;
+  S.level=to;
+  syncLevelChoices(to);
+  const after=()=>{ buildSheet(); recalc(); renderLevelCard(from, to); };
+  // вгору — проходимо візард лише по нових рівнях; вниз — питати нічого
+  if(to>from) startAsiWizard(after, true); else after();
+}
+/* Приводимо вибори у відповідність новому рівню: зайве прибираємо,
+   обовʼязкове (підклас, бойовий стиль) підставляємо, щоб стан не «завис». */
+function syncLevelChoices(level){
+  const c=currentClass(); if(!c) return;
+  Object.keys(S.slots).forEach(k=>{ if(+k>level) delete S.slots[k]; });
+  if(c.subs){
+    if(level<c.subLevel) S.subclass=null;
+    else if(!S.subclass || !c.subs.some(x=>x.name===S.subclass)) S.subclass=c.subs[0].name;
+  }
+  const fs=FS_CONFIG[S.class];
+  if(fs){
+    if(level<fs.level) S.fightingStyle=null;
+    else if(!S.fightingStyle || !fsStyles(S.class).includes(S.fightingStyle)) S.fightingStyle=fsStyles(S.class)[0];
+  }
+  pruneExpertise();          // експертиза понад новий ліміт відпадає
+}
+/* Що саме змінилось між рівнями — здібності, ресурси, HP і нові вибори. */
+function levelDeltaHtml(from, to){
+  if(to<from) return `<div class="lvl-delta down">${esc(t('sh.lvlDown').replace("{n}", to))}</div>`;
+  const c=currentClass(), prog=CLASS_PROG[S.class]||{};
+  const sub=(c.subs||[]).find(x=>x.name===S.subclass);
+  const asiSet=new Set([...ASI_LEVELS, ...(c.extraASI||[])]);
+  const rows=[];
+  const normRes=(v)=>String(v).replace(/\s*\(\d+\)\s*$/,"").trim();
+  for(let L=from+1; L<=to; L++){
+    const add=(txt)=>rows.push({lvl:L, txt});
+    (prog[L]||[]).forEach(f=>add(tr(f)));
+    if(sub&&sub.feats&&sub.feats[L]) sub.feats[L].forEach(f=>add(`${tr(S.subclass)}: ${tr(f)}`));
+    if(L===c.subLevel && c.subs) add(t('sh.lvlPickSub').replace("{s}", tr(c.subLabel)));
+    const fs=FS_CONFIG[S.class]; if(fs && L===fs.level) add(t('cd.fightStyle'));
+    if(asiSet.has(L)) add(t('cd.asiOrFeat'));
+    if((EXPERTISE_PROG[S.class]||{})[L]) add(t('cd.expertisePick').replace("{n}", EXPERTISE_PROG[S.class][L]));
+    if(S.optionalFeats && OPT_FEATS[S.class] && OPT_FEATS[S.class][L])
+      OPT_FEATS[S.class][L].forEach(f=>add(`${tr(f)} (${t('cd.opt')})`));
+    // ресурси, що підросли саме на цьому рівні
+    const cur=[...resourceLines(S.class,L,S.subclass), ...spellCountLines(S.class,L,S.subclass)];
+    const prevMap={}; [...resourceLines(S.class,L-1,S.subclass), ...spellCountLines(S.class,L-1,S.subclass)]
+      .forEach(r=>prevMap[r.label]=normRes(r.value));
+    cur.forEach(r=>{ const nv=normRes(r.value);
+      if(prevMap[r.label]!==nv) add(`${tr(r.label)}: ${tr(nv)}`); });
+  }
+  const avg=c.hd/2+1, conMod=mod(finalScores().con);
+  const hpGain=Math.round((to-from)*(avg+conMod));
+  let html=`<div class="lvl-delta"><div class="lvl-delta-h">${esc(t('sh.lvlUpTitle').replace("{a}",from).replace("{b}",to))}`+
+    (hpGain>0?` <span class="lvl-hp">+${hpGain} HP</span>`:"")+`</div>`;
+  html+=rows.length
+    ? `<ul class="lvl-delta-list">`+rows.map(r=>`<li><b>${r.lvl}</b> ${esc(r.txt)}</li>`).join("")+`</ul>`
+    : `<div class="desc-line">${esc(t('sh.lvlNoNews'))}</div>`;
+  html+=`<div class="desc-line">${esc(t('sh.lvlSaveHint'))}</div></div>`;
+  return html;
+}
+/* Діапазон останньої зміни памʼятаємо в стані: тоді панель «що додалось»
+   переживає перемальовування чарника й оновлюється, якщо змінили підклас. */
+function renderLevelCard(from, to){
+  if(from!=null && to!=null) S._lvlDelta = (from===to) ? null : {from, to};
+  const box=$("lvlValue"); if(box) box.textContent=S.level;
+  const minus=$("lvlMinus"), plus=$("lvlPlus");
+  if(minus) minus.disabled=S.level<=1;
+  if(plus) plus.disabled=S.level>=20;
+  const d=$("lvlDelta"); if(!d) return;
+  d.innerHTML=S._lvlDelta ? levelDeltaHtml(S._lvlDelta.from, S._lvlDelta.to) : "";
+}
+
+/* =========================================================================
+   ВИБОРИ КЛАСУ: підклас, бойовий стиль, експертиза, вибори слідопита
    ========================================================================= */
 // Опції слідопита доступні лише коли увімкнено «опційні вміння класів»
 function rangerOptsOn(){ return S.class==="Слідопит" && S.optionalFeats; }
@@ -3046,6 +3163,13 @@ function toggleExpertise(name){
   renderClassChoices(); recalc();
 }
 function setRangerPick(field, val){ S.ranger[field]=val; renderClassChoices(); }
+/* Підклас і стиль зі сторінки чарника: міняють магію та підсумок, тож
+   перемальовуємо ще й шапку й картку магії. */
+function setSheetSubclass(name){
+  S.subclass=name;
+  renderSummary(); renderClassChoices(); renderSpellPlan(); renderLevelCard(); recalc();
+}
+function setSheetFightingStyle(name){ S.fightingStyle=name; renderClassChoices(); recalc(); }
 function toggleRangerOpt(field){
   S.ranger[field]=!S.ranger[field];
   if(field==="deft" && !S.ranger.deft) pruneExpertise();
@@ -3058,6 +3182,31 @@ function renderClassChoices(){
   if(!S.class||S.mode!=="full"){ card.classList.add("hidden"); return; }
   pruneExpertise();
   const parts=[]; let need=0, done=0;
+  const c=currentClass();
+
+  /* --- Підклас: раніше його можна було обрати лише на сторінці класу,
+     тож після підвищення рівня персонаж лишався без архетипу --- */
+  if(c && c.subs && S.level>=c.subLevel){
+    need++; if(S.subclass) done++;
+    parts.push(`<div class="pick-lead"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(tr(c.subLabel))}</div>`);
+    parts.push(c.subs.map(sb=>
+      `<div class="opt ${sb.name===S.subclass?"sel":""}" onclick="setSheetSubclass('${q(sb.name)}')">
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(sb.name))}${sb.src?` <span class="src-tag">${esc(sb.src)}</span>`:""}</span></div>
+        <div class="od">${esc(tr(sb.desc||""))}</div></div>`).join(""));
+  }
+
+  // --- Бойовий стиль (воїн/паладин/слідопит) ---
+  const fsCfg=FS_CONFIG[S.class];
+  if(fsCfg && S.level>=fsCfg.level){
+    need++; if(S.fightingStyle) done++;
+    parts.push(`<div class="pick-lead" style="margin-top:14px"><span class="pick-badge">${esc(t('cd.mustPick'))}</span>${esc(t('cd.fightStyle'))}</div>`);
+    parts.push(fsStyles(S.class).map(fname=>{
+      const isOpt=(fsCfg.opt||[]).includes(fname);
+      return `<div class="opt ${fname===S.fightingStyle?"sel":""}" onclick="setSheetFightingStyle('${q(fname)}')">
+        <div class="on"><span class="opt-radio"></span><span class="opt-name">${esc(tr(fname))}${isOpt?` <span class="src-tag">${esc(t('cd.opt'))}</span>`:""}</span></div>
+        <div class="od">${esc(tr(FIGHTING_STYLES[fname]||""))}</div></div>`;
+    }).join(""));
+  }
 
   // --- Слідопит: улюблений ворог + улюблений ландшафт (1-й рівень) ---
   if(S.class==="Слідопит"){
@@ -4267,6 +4416,8 @@ function validate(){
     if(rdef&&S.raceSkillPick.size!==rdef.count) return fail(t("err.raceSkills").replace("{n}",rdef.count));
     const adef=raceAsiChoiceDef();
     if(adef&&S.raceAsiPick.filter(Boolean).length!==adef.count) return fail(t("err.raceAsi").replace("{n}",adef.count));
+    const cl2=currentClass();
+    if(cl2.subs && S.level>=cl2.subLevel && !S.subclass) return fail(t("err.needSubclass").replace("{s}", tr(cl2.subLabel)));
     const maxE=expertiseMax();
     if(maxE&&S.expertise.length!==maxE) return fail(t("err.expertise").replace("{n}",maxE));
     if(S.class==="Слідопит"){
@@ -4441,7 +4592,7 @@ function restoreState(snap){
   S.detailRace=S.race; S.detailSub=S.subrace;
   S.detailClass=S.class; S.detailLevel=S.level; S.detailBg=S.background;
   S._equipClass=S.class;   // спорядження вже в знімку — не перебудовувати з нуля
-  S._ready=true; S.cwDraft=null;
+  S._ready=true; S.cwDraft=null; S._lvlDelta=null;
   if($("name")) $("name").value=snap.name||"";
   if($("alignment") && snap.alignment) $("alignment").value=snap.alignment;
   return true;
