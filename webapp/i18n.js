@@ -329,6 +329,7 @@
       "rv.edit": "✎ Редагувати / підвищити рівень",
       "err.needSubclass": "Обери «{s}» у виборах класу.",
       "sh.lvlPickSub": "Обери «{s}» у виборах класу",
+      "sh.lvlNow": "Макс. HP: {hp} · кості здоровʼя {hd} · бонус майстерності {pb}",
       "pdf.docTitle": "Чарник",
     },
     en: {
@@ -638,6 +639,7 @@
       "rv.edit": "✎ Edit / level up",
       "err.needSubclass": "Choose your {s} in the class choices.",
       "sh.lvlPickSub": "Choose your {s} in the class choices",
+      "sh.lvlNow": "Max HP: {hp} · hit dice {hd} · proficiency bonus {pb}",
       "pdf.docTitle": "Character sheet",
     },
     be: {
@@ -947,6 +949,7 @@
       "rv.edit": "✎ Рэдагаваць / павысіць узровень",
       "err.needSubclass": "Выберы «{s}» у выбарах класа.",
       "sh.lvlPickSub": "Выберы «{s}» у выбарах класа",
+      "sh.lvlNow": "Макс. HP: {hp} · косці здароўя {hd} · бонус майстэрства {pb}",
       "pdf.docTitle": "Чарнік",
     },
     ru: {
@@ -1256,6 +1259,7 @@
       "rv.edit": "✎ Редактировать / повысить уровень",
       "err.needSubclass": "Выбери «{s}» в выборах класса.",
       "sh.lvlPickSub": "Выбери «{s}» в выборах класса",
+      "sh.lvlNow": "Макс. HP: {hp} · кости здоровья {hd} · бонус мастерства {pb}",
       "pdf.docTitle": "Лист персонажа",
     },
   };

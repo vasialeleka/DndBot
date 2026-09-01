@@ -293,6 +293,7 @@
     background:rgba(182,65,47,.14); color:var(--text); font-size:20px; font-weight:700; line-height:1; cursor:pointer; padding:0; }
   .lvl-step button:disabled { opacity:.35; cursor:default; }
   .lvl-step #lvlValue { min-width:32px; text-align:center; font-size:20px; font-weight:700; }
+  .lvl-now { font-size:13px; color:var(--text); margin:6px 0 2px; }
   .lvl-delta { margin-top:10px; border:1px solid rgba(182,65,47,.35); border-radius:11px;
     background:rgba(182,65,47,.10); padding:10px 12px; }
   .lvl-delta.down { color:var(--hint); font-size:13px; }
@@ -558,6 +559,7 @@
         <span id="lvlValue">1</span>
         <button id="lvlPlus" onclick="stepLevel(1)" aria-label="+">+</button>
       </div></div>
+    <div class="lvl-now" id="lvlNow"></div>
     <div class="desc-line" data-i18n="sh.levelHint">Підвищив рівень — обери, що додалось, і збережи чарник знову.</div>
     <div id="lvlDelta"></div>
   </div>
@@ -3070,14 +3072,30 @@ function renderRaceChoices(){
    з нуля (скидає навички, підвищення, експертизу). Тут рівень міняється
    «на місці» — усе вже зроблене лишається, а питаємо тільки про нове.
    ========================================================================= */
+/* Максимальні HP за поточним станом. Єдине джерело правди і для чарника,
+   і для панелі «що додалось»: підвищення Статури додає HP ретроактивно
+   за всі рівні, тож рахувати приріст «на око» не можна. */
+function currentMaxHp(){
+  const c=currentClass(); if(!c) return 0;
+  const sc=finalScores(); const conMod=mod(sc.con);
+  const specials=new Set();
+  allChosenFeats().forEach(fn=>((FEATS[fn]||{}).special||[]).forEach(x=>specials.add(x)));
+  const sr=currentSubrace(); if(sr&&sr.special) sr.special.forEach(x=>specials.add(x));
+  const avg=c.hd/2+1;
+  let hp=c.hd+conMod+(S.level-1)*(avg+conMod);
+  if(specials.has("hpPerLevel1")) hp+=S.level;
+  if(specials.has("hpPerLevel2")) hp+=2*S.level;
+  return hp;
+}
 function stepLevel(d){ setLevel(S.level+d); }
 function setLevel(next){
   const c=currentClass(); if(!c) return;
   const to=Math.max(1, Math.min(20, next|0)), from=S.level;
   if(to===from) return;
+  const hpBefore=currentMaxHp();      // до зміни рівня й до нових підвищень
   S.level=to;
   syncLevelChoices(to);
-  const after=()=>{ buildSheet(); recalc(); renderLevelCard(from, to); };
+  const after=()=>{ buildSheet(); recalc(); renderLevelCard(from, to, hpBefore); };
   // вгору — проходимо візард лише по нових рівнях; вниз — питати нічого
   if(to>from) startAsiWizard(after, true); else after();
 }
@@ -3098,7 +3116,7 @@ function syncLevelChoices(level){
   pruneExpertise();          // експертиза понад новий ліміт відпадає
 }
 /* Що саме змінилось між рівнями — здібності, ресурси, HP і нові вибори. */
-function levelDeltaHtml(from, to){
+function levelDeltaHtml(from, to, hpBefore){
   if(to<from) return `<div class="lvl-delta down">${esc(t('sh.lvlDown').replace("{n}", to))}</div>`;
   const c=currentClass(), prog=CLASS_PROG[S.class]||{};
   const sub=(c.subs||[]).find(x=>x.name===S.subclass);
@@ -3122,10 +3140,9 @@ function levelDeltaHtml(from, to){
     cur.forEach(r=>{ const nv=normRes(r.value);
       if(prevMap[r.label]!==nv) add(`${tr(r.label)}: ${tr(nv)}`); });
   }
-  const avg=c.hd/2+1, conMod=mod(finalScores().con);
-  const hpGain=Math.round((to-from)*(avg+conMod));
+  const hpGain=(hpBefore!=null) ? currentMaxHp()-hpBefore : null;
   let html=`<div class="lvl-delta"><div class="lvl-delta-h">${esc(t('sh.lvlUpTitle').replace("{a}",from).replace("{b}",to))}`+
-    (hpGain>0?` <span class="lvl-hp">+${hpGain} HP</span>`:"")+`</div>`;
+    (hpGain ? ` <span class="lvl-hp">${hpGain>0?"+":""}${hpGain} HP</span>` : "")+`</div>`;
   html+=rows.length
     ? `<ul class="lvl-delta-list">`+rows.map(r=>`<li><b>${r.lvl}</b> ${esc(r.txt)}</li>`).join("")+`</ul>`
     : `<div class="desc-line">${esc(t('sh.lvlNoNews'))}</div>`;
@@ -3134,14 +3151,19 @@ function levelDeltaHtml(from, to){
 }
 /* Діапазон останньої зміни памʼятаємо в стані: тоді панель «що додалось»
    переживає перемальовування чарника й оновлюється, якщо змінили підклас. */
-function renderLevelCard(from, to){
-  if(from!=null && to!=null) S._lvlDelta = (from===to) ? null : {from, to};
+function renderLevelCard(from, to, hpBefore){
+  if(from!=null && to!=null) S._lvlDelta = (from===to) ? null : {from, to, hpBefore};
   const box=$("lvlValue"); if(box) box.textContent=S.level;
   const minus=$("lvlMinus"), plus=$("lvlPlus");
   if(minus) minus.disabled=S.level<=1;
   if(plus) plus.disabled=S.level>=20;
+  const now=$("lvlNow");
+  if(now && currentClass()) now.textContent=t('sh.lvlNow')
+    .replace("{hp}", currentMaxHp()).replace("{hd}", `${S.level}d${currentClass().hd}`)
+    .replace("{pb}", fmt(profBonus(S.level)));
   const d=$("lvlDelta"); if(!d) return;
-  d.innerHTML=S._lvlDelta ? levelDeltaHtml(S._lvlDelta.from, S._lvlDelta.to) : "";
+  const st=S._lvlDelta;
+  d.innerHTML=st ? levelDeltaHtml(st.from, st.to, st.hpBefore) : "";
 }
 
 /* =========================================================================
@@ -4254,9 +4276,7 @@ function computeCharacter(){
   const specials=new Set(); feats.forEach(fn=>(FEATS[fn].special||[]).forEach(s=>specials.add(s)));
   if(sr&&sr.special) sr.special.forEach(s=>specials.add(s));
 
-  const avg=c.hd/2+1; let maxHp=c.hd+mods.con+(level-1)*(avg+mods.con);
-  if(specials.has("hpPerLevel1")) maxHp+=level;
-  if(specials.has("hpPerLevel2")) maxHp+=2*level;
+  const maxHp=currentMaxHp();
   ensureEquipment();
   const acRes=computeAC(mods, acContext(mods)); const ac=acRes.ac;
   const combatTags=classProfTags();
