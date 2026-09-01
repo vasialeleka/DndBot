@@ -307,6 +307,19 @@
       "pdf.artifacts": "Артефакти й особливе спорядження",
       "pdf.lvlShort": "{n} рів.",
       "pdf.contNextPage": "далі на наступній сторінці →",
+      "sv.title": "Мої чарники",
+      "sv.delete": "Видалити",
+      "sv.confirmDel": "Видалити «{n}» зі списку?",
+      "sv.brokenRec": "Не вдалося відкрити запис — схоже, він пошкоджений.",
+      "sv.noteCloud": "Зберігається у твоєму Telegram: не зникне, якщо почистити кеш, і буде доступне на інших пристроях.",
+      "sv.noteLocal": "Зберігається лише на цьому пристрої. Якщо почистити кеш Telegram чи браузера — список зникне.",
+      "sv.noteChecking": "Перевіряю сховище Telegram…",
+      "sv.saveBtn": "💾 Зберегти чарник у застосунку",
+      "sv.saveHint": "Зʼявиться у списку на першому екрані — можна відкрити й перегенерувати PDF.",
+      "sv.savedOk": "Збережено: «{n}».",
+      "sv.savedCloud": "Лежить у твоєму Telegram — переживе очищення кешу.",
+      "sv.savedLocal": "Лише на цьому пристрої: очищення кешу зітре список.",
+      "sv.savedFail": "Не вдалося зберегти — можливо, сховище переповнене.",
       "pdf.docTitle": "Чарник",
     },
     en: {
@@ -594,6 +607,19 @@
       "pdf.artifacts": "Artifacts and special gear",
       "pdf.lvlShort": "lvl {n}",
       "pdf.contNextPage": "continued on the next page →",
+      "sv.title": "My characters",
+      "sv.delete": "Delete",
+      "sv.confirmDel": "Remove “{n}” from the list?",
+      "sv.brokenRec": "Could not open this entry — it looks damaged.",
+      "sv.noteCloud": "Stored in your Telegram: clearing the cache won't wipe it, and it follows you to other devices.",
+      "sv.noteLocal": "Stored on this device only. Clearing the Telegram or browser cache erases the list.",
+      "sv.noteChecking": "Checking Telegram storage…",
+      "sv.saveBtn": "💾 Save this character in the app",
+      "sv.saveHint": "It shows up on the first screen — open it any time to regenerate the PDF.",
+      "sv.savedOk": "Saved: “{n}”.",
+      "sv.savedCloud": "Kept in your Telegram — survives a cache wipe.",
+      "sv.savedLocal": "On this device only: clearing the cache erases the list.",
+      "sv.savedFail": "Could not save — the storage may be full.",
       "pdf.docTitle": "Character sheet",
     },
     be: {
@@ -881,6 +907,19 @@
       "pdf.artifacts": "Артэфакты і адмысловае рыштаванне",
       "pdf.lvlShort": "{n} ур.",
       "pdf.contNextPage": "далей на наступнай старонцы →",
+      "sv.title": "Мае чарнікі",
+      "sv.delete": "Выдаліць",
+      "sv.confirmDel": "Выдаліць «{n}» са спісу?",
+      "sv.brokenRec": "Не ўдалося адкрыць запіс — здаецца, ён пашкоджаны.",
+      "sv.noteCloud": "Захоўваецца ў тваім Telegram: не знікне пры ачыстцы кэша і будзе даступнае на іншых прыладах.",
+      "sv.noteLocal": "Захоўваецца толькі на гэтай прыладзе. Калі ачысціць кэш Telegram ці браўзера — спіс знікне.",
+      "sv.noteChecking": "Правяраю сховішча Telegram…",
+      "sv.saveBtn": "💾 Захаваць чарнік у дадатку",
+      "sv.saveHint": "Зʼявіцца ў спісе на першым экране — можна адкрыць і перагенераваць PDF.",
+      "sv.savedOk": "Захавана: «{n}».",
+      "sv.savedCloud": "Ляжыць у тваім Telegram — перажыве ачыстку кэша.",
+      "sv.savedLocal": "Толькі на гэтай прыладзе: ачыстка кэша сатрэ спіс.",
+      "sv.savedFail": "Не ўдалося захаваць — магчыма, сховішча перапоўнена.",
       "pdf.docTitle": "Чарнік",
     },
     ru: {
@@ -1168,6 +1207,19 @@
       "pdf.artifacts": "Артефакты и особое снаряжение",
       "pdf.lvlShort": "{n} ур.",
       "pdf.contNextPage": "продолжение на следующей странице →",
+      "sv.title": "Мои чарники",
+      "sv.delete": "Удалить",
+      "sv.confirmDel": "Удалить «{n}» из списка?",
+      "sv.brokenRec": "Не удалось открыть запись — похоже, она повреждена.",
+      "sv.noteCloud": "Хранится в твоём Telegram: не исчезнет при очистке кэша и будет доступно на других устройствах.",
+      "sv.noteLocal": "Хранится только на этом устройстве. Если очистить кэш Telegram или браузера — список исчезнет.",
+      "sv.noteChecking": "Проверяю хранилище Telegram…",
+      "sv.saveBtn": "💾 Сохранить чарник в приложении",
+      "sv.saveHint": "Появится в списке на первом экране — можно открыть и перегенерировать PDF.",
+      "sv.savedOk": "Сохранено: «{n}».",
+      "sv.savedCloud": "Лежит в твоём Telegram — переживёт очистку кэша.",
+      "sv.savedLocal": "Только на этом устройстве: очистка кэша сотрёт список.",
+      "sv.savedFail": "Не удалось сохранить — возможно, хранилище переполнено.",
       "pdf.docTitle": "Лист персонажа",
     },
   };
@@ -1243,9 +1295,12 @@
     "Харизма · вогонь · магія":"Харизма · огонь · магия",
   };
 
-  var COMMON_EN = { "Усі":"All" };
-  var COMMON_BE = { "Усі":"Усе" };
-  var COMMON_RU = { "Усі":"Все" };
+  var COMMON_EN = {
+    "Без імені":"Unnamed", "Усі":"All" };
+  var COMMON_BE = {
+    "Без імені":"Без імя", "Усі":"Усе" };
+  var COMMON_RU = {
+    "Без імені":"Без имени", "Усі":"Все" };
 
   /* --- характеристики (повні + скорочення ABIL_SHORT) --- */
   var ABBR_EN = { "СИЛ":"STR","СПР":"DEX","СТА":"CON","ІНТ":"INT","МУД":"WIS","ХАР":"CHA" };

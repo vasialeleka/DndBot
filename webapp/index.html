@@ -287,6 +287,18 @@
     padding:2px 6px; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
   .res-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
 
+  /* збережені чарники */
+  .sv-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); }
+  .sv-row:last-child { border-bottom:none; }
+  .sv-main { flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+    background:none; border:none; padding:6px 2px; text-align:left; cursor:pointer; color:var(--text); }
+  .sv-name { font-size:15px; font-weight:700; }
+  .sv-meta { font-size:12px; color:var(--hint); }
+  .sv-date { flex:none; font-size:11px; color:var(--hint); }
+  .btn-ghost { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--accent);
+    background:rgba(182,65,47,.12); color:var(--text); font-weight:700; font-size:15px; cursor:pointer; }
+  .btn-ghost:disabled { opacity:.6; cursor:default; }
+
   /* інвентар + своя зброя */
   .inv-row { display:flex; align-items:center; gap:9px; padding:7px 2px; font-size:14px;
     border-bottom:1px solid var(--line); }
@@ -423,6 +435,12 @@
               aria-label="Випадковий персонаж" title="Випадковий персонаж">🎲</button>
     </div>
   </div>
+  <div class="card hidden" id="savedCard">
+    <div class="pick-head"><h2 style="margin:0"><span data-i18n="sv.title">Мої чарники</span><span class="pick-count" id="savedCount"></span></h2></div>
+    <div id="savedList"></div>
+    <div class="desc-line" id="savedNote"></div>
+  </div>
+
   <p class="sub" data-i18n="race.step">D&D 5e · Крок 1 — обери расу (тапни, щоб прочитати)</p>
   <label class="opt-toggle"><input type="checkbox" id="optToggle" checked onchange="S.optionalFeats=this.checked">
     <span data-i18n="race.tashaToggle">Додавати опційні вміння класів (Tasha) у чарник</span></label>
@@ -671,6 +689,8 @@
   <div class="card"><h2 data-i18n="rv.gear">Спорядження та атаки</h2><div id="r-attacks"></div><div class="list-inline" id="r-equip" style="margin-top:8px"></div></div>
   <div class="card" id="r-spell-card"><h2 data-i18n="rv.magic">Магія</h2><div id="r-spell"></div></div>
   <div class="card"><h2 data-i18n="rv.features">Риси, здібності та черти</h2><div class="list-inline" id="r-features"></div></div>
+  <div class="card"><button class="btn btn-ghost" onclick="saveFromReview()" id="rvSaveBtn" data-i18n="sv.saveBtn">💾 Зберегти чарник у застосунку</button>
+    <div class="desc-line" id="rvSaveNote" data-i18n="sv.saveHint">Зʼявиться у списку на першому екрані — можна відкрити й перегенерувати PDF.</div></div>
   <div class="footer"><button class="btn btn-primary" onclick="finish()" data-i18n="rv.finish">✅ Готово — зберегти PDF</button></div>
 </div>
 
@@ -2193,6 +2213,7 @@ const S = {
   customWeapons:[],    // своя зброя й артефакти: {key,name,cat,dmg,type,props,magic,desc}
   equipRemoved:[],     // ключі згенерованих позицій, які прибрали з інвентаря
   cwDraft:null,        // чернетка форми «своя зброя»
+  _savedId:null,       // id запису в «Моїх чарниках», якщо редагуємо збережений
   lang:"uk",
   _ready:false
 };
@@ -2291,6 +2312,7 @@ function refreshDynamicI18n(){
   if (typeof renderRaceFilter === "function") renderRaceFilter();
   if (typeof renderRaceList === "function") renderRaceList();
   if (typeof renderClassList === "function") renderClassList();
+  if (typeof renderSavedList === "function") renderSavedList();
   // якщо відкрита деталь раси/класу — перемалювати її теж
   if (S.detailRace && !$("view-race-detail").classList.contains("hidden")
       && typeof renderRaceDetail === "function") renderRaceDetail();
@@ -2500,6 +2522,7 @@ function init(){
   fillSelect("alignment", ALIGNMENTS, "Істинно нейтральний");
   $("skills").addEventListener("change", onSkillChange);
   renderRaceFilter(); renderRaceList(); renderClassList();
+  savedInit();
   showView("race-list");
   if(tg){ tg.ready(); tg.expand(); try{ tg.setHeaderColor("secondary_bg_color"); }catch(e){} }
 }
@@ -4325,6 +4348,9 @@ async function finish(){
     finishStatus("Не вдалося згенерувати PDF: "+(err&&err.message||err), true);
     return;
   }
+  // Чарник згенерувався — одразу кладемо його у список, щоб не втратився
+  try { await saveCurrentCharacter(); } catch(e){ console.error(e); }
+
   const { blob, filename }=built;
   const file=(typeof File!=="undefined") ? new File([blob], filename, {type:"application/pdf"}) : null;
 
@@ -4347,6 +4373,237 @@ async function finish(){
     console.error(err);
     finishStatus("Не вдалося зберегти файл. Спробуй відкрити апку в браузері.", true);
   }
+}
+
+/* =========================================================================
+   ЗБЕРЕЖЕНІ ЧАРНИКИ
+
+   Два сховища працюють разом:
+   • localStorage — миттєве, працює й у звичайному браузері, але зникає разом
+     із кешем Telegram/браузера;
+   • Telegram CloudStorage — лежить на боці Telegram, тож переживає очищення
+     кешу й підтягується на інших пристроях того самого акаунта.
+   Пишемо в обидва, читаємо — обʼєднуючи записи за id (свіжіший за updatedAt).
+   Хмара може бути недоступна (стара версія Telegram, звичайний браузер) —
+   тоді просто лишається локальне сховище, а в UI чесно пишемо про це.
+   ========================================================================= */
+const SAVE_KEY = "dnd_chars_v1";
+const SAVE_LIMIT = 20;          // скільки чарників тримаємо
+const CLOUD_CHUNK = 3500;       // ліміт значення CloudStorage — 4096 символів
+const CLOUD_MIN_VER = "6.9";    // з цієї версії Bot API зʼявився CloudStorage
+
+let SAVED = [];                 // кеш списку в памʼяті
+let CLOUD_OK = null;            // null — ще не перевіряли, далі true/false
+
+function cloudApi(){
+  if(!tg || !tg.CloudStorage) return null;
+  try { if(tg.isVersionAtLeast && !tg.isVersionAtLeast(CLOUD_MIN_VER)) return null; } catch(e){}
+  return tg.CloudStorage;
+}
+// Колбеки Telegram → проміси; таймаут, щоб UI не завис, якщо відповіді не буде
+function cloudCall(method, ...args){
+  const cs=cloudApi();
+  if(!cs) return Promise.reject(new Error("cloud unavailable"));
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const timer=setTimeout(()=>{ if(!done){ done=true; reject(new Error("cloud timeout")); } }, 8000);
+    const cb=(err,val)=>{ if(done) return; done=true; clearTimeout(timer);
+      if(err) reject(err instanceof Error?err:new Error(String(err))); else resolve(val); };
+    try { cs[method](...args, cb); }
+    catch(e){ if(!done){ done=true; clearTimeout(timer); reject(e); } }
+  });
+}
+
+/* --- знімок стану --- */
+/* Свідомо перелічуємо поля: у S є ще й службові (asiAfter — функція, _view),
+   яким у збереженні не місце. Set-и кладемо окремо — JSON їх не вміє. */
+const SNAP_FIELDS = ["race","subrace","class","subclass","level","background",
+  "mode","method","base","rollPool","raceAsiPick","slots","humanFeat",
+  "optionalFeats","fightingStyle","expertise","ranger",
+  "customItems","customWeapons","equipRemoved",
+  "equipMode","equipPick","anyPick","armor","shield","weapons",
+  "equipExtra","equipQty","equipAmmo","showAllGear"];
+function snapshotState(){
+  const out={};
+  SNAP_FIELDS.forEach(k=>{ if(S[k]!==undefined) out[k]=S[k]; });
+  out.raceSkillPick=[...S.raceSkillPick];
+  out.classSkillPick=[...S.classSkillPick];
+  out.name=(($("name")&&$("name").value)||"").trim();
+  out.alignment=getSel("alignment");
+  return out;
+}
+function restoreState(snap){
+  if(!snap || !RACES[snap.race] || !CLASSES[snap.class]) return false;
+  SNAP_FIELDS.forEach(k=>{ if(snap[k]!==undefined) S[k]=snap[k]; });
+  S.raceSkillPick=new Set(snap.raceSkillPick||[]);
+  S.classSkillPick=new Set(snap.classSkillPick||[]);
+  // сторінки перегляду мають дивитись на ту саму расу/клас
+  S.detailRace=S.race; S.detailSub=S.subrace;
+  S.detailClass=S.class; S.detailLevel=S.level; S.detailBg=S.background;
+  S._equipClass=S.class;   // спорядження вже в знімку — не перебудовувати з нуля
+  S._ready=true; S.cwDraft=null;
+  if($("name")) $("name").value=snap.name||"";
+  if($("alignment") && snap.alignment) $("alignment").value=snap.alignment;
+  return true;
+}
+
+/* --- локальне сховище --- */
+function localRead(){
+  try { const raw=localStorage.getItem(SAVE_KEY); if(!raw) return [];
+    const data=JSON.parse(raw); return Array.isArray(data.items)?data.items:[]; }
+  catch(e){ return []; }
+}
+function localWrite(items){
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({v:1, items})); return true; }
+  catch(e){ return false; }   // приватний режим / переповнене сховище
+}
+
+/* --- Telegram CloudStorage --- */
+function newSaveId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function cloudKey(id,i){ return "ch_"+id+"_"+i; }
+const CLOUD_KEY_RE = /^ch_([a-z0-9]+)_(\d+)$/;
+function splitChunks(str,size){ const out=[]; for(let i=0;i<str.length;i+=size) out.push(str.slice(i,i+size)); return out; }
+async function cloudSave(rec){
+  const parts=splitChunks(JSON.stringify(rec), CLOUD_CHUNK);
+  if(parts.length>24) throw new Error("record too large");
+  // спершу пишемо нові частини, аж потім прибираємо «хвіст» довшої попередньої
+  for(let i=0;i<parts.length;i++) await cloudCall("setItem", cloudKey(rec.id,i), parts[i]);
+  const keys=await cloudCall("getKeys").catch(()=>[]);
+  const stale=(keys||[]).filter(k=>{ const m=k.match(CLOUD_KEY_RE); return m && m[1]===rec.id && +m[2]>=parts.length; });
+  if(stale.length) await cloudCall("removeItems", stale).catch(()=>{});
+}
+async function cloudDelete(ids){
+  const set=new Set(ids);
+  const keys=await cloudCall("getKeys");
+  const mine=(keys||[]).filter(k=>{ const m=k.match(CLOUD_KEY_RE); return m && set.has(m[1]); });
+  if(mine.length) await cloudCall("removeItems", mine);
+}
+async function cloudLoad(){
+  const keys=await cloudCall("getKeys");
+  const mine=(keys||[]).filter(k=>CLOUD_KEY_RE.test(k));
+  if(!mine.length) return [];
+  const values={};
+  for(let i=0;i<mine.length;i+=40){
+    const batch=mine.slice(i,i+40);
+    Object.assign(values, (await cloudCall("getItems", batch))||{});
+  }
+  const byId={};
+  mine.forEach(k=>{ const m=k.match(CLOUD_KEY_RE);
+    (byId[m[1]]=byId[m[1]]||[])[+m[2]]=values[k]||""; });
+  const out=[];
+  Object.keys(byId).forEach(id=>{
+    try { const rec=JSON.parse(byId[id].join("")); if(rec&&rec.id&&rec.snap) out.push(rec); }
+    catch(e){}   // побиті/неповні частини просто ігноруємо
+  });
+  return out;
+}
+
+/* --- обʼєднання та публічні дії --- */
+function mergeRecords(...lists){
+  const map=new Map();
+  lists.flat().forEach(r=>{ if(!r||!r.id) return;
+    const prev=map.get(r.id);
+    if(!prev || (r.at||0)>(prev.at||0)) map.set(r.id,r); });
+  return [...map.values()].sort((a,b)=>(b.at||0)-(a.at||0));
+}
+function savedInit(){
+  SAVED=mergeRecords(localRead());
+  renderSavedList();
+  if(!cloudApi()){ CLOUD_OK=false; renderSavedList(); return; }
+  cloudLoad().then(cloud=>{
+    CLOUD_OK=true;
+    SAVED=mergeRecords(SAVED, cloud).slice(0,SAVE_LIMIT);
+    localWrite(SAVED);            // дзеркалимо хмару локально — швидший старт далі
+  }).catch(()=>{ CLOUD_OK=false; }).then(renderSavedList);
+}
+async function saveCurrentCharacter(){
+  const snap=snapshotState();
+  const id=S._savedId||newSaveId();
+  const rec={ id, at:Date.now(), name:snap.name||tr("Без імені"),
+              race:S.race, sub:S.subrace, cls:S.class, lvl:S.level, snap };
+  S._savedId=id;
+  const before=SAVED.map(r=>r.id);
+  SAVED=mergeRecords([rec], SAVED).slice(0,SAVE_LIMIT);
+  const dropped=before.filter(x=>!SAVED.some(r=>r.id===x));
+  localWrite(SAVED);
+  renderSavedList();
+  if(cloudApi()){
+    try { await cloudSave(rec); if(dropped.length) await cloudDelete(dropped).catch(()=>{}); CLOUD_OK=true; }
+    catch(e){ CLOUD_OK=false; }
+    renderSavedList();
+  }
+  return rec;
+}
+/* У Telegram-WebView window.confirm подекуди заблокований — там питаємо
+   через рідний showConfirm, а в браузері лишається звичайний confirm. */
+function askConfirm(msg){
+  if(tg && typeof tg.showConfirm==="function"){
+    return new Promise(resolve=>{
+      try { tg.showConfirm(msg, ok=>resolve(!!ok)); }
+      catch(e){ resolve(window.confirm(msg)); }
+    });
+  }
+  return Promise.resolve(window.confirm(msg));
+}
+async function deleteSaved(idx){
+  const rec=SAVED[idx]; if(!rec) return;
+  if(!(await askConfirm(t('sv.confirmDel').replace("{n}", rec.name)))) return;
+  SAVED=SAVED.filter(r=>r.id!==rec.id);
+  if(S._savedId===rec.id) S._savedId=null;
+  localWrite(SAVED); renderSavedList();
+  if(cloudApi()) cloudDelete([rec.id]).catch(()=>{});
+}
+function openSaved(idx){
+  const rec=SAVED[idx]; if(!rec) return;
+  if(!restoreState(rec.snap)){ finishStatus(t('sv.brokenRec'), true); return; }
+  S._savedId=rec.id;
+  try {
+    buildSheet();          // сам перемальовує расові вибори, навички й характеристики
+    renderReview(computeCharacter());
+    showView("review");
+  } catch(e){        // дані застаріли/неповні — відкриваємо чарник для правок
+    console.error(e);
+    buildSheet(); showView("sheet");
+  }
+}
+
+async function saveFromReview(){
+  const btn=$("rvSaveBtn"), note=$("rvSaveNote");
+  if(btn) btn.disabled=true;
+  try {
+    const rec=await saveCurrentCharacter();
+    if(note) note.textContent=t('sv.savedOk').replace("{n}", rec.name)+
+      (CLOUD_OK ? " "+t('sv.savedCloud') : (CLOUD_OK===false ? " "+t('sv.savedLocal') : ""));
+  } catch(e){
+    console.error(e);
+    if(note) note.textContent=t('sv.savedFail');
+  } finally { if(btn) btn.disabled=false; }
+}
+
+/* --- список на стартовому екрані --- */
+function savedDateText(ts){
+  try { return new Date(ts).toLocaleDateString(undefined,{day:"2-digit",month:"2-digit",year:"2-digit"}); }
+  catch(e){ return ""; }
+}
+function renderSavedList(){
+  const card=$("savedCard"), box=$("savedList"); if(!card||!box) return;
+  if(!SAVED.length){ card.classList.add("hidden"); box.innerHTML=""; return; }
+  card.classList.remove("hidden");
+  box.innerHTML=SAVED.map((r,i)=>{
+    const raceLabel=r.sub?`${tr(r.race)} (${tr(r.sub)})`:tr(r.race);
+    const meta=`${raceLabel} · ${tr(r.cls)} ${t('sh.lvlTpl').replace("{n}", r.lvl)}`;
+    return `<div class="sv-row">
+      <button class="sv-main" onclick="openSaved(${i})">
+        <span class="sv-name">${esc(r.name)}</span>
+        <span class="sv-meta">${esc(meta)}</span></button>
+      <span class="sv-date">${esc(savedDateText(r.at))}</span>
+      <button class="inv-btn del" title="${esc(t('sv.delete'))}" onclick="deleteSaved(${i})">🗑</button>
+    </div>`;
+  }).join("");
+  const cnt=$("savedCount"); if(cnt) cnt.textContent=`${SAVED.length}/${SAVE_LIMIT}`;
+  const note=$("savedNote");
+  if(note) note.textContent = CLOUD_OK ? t('sv.noteCloud')
+    : (CLOUD_OK===false ? t('sv.noteLocal') : t('sv.noteChecking'));
 }
 
 /* =========================================================================
@@ -4501,6 +4758,8 @@ function generateRandomCharacter(){
   // СВІТОГЛЯД + ІМ'Я
   const al=$("alignment"); if(al) al.value=rcPick(ALIGNMENTS);
   $("name").value=RC.name;
+
+  S._savedId=null;   // це новий персонаж, а не правка збереженого
 
   // СПОРЯДЖЕННЯ (випадковий персонаж починається з чистого інвентаря)
   S.customItems=[]; S.customWeapons=[]; S.equipRemoved=[]; S.cwDraft=null;
