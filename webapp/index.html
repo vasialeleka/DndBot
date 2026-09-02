@@ -329,6 +329,8 @@
   .inv-add input { flex:1; }
   .btn-mini { flex:none; padding:0 14px; border-radius:10px; border:1px solid var(--accent);
     background:rgba(182,65,47,.16); color:var(--text); font-weight:700; font-size:13px; cursor:pointer; }
+  .cw-add { display:flex; gap:6px; flex:none; }
+  .inv-btn.on { border-color:var(--accent); background:rgba(182,65,47,.2); }
   .cw-row { display:flex; align-items:flex-start; gap:8px; padding:9px 2px; border-bottom:1px solid var(--line); }
   .cw-row:last-child { border-bottom:none; }
   .cw-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
@@ -671,8 +673,9 @@
   </div>
 
   <div class="card">
-    <div class="pick-head"><h2 style="margin:0"><span data-i18n="eq.customWeapons">Своя зброя / артефакти</span></h2>
-      <button class="change" onclick="openCustomWeapon(-1)" data-i18n="eq.cwAdd">+ додати</button></div>
+    <div class="pick-head"><h2 style="margin:0"><span data-i18n="eq.customGear">Своє спорядження</span></h2>
+      <span class="cw-add"><button class="change" onclick="openCustomWeapon(-1)" data-i18n="eq.cwAddW">+ зброя</button>
+      <button class="change" onclick="openCustomArmor(-1)" data-i18n="eq.cwAddA">+ обладунок</button></span></div>
     <div id="eqCustomWeapons"></div>
   </div>
 
@@ -2240,9 +2243,13 @@ const S = {
   expertise:[],                                  // навички/інструменти з подвоєним бонусом
   ranger:{ enemy:"", terrain:"", foe:false, deft:false },  // вибори слідопита на 1-му рівні
   customItems:[],      // свої предмети/набори в інвентарі (напр. «Набір для гриму»)
-  customWeapons:[],    // своя зброя й артефакти: {key,name,cat,dmg,type,props,magic,desc}
+  customWeapons:[],    // своя зброя й артефакти: {key,name,cat,dmg,type,abil,magic,desc}
+  customArmors:[],     // свій обладунок і щити: {key,name,cat,base,addDex,maxDex,...}
+  armorWorn:"",        // ключ свого обладунку, який вдягнено (перекриває список)
+  shieldWorn:"",       // ключ свого щита
   equipRemoved:[],     // ключі згенерованих позицій, які прибрали з інвентаря
   cwDraft:null,        // чернетка форми «своя зброя»
+  caDraft:null,        // чернетка форми «свій обладунок»
   _savedId:null,       // id запису в «Моїх чарниках», якщо редагуємо збережений
   _lvlDelta:null,      // діапазон останньої зміни рівня для панелі «що додалось»
   lang:"uk",
@@ -3768,7 +3775,18 @@ const CW_PROPS = [
   {k:"light",   label:"легка"},    {k:"heavy",  label:"важка"},
   {k:"reach",   label:"досяжність"}
 ];
+// Здібності, які можна призначити своїй зброї (Статура для влучань не буває)
+const CW_ABILS = ["str","dex","int","wis","cha"];
+// Категорії свого обладунку
+const CA_CATS = [
+  {k:"light",  label:"Легка броня",   base:11, addDex:true,  maxDex:99},
+  {k:"medium", label:"Середня броня", base:14, addDex:true,  maxDex:2},
+  {k:"heavy",  label:"Важка броня",   base:16, addDex:false, maxDex:0},
+  {k:"shield", label:"Щит",           base:2,  addDex:false, maxDex:0}
+];
+function caCat(k){ return CA_CATS.find(c=>c.k===k)||CA_CATS[0]; }
 function customWeaponByKey(k){ return (S.customWeapons||[]).find(w=>w.key===k)||null; }
+function customArmorByKey(k){ return (S.customArmors||[]).find(a=>a.key===k)||null; }
 // Зброя за ключем: спершу довідник, потім своя
 function weaponByKey(k){ return WEAPONS[k] || customWeaponByKey(k); }
 /* Усе, що персонаж реально носить. Позиції, прибрані ✕ в інвентарі, не йдуть
@@ -3789,10 +3807,48 @@ function customWeaponMeta(w){
   const cat=tr(w.cat==="martial"?"військова":"проста");
   const props=CW_PROPS.filter(p=>w[p.k]).map(p=>tr(p.label));
   if(w.versatile) props.push(t('eq.versatShort')+" "+w.versatile);
+  if(w.abil) props.push(t('eq.cwAbilTag').replace("{a}", abShort(w.abil)));
   return [`${w.dmg}${w.magic?fmt(+w.magic):""} ${tr(w.type)}`, cat, ...props].join(" · ");
 }
 function customWeaponLabel(w){ return tr(w.name)+(w.magic?` ${fmt(+w.magic)}`:""); }
+function customArmorLabel(a){ return tr(a.name)+(a.magic?` ${fmt(+a.magic)}`:""); }
+// Підпис свого обладунку: «КБ 14 + Спр (макс 2) · середня · перешкода на Скритність»
+function customArmorMeta(a){
+  const parts=[];
+  if(a.cat==="shield") parts.push(`${t('eq.acShort')} +${a.base}${a.magic?fmt(+a.magic):""}`);
+  else parts.push(`${t('eq.acShort')} ${a.base}${a.magic?fmt(+a.magic):""}`+
+    (a.addDex?` ${t('eq.dex')}${(+a.maxDex<99)?` (${t('eq.maxN').replace("{n}",a.maxDex)})`:""}`:""));
+  parts.push(tr(caCat(a.cat).label));
+  if(a.strReq) parts.push(t('eq.strReq').replace("{n}", a.strReq));
+  if(a.stealth) parts.push(tr("перешкода на Скритність"));
+  return parts.join(" · ");
+}
+function nextCustomArmorKey(){ let i=1; while((S.customArmors||[]).some(a=>a.key==="ca"+i)) i++; return "ca"+i; }
+/* Що реально вдягнено. Свій обладунок перекриває вибір зі списку, бо
+   стандартний набір класу перебудовує S.armor на кожному рендері. */
+function wornCustomArmor(){
+  const a=S.armorWorn?customArmorByKey(S.armorWorn):null;
+  return (a && !equipIsRemoved("ca:"+a.key)) ? a : null;
+}
+function wornCustomShield(){
+  const a=S.shieldWorn?customArmorByKey(S.shieldWorn):null;
+  return (a && a.cat==="shield" && !equipIsRemoved("ca:"+a.key)) ? a : null;
+}
+// Обʼєкт броні для розрахунку КБ: своя має пріоритет над довідниковою
+function carriedArmorObj(){
+  const own=wornCustomArmor();
+  if(own) return own;
+  const k=carriedArmor();
+  return (k && k!=="none") ? ARMORS[k] : null;
+}
+// Бонус щита: свій щит перекриває стандартні +2
+function carriedShieldBonus(){
+  const own=wornCustomShield();
+  if(own) return (+own.base||0)+(+own.magic||0);
+  return carriedShield() ? 2 : 0;
+}
 function weaponAbility(w,mods){
+  if(w.abil) return w.abil;          // явно задано у своїй зброї
   if(w.ranged) return "dex";
   if(w.finesse) return mods.dex>=mods.str ? "dex":"str";
   return "str";
@@ -3826,7 +3882,8 @@ function acContext(mods){
   const r=currentRace(), sr=currentSubrace();
   const traits=[...((r&&r.baseTraits)||[]), ...((sr&&sr.traits)||[])];
   return {
-    armor:carriedArmor(), shield:carriedShield(),
+    armorObj:carriedArmorObj(), shieldBonus:carriedShieldBonus(),
+    shield:carriedShieldBonus()>0,
     barbUnarmored:S.class==="Варвар", monkUnarmored:S.class==="Монах",
     dracoUnarmored:S.class==="Чаклун" && /дракон/.test((S.subclass||"").toLowerCase()),
     defenseStyle:S.fightingStyle==="Оборона",
@@ -3835,13 +3892,17 @@ function acContext(mods){
 }
 /* КБ: збираємо всі альтернативні бази, беремо найкращу; щит і вбудовані додаємо зверху. */
 function computeAC(mods,ctx){
-  const A=(ctx.armor && ctx.armor!=="none") ? ARMORS[ctx.armor] : null;
-  const shield=ctx.shield?2:0;
+  const A=ctx.armorObj||null;
+  const shield=ctx.shieldBonus||0;
   const cands=[];
   if(A){
-    const dexPart=A.addDex?Math.min(mods.dex,A.maxDex):0;
+    const maxDex=(A.maxDex==null?99:+A.maxDex);
+    const dexPart=A.addDex?Math.min(mods.dex,maxDex):0;
+    const magic=+(A.magic||0);
     const dxa=t('eq.dex'); // "+ Спр"
-    let v=A.base+dexPart, lbl=`${tr(A.name)} ${A.base}`+(A.addDex?` ${dxa} ${fmt(dexPart)}${A.cat==="medium"?" "+t('eq.max2'):""}`:"");
+    let v=A.base+dexPart+magic;
+    let lbl=`${tr(A.name)} ${A.base}`+(magic?fmt(magic):"")+
+      (A.addDex?` ${dxa} ${fmt(dexPart)}${(A.cat==="medium"&&maxDex<=2)?" "+t('eq.max2'):""}`:"");
     if(ctx.defenseStyle){ v+=1; lbl+=` + ${tr("Оборона")} 1`; }
     cands.push({val:v,label:lbl,shieldOK:true});
   } else {
@@ -3854,7 +3915,10 @@ function computeAC(mods,ctx){
   }
   let best=cands[0];
   cands.forEach(c=>{ if(c.val+(c.shieldOK?shield:0) > best.val+(best.shieldOK?shield:0)) best=c; });
-  let ac=best.val+(best.shieldOK?shield:0), label=best.label+(best.shieldOK&&shield?` + ${tr("Щит")} +2`:"");
+  let ac=best.val+(best.shieldOK?shield:0);
+  const shObj=wornCustomShield();
+  let label=best.label+(best.shieldOK&&shield
+    ? ` + ${shObj?tr(shObj.name):tr("Щит")} +${shield}` : "");
   const flat=(ctx.natural&&ctx.natural.flat)||0;
   if(flat){ ac+=flat; label+=` + ${t('eq.integrated')} +${flat}`; }
   return {ac,label};
@@ -3937,8 +4001,13 @@ function ensureEquipment(){
 function equipmentEntries(){
   const out=[]; const seen=new Set();
   const add=(key,label,src)=>{ if(seen.has(key)) return; seen.add(key); out.push({key,label,src}); };
-  if(S.armor && S.armor!=="none" && ARMORS[S.armor]) add("a:"+S.armor, tr(ARMORS[S.armor].name), "gear");
-  if(S.shield) add("shield", tr("Щит"), "gear");
+  const ownArmor=wornCustomArmor(), ownShield=wornCustomShield();
+  if(ownArmor) add("ca:"+ownArmor.key, customArmorLabel(ownArmor), "armor");
+  else if(S.armor && S.armor!=="none" && ARMORS[S.armor]) add("a:"+S.armor, tr(ARMORS[S.armor].name), "gear");
+  if(ownShield) add("ca:"+ownShield.key, customArmorLabel(ownShield), "armor");
+  else if(S.shield) add("shield", tr("Щит"), "gear");
+  // свій обладунок, який зараз не вдягнено, теж лежить у речах
+  (S.customArmors||[]).forEach(a=>add("ca:"+a.key, customArmorLabel(a), "armor"));
   (S.weapons||[]).forEach(k=>{ if(!WEAPONS[k]) return;
     let n=tr(WEAPONS[k].name);
     const q=(S.equipQty||{})[k], am=(S.equipAmmo||{})[k];
@@ -3958,8 +4027,12 @@ function buildEquipmentList(){ return equipmentVisible().map(e=>e.label); }
 // Артефакти й своя зброя з описом — окремим блоком у PDF
 function artifactEntries(){
   const removed=new Set(S.equipRemoved||[]);
-  return (S.customWeapons||[]).filter(w=>!removed.has("cw:"+w.key) && (w.desc||"").trim())
-    .map(w=>({name:customWeaponLabel(w), meta:customWeaponMeta(w), desc:tr(w.desc)}));
+  const out=[];
+  (S.customWeapons||[]).forEach(w=>{ if(removed.has("cw:"+w.key)||!(w.desc||"").trim()) return;
+    out.push({name:customWeaponLabel(w), meta:customWeaponMeta(w), desc:tr(w.desc)}); });
+  (S.customArmors||[]).forEach(a=>{ if(removed.has("ca:"+a.key)||!(a.desc||"").trim()) return;
+    out.push({name:customArmorLabel(a), meta:customArmorMeta(a), desc:tr(a.desc)}); });
+  return out;
 }
 // Приймаємо індекс рядка, а не назву: користувацький текст не потрапляє в onclick
 function toggleEquipEntry(idx){
@@ -4008,7 +4081,7 @@ function buildEquipment(){
   renderShowAll(); renderEquipModeToggle();
   if(S.equipMode==="custom"){ renderArmorSelect(); renderShield(); renderWeaponList(); }
   else { applyStandardToGear(); renderStandard(); }
-  renderCustomWeapons(); renderInventory();
+  renderCustomGear(); renderInventory();
   renderEquipmentPreview();
 }
 /* рендер стандартних виборів */
@@ -4163,20 +4236,30 @@ function renderInventory(){
 }
 
 /* ---- Своя зброя / артефакти ---- */
-function renderCustomWeapons(){
+function renderCustomGear(){
   const box=$("eqCustomWeapons"); if(!box) return;
-  const list=S.customWeapons||[];
-  box.innerHTML = list.length ? list.map((w,i)=>
+  const ws=S.customWeapons||[], as=S.customArmors||[];
+  let html="";
+  if(ws.length) html+=ws.map((w,i)=>
     `<div class="cw-row"><div class="cw-main"><b>${esc(customWeaponLabel(w))}</b>
       <small>${esc(customWeaponMeta(w))}</small>
       ${w.desc?`<small class="cw-desc">${esc(tr(w.desc))}</small>`:""}</div>
       <button class="inv-btn" title="${esc(t('eq.editWeapon'))}" onclick="openCustomWeapon(${i})">✎</button>
-      <button class="inv-btn del" title="${esc(t('eq.deleteWeapon'))}" onclick="deleteCustomWeapon(${i})">🗑</button></div>`
-  ).join("") : `<div class="desc-line">${esc(t('eq.cwEmpty'))}</div>`;
+      <button class="inv-btn del" title="${esc(t('eq.deleteWeapon'))}" onclick="deleteCustomWeapon(${i})">🗑</button></div>`).join("");
+  if(as.length) html+=as.map((a,i)=>{
+    const worn=(a.cat==="shield") ? S.shieldWorn===a.key : S.armorWorn===a.key;
+    return `<div class="cw-row"><div class="cw-main"><b>${esc(customArmorLabel(a))}${worn?` <span class="src-tag">${esc(t('eq.caWorn'))}</span>`:""}</b>
+      <small>${esc(customArmorMeta(a))}</small>
+      ${a.desc?`<small class="cw-desc">${esc(tr(a.desc))}</small>`:""}</div>
+      <button class="inv-btn ${worn?"on":""}" title="${esc(t(worn?'eq.caTakeOff':'eq.caWear'))}" onclick="toggleWearArmor(${i})">${worn?"✓":"🛡"}</button>
+      <button class="inv-btn" title="${esc(t('eq.editWeapon'))}" onclick="openCustomArmor(${i})">✎</button>
+      <button class="inv-btn del" title="${esc(t('eq.deleteWeapon'))}" onclick="deleteCustomArmor(${i})">🗑</button></div>`;
+  }).join("");
+  box.innerHTML = html || `<div class="desc-line">${esc(t('eq.cwEmpty'))}</div>`;
 }
 function blankCustomWeapon(){
   return { key:"", name:"", cat:"martial", dmg:"1d8", type:"руб", versatile:"", magic:0,
-    alwaysProf:true, desc:"", finesse:false, ranged:false, twoH:false, thrown:false,
+    abil:"", alwaysProf:true, desc:"", finesse:false, ranged:false, twoH:false, thrown:false,
     light:false, heavy:false, reach:false };
 }
 // idx — індекс у S.customWeapons; -1 (або нічого) означає «нова зброя»
@@ -4206,6 +4289,11 @@ function cwFormHtml(){
         <select id="cwMagic" onchange="cwSet('magic',+this.value)">
           ${[0,1,2,3].map(n=>opt(String(n),String(d.magic||0),n?`+${n}`:"—")).join("")}</select></div>
     </div>
+    <label class="field">${esc(t('eq.cwAbil'))}</label>
+    <select id="cwAbil" onchange="cwSet('abil',this.value)">
+      ${opt("",d.abil||"",t('eq.cwAbilAuto'))}
+      ${CW_ABILS.map(a=>opt(a,d.abil||"",tr(ABIL_UA[a]))).join("")}</select>
+    <div class="desc-line">${esc(t('eq.cwAbilHint'))}</div>
     <label class="field">${esc(t('eq.cwProps'))}</label>
     <div class="cw-props">${CW_PROPS.map(pr=>
       `<label class="cw-chip ${d[pr.k]?"on":""}" onclick="event.preventDefault();cwToggle('${pr.k}')">${esc(tr(pr.label))}</label>`).join("")}
@@ -4242,13 +4330,103 @@ function saveCustomWeapon(){
     S.customWeapons.push({...d});
   }
   S.cwDraft=null; closeModal();
-  renderCustomWeapons(); renderInventory(); renderEquipmentPreview();
+  renderCustomGear(); renderInventory(); renderEquipmentPreview();
 }
+/* ---- Свій обладунок і щити ---- */
+function blankCustomArmor(){
+  const c=caCat("medium");
+  return { key:"", name:"", cat:"medium", base:c.base, addDex:c.addDex, maxDex:c.maxDex,
+    stealth:false, strReq:0, magic:0, desc:"" };
+}
+function openCustomArmor(idx){
+  const src=(idx!=null&&idx>=0)?(S.customArmors||[])[idx]:null;
+  S.caDraft = src ? {...src} : blankCustomArmor();
+  openModal(esc(t(src?'eq.caEditTitle':'eq.caNewTitle')), caFormHtml());
+}
+function caFormHtml(){
+  const d=S.caDraft;
+  const opt=(v,cur,label)=>`<option value="${esc(v)}" ${String(v)===String(cur)?"selected":""}>${esc(label)}</option>`;
+  const isShield=d.cat==="shield";
+  return `<div class="cw-form">
+    <label class="field">${esc(t('eq.caName'))}</label>
+    <input id="caName" value="${esc(d.name)}" placeholder="${esc(t('eq.caNamePh'))}" oninput="caSet('name',this.value)"/>
+    <div class="cw-grid">
+      <div><label class="field">${esc(t('eq.caCat'))}</label>
+        <select id="caCat" onchange="caSetCat(this.value)">
+          ${CA_CATS.map(c=>opt(c.k,d.cat,tr(c.label))).join("")}</select></div>
+      <div><label class="field">${esc(isShield?t('eq.caShieldBonus'):t('eq.caBase'))}</label>
+        <input id="caBase" type="number" inputmode="numeric" value="${esc(d.base)}" oninput="caSet('base',+this.value||0)"/></div>
+    </div>
+    <div class="cw-grid">
+      <div><label class="field">${esc(t('eq.caMagic'))}</label>
+        <select id="caMagic" onchange="caSet('magic',+this.value)">
+          ${[0,1,2,3].map(n=>opt(String(n),String(d.magic||0),n?`+${n}`:"—")).join("")}</select></div>
+      <div><label class="field">${esc(t('eq.caStrReq'))}</label>
+        <input id="caStr" type="number" inputmode="numeric" value="${esc(d.strReq||0)}" oninput="caSet('strReq',+this.value||0)"/></div>
+    </div>
+    ${isShield?"":`
+    <label class="field">${esc(t('eq.caDex'))}</label>
+    <div class="cw-props">
+      <label class="cw-chip ${d.addDex?"on":""}" onclick="event.preventDefault();caToggle('addDex')">${esc(t('eq.caAddDex'))}</label>
+      <label class="cw-chip ${d.stealth?"on":""}" onclick="event.preventDefault();caToggle('stealth')">${esc(tr("перешкода на Скритність"))}</label>
+    </div>
+    ${d.addDex?`<label class="field">${esc(t('eq.caMaxDex'))}</label>
+      <select id="caMaxDex" onchange="caSet('maxDex',+this.value)">
+        ${[["99",t('eq.caNoCap')],["2","2"],["3","3"],["1","1"],["0","0"]].map(x=>opt(x[0],String(d.maxDex),x[1])).join("")}</select>`:""}`}
+    <label class="field">${esc(t('eq.cwDesc'))}</label>
+    <textarea id="caDesc" rows="3" placeholder="${esc(t('eq.caDescPh'))}" oninput="caSet('desc',this.value)">${esc(d.desc||"")}</textarea>
+    <div class="cw-err hidden" id="caErr"></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="saveCustomArmor()">${esc(t('eq.cwSave'))}</button>
+  </div>`;
+}
+function caSet(k,v){ if(S.caDraft) S.caDraft[k]=v; }
+function caToggle(k){ if(!S.caDraft) return; S.caDraft[k]=!S.caDraft[k]; $("modalBody").innerHTML=caFormHtml(); }
+// Зміна категорії підставляє типові значення — щоб не вводити їх щоразу вручну
+function caSetCat(k){
+  if(!S.caDraft) return;
+  const c=caCat(k), d=S.caDraft;
+  d.cat=k; d.base=c.base; d.addDex=c.addDex; d.maxDex=c.maxDex;
+  if(k==="heavy"||k==="shield") d.addDex=false;
+  $("modalBody").innerHTML=caFormHtml();
+}
+function saveCustomArmor(){
+  const d=S.caDraft; if(!d) return;
+  const err=$("caErr");
+  const fail=(m)=>{ if(err){ err.textContent=m; err.classList.remove("hidden"); } };
+  d.name=String(d.name||"").trim();
+  if(!d.name) return fail(t('eq.caErrName'));
+  d.base=+d.base||0;
+  if(d.base<0||d.base>25) return fail(t('eq.caErrBase'));
+  if(!S.customArmors) S.customArmors=[];
+  if(d.key){
+    const i=S.customArmors.findIndex(a=>a.key===d.key);
+    if(i>=0) S.customArmors[i]={...d}; else S.customArmors.push({...d});
+  } else { d.key=nextCustomArmorKey(); S.customArmors.push({...d}); }
+  S.caDraft=null; closeModal();
+  renderCustomGear(); renderInventory(); renderEquipmentPreview();
+}
+function deleteCustomArmor(idx){
+  const a=(S.customArmors||[])[idx]; if(!a) return;
+  S.customArmors.splice(idx,1);
+  if(S.armorWorn===a.key) S.armorWorn="";
+  if(S.shieldWorn===a.key) S.shieldWorn="";
+  S.equipRemoved=(S.equipRemoved||[]).filter(k=>k!=="ca:"+a.key);
+  renderCustomGear(); renderInventory(); renderEquipmentPreview();
+}
+// Вдягнути/зняти: щити й броня — різні слоти, в кожному максимум одна річ
+function toggleWearArmor(idx){
+  const a=(S.customArmors||[])[idx]; if(!a) return;
+  if(a.cat==="shield") S.shieldWorn = (S.shieldWorn===a.key) ? "" : a.key;
+  else S.armorWorn = (S.armorWorn===a.key) ? "" : a.key;
+  if(equipIsRemoved("ca:"+a.key)) S.equipRemoved=S.equipRemoved.filter(k=>k!=="ca:"+a.key);
+  renderCustomGear(); renderInventory(); renderEquipmentPreview();
+}
+
 function deleteCustomWeapon(idx){
   const w=(S.customWeapons||[])[idx]; if(!w) return;
   S.customWeapons.splice(idx,1);
   S.equipRemoved=(S.equipRemoved||[]).filter(k=>k!=="cw:"+w.key);
-  renderCustomWeapons(); renderInventory(); renderEquipmentPreview();
+  renderCustomGear(); renderInventory(); renderEquipmentPreview();
 }
 
 function renderEquipmentPreview(){
@@ -4264,8 +4442,7 @@ function renderEquipmentPreview(){
   }).join("");
   $("eqAttacks").innerHTML=`<table class="atk-tbl"><tr><th>${esc(tr("Назва"))}</th><th style="text-align:center">${esc(tr("Влуч."))}</th><th>${esc(tr("Шкода / тип"))}</th></tr>${rows}</table>`;
   const notes=[]; if(anyNoProf) notes.push(tr("Без володіння — на влучання без бонусу майстерності."));
-  const ca=carriedArmor();
-  const A=(ca&&ca!=="none")?ARMORS[ca]:null; if(A&&A.stealth) notes.push(tr("Обладунок дає перешкоду на Скритність."));
+  const A=carriedArmorObj(); if(A&&A.stealth) notes.push(tr("Обладунок дає перешкоду на Скритність."));
   $("eqAttackNote").textContent=notes.join(" ");
 }
 
@@ -4592,7 +4769,7 @@ function cloudCall(method, ...args){
 const SNAP_FIELDS = ["race","subrace","class","subclass","level","background",
   "mode","method","base","rollPool","raceAsiPick","slots","humanFeat",
   "optionalFeats","fightingStyle","expertise","ranger",
-  "customItems","customWeapons","equipRemoved",
+  "customItems","customWeapons","customArmors","armorWorn","shieldWorn","equipRemoved",
   "equipMode","equipPick","anyPick","armor","shield","weapons",
   "equipExtra","equipQty","equipAmmo","showAllGear"];
 function snapshotState(){
@@ -4613,7 +4790,7 @@ function restoreState(snap){
   S.detailRace=S.race; S.detailSub=S.subrace;
   S.detailClass=S.class; S.detailLevel=S.level; S.detailBg=S.background;
   S._equipClass=S.class;   // спорядження вже в знімку — не перебудовувати з нуля
-  S._ready=true; S.cwDraft=null; S._lvlDelta=null;
+  S._ready=true; S.cwDraft=null; S.caDraft=null; S._lvlDelta=null;
   if($("name")) $("name").value=snap.name||"";
   if($("alignment") && snap.alignment) $("alignment").value=snap.alignment;
   return true;
@@ -4945,6 +5122,7 @@ function generateRandomCharacter(){
 
   // СПОРЯДЖЕННЯ (випадковий персонаж починається з чистого інвентаря)
   S.customItems=[]; S.customWeapons=[]; S.equipRemoved=[]; S.cwDraft=null;
+  S.customArmors=[]; S.armorWorn=""; S.shieldWorn=""; S.caDraft=null;
   rcEquipment();
 
   S.mode="full"; S._ready=true;
