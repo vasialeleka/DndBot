@@ -3804,21 +3804,28 @@ function nextCustomWeaponKey(){
 }
 // Короткий підпис зброї для інвентаря: «Клинок Півночі +1 (1d8 руб, військова)»
 function customWeaponMeta(w){
-  const cat=tr(w.cat==="martial"?"військова":"проста");
-  const props=CW_PROPS.filter(p=>w[p.k]).map(p=>tr(p.label));
-  if(w.versatile) props.push(t('eq.versatShort')+" "+w.versatile);
-  if(w.abil) props.push(t('eq.cwAbilTag').replace("{a}", abShort(w.abil)));
-  return [`${w.dmg}${w.magic?fmt(+w.magic):""} ${tr(w.type)}`, cat, ...props].join(" · ");
+  const parts=[`${w.dmg}${w.magic?fmt(+w.magic):""}${w.type?" "+tr(w.type):""}`];
+  if(w.abil) parts.push(t('eq.cwAbilTag').replace("{a}", abShort(w.abil)));
+  // старі записи ще можуть мати чіпи властивостей — показуємо, якщо є
+  CW_PROPS.forEach(pr=>{ if(w[pr.k]) parts.push(tr(pr.label)); });
+  if(w.versatile) parts.push(t('eq.versatShort')+" "+w.versatile);
+  if(!w.alwaysProf) parts.push(t('eq.cwNoProf'));
+  return parts.join(" · ");
 }
 function customWeaponLabel(w){ return tr(w.name)+(w.magic?` ${fmt(+w.magic)}`:""); }
 function customArmorLabel(a){ return tr(a.name)+(a.magic?` ${fmt(+a.magic)}`:""); }
-// Підпис свого обладунку: «КБ 14 + Спр (макс 2) · середня · перешкода на Скритність»
+/* Підпис свого обладунку: «КБ 14 + Спр (макс 2)». Старі записи могли мати
+   вимогу Сили й перешкоду на Скритність — показуємо, якщо збереглись. */
 function customArmorMeta(a){
+  const magic=a.magic?fmt(+a.magic):"";
   const parts=[];
-  if(a.cat==="shield") parts.push(`${t('eq.acShort')} +${a.base}${a.magic?fmt(+a.magic):""}`);
-  else parts.push(`${t('eq.acShort')} ${a.base}${a.magic?fmt(+a.magic):""}`+
-    (a.addDex?` ${t('eq.dex')}${(+a.maxDex<99)?` (${t('eq.maxN').replace("{n}",a.maxDex)})`:""}`:""));
-  parts.push(tr(caCat(a.cat).label));
+  if(a.cat==="shield") parts.push(`${t('eq.acShort')} +${a.base}${magic}`);
+  else {
+    const cap=(+a.maxDex<99) ? ` (${t('eq.maxN').replace("{n}", a.maxDex)})` : "";
+    parts.push(`${t('eq.acShort')} ${a.base}${magic}`+(a.addDex?` ${t('eq.dex')}${cap}`:""));
+  }
+  const known=CA_CATS.find(c=>c.k===a.cat);
+  if(known && a.cat!=="shield") parts.push(tr(known.label));
   if(a.strReq) parts.push(t('eq.strReq').replace("{n}", a.strReq));
   if(a.stealth) parts.push(tr("перешкода на Скритність"));
   return parts.join(" · ");
@@ -4258,9 +4265,8 @@ function renderCustomGear(){
   box.innerHTML = html || `<div class="desc-line">${esc(t('eq.cwEmpty'))}</div>`;
 }
 function blankCustomWeapon(){
-  return { key:"", name:"", cat:"martial", dmg:"1d8", type:"руб", versatile:"", magic:0,
-    abil:"", alwaysProf:true, desc:"", finesse:false, ranged:false, twoH:false, thrown:false,
-    light:false, heavy:false, reach:false };
+  return { key:"", name:"", cat:"martial", dmg:"1d8", type:"", versatile:"", magic:0,
+    abil:"", alwaysProf:true, desc:"" };
 }
 // idx — індекс у S.customWeapons; -1 (або нічого) означає «нова зброя»
 function openCustomWeapon(idx){
@@ -4268,41 +4274,32 @@ function openCustomWeapon(idx){
   S.cwDraft = src ? {...src} : blankCustomWeapon();
   openModal(esc(t(src?'eq.cwEditTitle':'eq.cwNewTitle')), cwFormHtml());
 }
+/* Форма свідомо коротка: питаємо лише те, з чого рахуються атаки, решта —
+   вільним текстом. Артефакт унікальний, у чекбокси його не заженеш. */
 function cwFormHtml(){
   const d=S.cwDraft;
-  const opt=(v,cur,label)=>`<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(label)}</option>`;
+  const opt=(v,cur,label)=>`<option value="${esc(v)}" ${String(v)===String(cur)?"selected":""}>${esc(label)}</option>`;
   return `<div class="cw-form">
     <label class="field">${esc(t('eq.cwName'))}</label>
     <input id="cwName" value="${esc(d.name)}" placeholder="${esc(t('eq.cwNamePh'))}" oninput="cwSet('name',this.value)"/>
     <div class="cw-grid">
-      <div><label class="field">${esc(t('eq.cwCat'))}</label>
-        <select id="cwCat" onchange="cwSet('cat',this.value)">
-          ${opt("simple",d.cat,tr("Проста зброя"))}${opt("martial",d.cat,tr("Військова зброя"))}</select></div>
       <div><label class="field">${esc(t('eq.cwDmg'))}</label>
         <input id="cwDmg" value="${esc(d.dmg)}" placeholder="1d8" oninput="cwSet('dmg',this.value)"/></div>
+      <div><label class="field">${esc(t('eq.cwBonus'))}</label>
+        <input id="cwMagic" type="number" inputmode="numeric" value="${esc(d.magic||0)}" oninput="cwSet('magic',+this.value||0)"/></div>
     </div>
-    <div class="cw-grid">
-      <div><label class="field">${esc(t('eq.cwType'))}</label>
-        <select id="cwType" onchange="cwSet('type',this.value)">
-          ${DMG_TYPES.map(x=>opt(x,d.type,tr(x))).join("")}</select></div>
-      <div><label class="field">${esc(t('eq.cwMagic'))}</label>
-        <select id="cwMagic" onchange="cwSet('magic',+this.value)">
-          ${[0,1,2,3].map(n=>opt(String(n),String(d.magic||0),n?`+${n}`:"—")).join("")}</select></div>
-    </div>
+    <label class="field">${esc(t('eq.cwType'))}</label>
+    <input id="cwType" list="dmgTypeList" value="${esc(d.type||"")}" placeholder="${esc(t('eq.cwTypePh'))}" oninput="cwSet('type',this.value)"/>
+    <datalist id="dmgTypeList">${DMG_TYPES.map(x=>`<option value="${esc(tr(x))}"></option>`).join("")}</datalist>
     <label class="field">${esc(t('eq.cwAbil'))}</label>
     <select id="cwAbil" onchange="cwSet('abil',this.value)">
       ${opt("",d.abil||"",t('eq.cwAbilAuto'))}
       ${CW_ABILS.map(a=>opt(a,d.abil||"",tr(ABIL_UA[a]))).join("")}</select>
-    <div class="desc-line">${esc(t('eq.cwAbilHint'))}</div>
-    <label class="field">${esc(t('eq.cwProps'))}</label>
-    <div class="cw-props">${CW_PROPS.map(pr=>
-      `<label class="cw-chip ${d[pr.k]?"on":""}" onclick="event.preventDefault();cwToggle('${pr.k}')">${esc(tr(pr.label))}</label>`).join("")}
+    <div class="cw-props" style="margin-top:10px">
       <label class="cw-chip ${d.alwaysProf?"on":""}" onclick="event.preventDefault();cwToggle('alwaysProf')">${esc(t('eq.cwProf'))}</label>
     </div>
-    <label class="field">${esc(t('eq.cwVersatile'))}</label>
-    <input id="cwVers" value="${esc(d.versatile||"")}" placeholder="1d10" oninput="cwSet('versatile',this.value)"/>
     <label class="field">${esc(t('eq.cwDesc'))}</label>
-    <textarea id="cwDesc" rows="3" placeholder="${esc(t('eq.cwDescPh'))}" oninput="cwSet('desc',this.value)">${esc(d.desc||"")}</textarea>
+    <textarea id="cwDesc" rows="4" placeholder="${esc(t('eq.cwDescPh'))}" oninput="cwSet('desc',this.value)">${esc(d.desc||"")}</textarea>
     <div class="cw-err hidden" id="cwErr"></div>
     <button class="btn btn-primary" style="margin-top:12px" onclick="saveCustomWeapon()">${esc(t('eq.cwSave'))}</button>
   </div>`;
@@ -4316,11 +4313,11 @@ function saveCustomWeapon(){
   const fail=(m)=>{ if(err){ err.textContent=m; err.classList.remove("hidden"); } };
   d.name=String(d.name||"").trim();
   d.dmg=String(d.dmg||"").trim();
+  d.type=String(d.type||"").trim();
   d.versatile=String(d.versatile||"").trim();
   if(!d.name) return fail(t('eq.cwErrName'));
   // приймаємо «1d8», «2d6», «1d8+1» — без кубика атака нічого не рахує
   if(!/^\d*d\d+(\s*[+-]\s*\d+)?$/i.test(d.dmg)) return fail(t('eq.cwErrDmg'));
-  if(d.versatile && !/^\d*d\d+$/i.test(d.versatile)) return fail(t('eq.cwErrVers'));
   if(!S.customWeapons) S.customWeapons=[];
   if(d.key){
     const i=S.customWeapons.findIndex(w=>w.key===d.key);
@@ -4334,9 +4331,7 @@ function saveCustomWeapon(){
 }
 /* ---- Свій обладунок і щити ---- */
 function blankCustomArmor(){
-  const c=caCat("medium");
-  return { key:"", name:"", cat:"medium", base:c.base, addDex:c.addDex, maxDex:c.maxDex,
-    stealth:false, strReq:0, magic:0, desc:"" };
+  return { key:"", name:"", cat:"custom", base:14, addDex:true, maxDex:2, magic:0, desc:"" };
 }
 function openCustomArmor(idx){
   const src=(idx!=null&&idx>=0)?(S.customArmors||[])[idx]:null;
@@ -4345,48 +4340,34 @@ function openCustomArmor(idx){
 }
 function caFormHtml(){
   const d=S.caDraft;
-  const opt=(v,cur,label)=>`<option value="${esc(v)}" ${String(v)===String(cur)?"selected":""}>${esc(label)}</option>`;
   const isShield=d.cat==="shield";
   return `<div class="cw-form">
     <label class="field">${esc(t('eq.caName'))}</label>
     <input id="caName" value="${esc(d.name)}" placeholder="${esc(t('eq.caNamePh'))}" oninput="caSet('name',this.value)"/>
+    <div class="cw-props" style="margin-top:10px">
+      <label class="cw-chip ${isShield?"on":""}" onclick="event.preventDefault();caToggleShield()">${esc(t('eq.caIsShield'))}</label>
+      ${isShield?"":`<label class="cw-chip ${d.addDex?"on":""}" onclick="event.preventDefault();caToggle('addDex')">${esc(t('eq.caAddDex'))}</label>`}
+    </div>
     <div class="cw-grid">
-      <div><label class="field">${esc(t('eq.caCat'))}</label>
-        <select id="caCat" onchange="caSetCat(this.value)">
-          ${CA_CATS.map(c=>opt(c.k,d.cat,tr(c.label))).join("")}</select></div>
       <div><label class="field">${esc(isShield?t('eq.caShieldBonus'):t('eq.caBase'))}</label>
         <input id="caBase" type="number" inputmode="numeric" value="${esc(d.base)}" oninput="caSet('base',+this.value||0)"/></div>
+      ${(!isShield && d.addDex)?`<div><label class="field">${esc(t('eq.caMaxDex'))}</label>
+        <input id="caMaxDex" type="number" inputmode="numeric" value="${esc(+d.maxDex>=99?"":d.maxDex)}"
+          placeholder="${esc(t('eq.caNoCap'))}" oninput="caSet('maxDex', this.value===''?99:(+this.value||0))"/></div>`:""}
     </div>
-    <div class="cw-grid">
-      <div><label class="field">${esc(t('eq.caMagic'))}</label>
-        <select id="caMagic" onchange="caSet('magic',+this.value)">
-          ${[0,1,2,3].map(n=>opt(String(n),String(d.magic||0),n?`+${n}`:"—")).join("")}</select></div>
-      <div><label class="field">${esc(t('eq.caStrReq'))}</label>
-        <input id="caStr" type="number" inputmode="numeric" value="${esc(d.strReq||0)}" oninput="caSet('strReq',+this.value||0)"/></div>
-    </div>
-    ${isShield?"":`
-    <label class="field">${esc(t('eq.caDex'))}</label>
-    <div class="cw-props">
-      <label class="cw-chip ${d.addDex?"on":""}" onclick="event.preventDefault();caToggle('addDex')">${esc(t('eq.caAddDex'))}</label>
-      <label class="cw-chip ${d.stealth?"on":""}" onclick="event.preventDefault();caToggle('stealth')">${esc(tr("перешкода на Скритність"))}</label>
-    </div>
-    ${d.addDex?`<label class="field">${esc(t('eq.caMaxDex'))}</label>
-      <select id="caMaxDex" onchange="caSet('maxDex',+this.value)">
-        ${[["99",t('eq.caNoCap')],["2","2"],["3","3"],["1","1"],["0","0"]].map(x=>opt(x[0],String(d.maxDex),x[1])).join("")}</select>`:""}`}
     <label class="field">${esc(t('eq.cwDesc'))}</label>
-    <textarea id="caDesc" rows="3" placeholder="${esc(t('eq.caDescPh'))}" oninput="caSet('desc',this.value)">${esc(d.desc||"")}</textarea>
+    <textarea id="caDesc" rows="4" placeholder="${esc(t('eq.caDescPh'))}" oninput="caSet('desc',this.value)">${esc(d.desc||"")}</textarea>
     <div class="cw-err hidden" id="caErr"></div>
     <button class="btn btn-primary" style="margin-top:12px" onclick="saveCustomArmor()">${esc(t('eq.cwSave'))}</button>
   </div>`;
 }
 function caSet(k,v){ if(S.caDraft) S.caDraft[k]=v; }
 function caToggle(k){ if(!S.caDraft) return; S.caDraft[k]=!S.caDraft[k]; $("modalBody").innerHTML=caFormHtml(); }
-// Зміна категорії підставляє типові значення — щоб не вводити їх щоразу вручну
-function caSetCat(k){
-  if(!S.caDraft) return;
-  const c=caCat(k), d=S.caDraft;
-  d.cat=k; d.base=c.base; d.addDex=c.addDex; d.maxDex=c.maxDex;
-  if(k==="heavy"||k==="shield") d.addDex=false;
+// «Це щит» перемикає сенс числа: базовий КБ ↔ бонус до КБ
+function caToggleShield(){
+  const d=S.caDraft; if(!d) return;
+  if(d.cat==="shield"){ d.cat="custom"; d.base=14; d.addDex=true; d.maxDex=2; }
+  else { d.cat="shield"; d.base=2; d.addDex=false; d.maxDex=0; }
   $("modalBody").innerHTML=caFormHtml();
 }
 function saveCustomArmor(){
