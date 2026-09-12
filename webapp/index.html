@@ -2565,6 +2565,8 @@ function init(){
   savedInit();
   showView("race-list");
   if(tg){ tg.ready(); tg.expand(); try{ tg.setHeaderColor("secondary_bg_color"); }catch(e){} }
+  // Прийшли з міні-апки за посиланням «відкрити у браузері» — піднімаємо чарник
+  try { pdfHandoff(); } catch(e){ console.error(e); }
 }
 
 /* =========================================================================
@@ -4653,31 +4655,44 @@ function renderReview(ch){
   }).join("<br>");
 }
 /* PDF генерується прямо в браузері (без бота/сервера) і зберігається/розшарюється
-   на пристрій. У Telegram-WebView надійніше за все працює share-меню ОС; якщо його
-   немає — падаємо на звичайне завантаження файлу.
+   на пристрій. Надійного способу «просто завантажити файл» у Telegram-WebView
+   немає, тож маємо три сходинки:
+     1) share-меню ОС (navigator.share з файлом) — найкраще, є «Зберегти у Файли»;
+     2) якщо share недоступний або впав — передаємо чарник у звичайний браузер
+        (посилання з тим самим знімком у #pdf=…), де завантаження працює;
+     3) звичайне <a download> — для десктопа й браузерів поза Telegram.
 
-   Головне правило: navigator.share треба викликати ще «під пальцем». iOS дає дозвіл
-   на кілька секунд після тапу і зʼїдає його на будь-якому очікуванні — а запис у
-   «Мої чарники» ходить у CloudStorage Telegram і відповідає асинхронно. Тому
-   порядок саме такий: синхронно зібрали PDF → одразу share → і лише потім
+   Головне правило: navigator.share треба викликати ще «під пальцем». iOS дає
+   дозвіл на кілька секунд після тапу і зʼїдає його на будь-якому очікуванні — а
+   запис у «Мої чарники» ходить у CloudStorage Telegram і відповідає асинхронно.
+   Тому порядок саме такий: синхронно зібрали PDF → одразу share → і лише потім
    зберігаємо чарник. Якщо зробити навпаки, share падає з NotAllowedError, ми
-   скочуємося на <a download>, а Telegram-WebView такий лінк не завантажує, а
-   просто ВІДКРИВАЄ PDF у переглядачі — і виглядає це так, ніби «зберегти» не
-   спрацювало. */
+   скочуємося на <a download>, а Telegram-WebView на iOS такий лінк не завантажує,
+   а просто ВІДКРИВАЄ PDF у переглядачі замість апки — і виглядає це так, ніби
+   «зберегти» не спрацювало. */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent||"")
+  || (navigator.platform==="MacIntel" && (navigator.maxTouchPoints||0)>1);
+const IS_ANDROID = /Android/.test(navigator.userAgent||"");
+// Мобільний Telegram: <a download> тут або відкриває PDF замість апки (iOS),
+// або мовчки нічого не робить (частина Android-клієнтів).
+const TG_MOBILE = !!tg && (IS_IOS || IS_ANDROID);
+
 let FONTS_DONE = false;
 if(window.DndFontsReady) window.DndFontsReady.then(()=>{FONTS_DONE=true;}, ()=>{FONTS_DONE=true;});
 else FONTS_DONE = true;
 
-function finishStatus(msg, isErr, action){
+/* actions — масив {label, fn}: кнопки просто в смужці статусу. Тап по такій
+   кнопці — «живий» жест, тож із неї можна кликати share чи openLink. */
+function finishStatus(msg, isErr, actions){
   const e=$("formErr")||$("finishMsg");
   if(!e) { if(isErr) alert(msg); return; }
   e.textContent=msg;
-  if(msg && action){        // напр. «тапни ще раз, щоб відкрити меню збереження»
+  if(msg) (actions||[]).forEach(a=>{
     const b=document.createElement("button");
-    b.type="button"; b.className="bar-btn"; b.textContent=action.label;
-    b.onclick=action.fn;
+    b.type="button"; b.className="bar-btn"; b.textContent=a.label;
+    b.onclick=a.fn;
     e.appendChild(b);
-  }
+  });
   e.classList.toggle("hidden", !msg);
   e.style.color = isErr ? "" : "var(--hint)";
 }
@@ -4697,25 +4712,81 @@ function canSharePdf(file){
   try { return !!(file && navigator.share && navigator.canShare && navigator.canShare({files:[file]})); }
   catch(e){ return false; }
 }
+
+/* --- передача чарника у звичайний браузер ---------------------------------
+   Знімок стану (ті самі дані, що й у «Моїх чарниках», ~1–2 КБ) кладемо в хеш
+   посилання. Телеграм відкриває його поза міні-апкою, апка там піднімається з
+   готовим чарником — лишається тапнути «Зберегти PDF», і файл таки збережеться. */
+function b64urlEncode(str){
+  const bytes=new TextEncoder().encode(str); let bin="";
+  bytes.forEach(b=>{ bin+=String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64urlDecode(s){
+  const bin=atob(s.replace(/-/g,"+").replace(/_/g,"/"));
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function browserHandoffLink(){
+  try {
+    const payload=b64urlEncode(JSON.stringify(snapshotState()));
+    if(payload.length>6000) return null;      // задовге посилання — не ризикуємо
+    return location.href.split("#")[0]+"#pdf="+payload;
+  } catch(e){ console.error(e); return null; }
+}
+function openInBrowser(link){
+  if(!link) return;
+  if(tg && typeof tg.openLink==="function") tg.openLink(link, {try_instant_view:false});
+  else window.open(link, "_blank", "noopener");
+}
+/* Апка відкрилась за посиланням із чарником — піднімаємо його й одразу
+   пропонуємо зберегти PDF. */
+function pdfHandoff(){
+  const m=/[#&]pdf=([A-Za-z0-9_-]+)/.exec(location.hash||"");
+  if(!m) return false;
+  let snap=null;
+  try { snap=JSON.parse(b64urlDecode(m[1])); } catch(e){ console.error(e); }
+  try { history.replaceState(null, "", location.href.split("#")[0]); } catch(e){}
+  if(!snap || !restoreState(snap)) return false;
+  try {
+    buildSheet(); renderReview(computeCharacter()); showView("review");
+  } catch(e){ console.error(e); buildSheet(); showView("sheet"); return true; }
+  finishStatus(t('fin.handoff'), false, [{ label:t('fin.saveBtn'), fn:()=>finish() }]);
+  return true;
+}
+
 function downloadPdf(built){
   try {
     downloadBlob(built.blob, built.filename);
-    // У Telegram-WebView <a download> не зберігає файл, а відкриває переглядач —
-    // чесно кажемо, де там кнопка «Поділитися», замість «завантажується…».
+    // У Telegram-WebView такий лінк не зберігає файл, а відкриває переглядач —
+    // кажемо це чесно, замість «завантажується…».
     finishStatus(tg ? t('fin.openedViewer') : t('fin.downloading'), false);
   } catch(err){
     console.error(err);
     finishStatus(t('fin.failed'), true);
   }
 }
+/* Share не вийшов. У мобільному Telegram не тягнемо <a download> наосліп: на iOS
+   він підміняє апку переглядачем PDF, з якого файл нікуди не подіти. */
+function fallbackNoShare(built){
+  const link=TG_MOBILE ? browserHandoffLink() : null;
+  if(!link){ downloadPdf(built); return; }
+  const actions=[{ label:t('fin.openBrowser'), fn:()=>openInBrowser(link) }];
+  if(IS_ANDROID){    // там завантаження часто таки спрацьовує — пробуємо, але
+    try { downloadBlob(built.blob, built.filename); }   // лишаємо запасний хід
+    catch(e){ console.error(e); }
+    finishStatus(t('fin.downloadOrBrowser'), false, actions);
+    return;
+  }
+  actions.push({ label:t('fin.openAnyway'), fn:()=>downloadPdf(built) });
+  finishStatus(t('fin.noShareTg'), false, actions);
+}
 /* Віддає готовий PDF користувачу. Викликати ЛИШЕ синхронно з обробника тапу:
    перший же await перед navigator.share коштує дозволу на share. */
 function deliverPdf(built){
   const file=pdfFile(built);
-  if(!canSharePdf(file)){          // десктоп/браузер без Web Share — просто качаємо
-    downloadPdf(built);
-    return Promise.resolve();
-  }
+  if(!canSharePdf(file)){ fallbackNoShare(built); return Promise.resolve(); }
   let p;
   try { p=navigator.share({ files:[file], title:built.filename }); }
   catch(err){ p=Promise.reject(err); }
@@ -4726,12 +4797,11 @@ function deliverPdf(built){
     if(err && err.name==="NotAllowedError"){
       // Системі забракло «живого» тапу. PDF уже в руках — лишається кнопка,
       // тап по якій викликає share напряму з обробника, з новим дозволом.
-      finishStatus(t('fin.needTap'), false,
-        { label:t('fin.saveBtn'), fn:()=>deliverPdf(built) });
+      finishStatus(t('fin.needTap'), false, [{ label:t('fin.saveBtn'), fn:()=>deliverPdf(built) }]);
       return;
     }
     console.error(err);
-    downloadPdf(built);
+    fallbackNoShare(built);
   });
 }
 function finish(){
