@@ -59,16 +59,22 @@
       this.PAGE_W = doc.internal.pageSize.getWidth();
       this.PAGE_H = doc.internal.pageSize.getHeight();
       this.MARGIN = 12 * MM;
+      // Альбомна сторінка ширша за висоту — звідси й розкладка.
+      this.landscape = this.PAGE_W > this.PAGE_H;
     }
 
     Y(y) { return this.PAGE_H - y; }
 
     // --- примітиви ---------------------------------------------------------
+    /* Ширина рядка. Міряємо на великому кеглі й масштабуємо: на 5–8px Chrome
+       округлює метрики й повертає на ~10% менше, ніж потім ляже в PDF, — через
+       це дрібні описи вилазили за рамку блоку. */
     sw(s, size, bold) {
       if (!Sheet._ctx) Sheet._ctx = document.createElement("canvas").getContext("2d");
       const ctx = Sheet._ctx;
-      ctx.font = (bold ? "700 " : "400 ") + size + 'px "SheetMeasure", sans-serif';
-      return ctx.measureText(s == null ? "" : String(s)).width;
+      const BASE = 100;
+      ctx.font = (bold ? "700 " : "400 ") + BASE + 'px "SheetMeasure", sans-serif';
+      return ctx.measureText(s == null ? "" : String(s)).width * (size / BASE);
     }
 
     text(x, y, s, opt) {
@@ -86,11 +92,19 @@
       d.text(s, x, this.Y(y), { baseline: "alphabetic" });
     }
 
+    /* Вписує рядок у задану ширину: спершу зменшує кегль до opt.min (типово 5),
+       а якщо й так не влазить і задано opt.clip — обрізає з трикрапкою, щоб
+       текст не наїхав на сусідній блок. */
     fitText(x, y, s, maxW, size, opt) {
       opt = opt || {};
       s = s == null ? "" : String(s);
       const bold = !!opt.bold;
-      while (size > 5 && this.sw(s, size, bold) > maxW) size -= 0.5;
+      const min = opt.min == null ? 5 : opt.min;
+      while (size > min && this.sw(s, size, bold) > maxW) size -= 0.5;
+      if (opt.clip && this.sw(s, size, bold) > maxW) {
+        while (s.length > 1 && this.sw(s + "…", size, bold) > maxW) s = s.slice(0, -1);
+        s = s.replace(/\s+$/, "") + "…";
+      }
       this.text(x, y, s, Object.assign({}, opt, { size }));
     }
 
@@ -165,14 +179,7 @@
       const fw = w - nameW - 10;
       const fbH = 44;
       this.box(fx, nbTop - fbH, fw, fbH, { radius: 9 });
-      const meta = [
-        [T("pdf.classLevel"), (String(char.class || "") + " " + String(char.level || "")).trim()],
-        [T("pdf.background"), char.background || ""],
-        [T("pdf.player"), char.player || ""],
-        [T("pdf.race"), char.race || ""],
-        [T("pdf.alignment"), char.alignment || ""],
-        [T("pdf.xp"), char.xp || ""],
-      ];
+      const meta = this.metaFields();
       const cw = fw / 3;
       for (let i = 0; i < 6; i++) {
         const r = Math.floor(i / 3), col = i % 3;
@@ -183,6 +190,57 @@
         this.text(cxp, cyp - 10, String(meta[i][0]).toUpperCase(), { size: 5.5, bold: true, color: MUTED });
       }
       return nbTop - fbH;
+    }
+
+    // Шість полів шапки: клас/рівень, передісторія, гравець, раса, світогляд, досвід.
+    metaFields() {
+      const char = this.char;
+      return [
+        [T("pdf.classLevel"), (String(char.class || "") + " " + String(char.level || "")).trim()],
+        [T("pdf.background"), char.background || ""],
+        [T("pdf.player"), char.player || ""],
+        [T("pdf.race"), char.race || ""],
+        [T("pdf.alignment"), char.alignment || ""],
+        [T("pdf.xp"), char.xp || ""],
+      ];
+    }
+
+    /* Шапка альбомної сторінки: ширини вистачає, тож імʼя ліворуч, а всі шість
+       полів — одним рядом праворуч. Так шапка з'їдає удвічі менше висоти. */
+    drawHeaderWide() {
+      const char = this.char, M = this.MARGIN;
+      const top = this.PAGE_H - M;
+      const w = this.PAGE_W - 2 * M;
+
+      const wm = "DUNGEONS & DRAGONS";
+      this.text(M + 2, top - 9, wm, { size: 12, bold: true });
+      this.line(M + 2, top - 13, M + 2 + this.sw(wm, 12, true), top - 13, MUTED, 0.7);
+
+      const rowTop = top - 18;
+      const h = 36;
+      const nameW = w * 0.26;
+      this.box(M, rowTop - h, nameW, h, { radius: 9 });
+      this.fitText(M + 9, rowTop - h + 13, char.name || T("pdf.noName"), nameW - 18, 15, { bold: true });
+      this.text(M + 9, rowTop - h + 5, T("pdf.charName"), { size: 5.5, bold: true, color: MUTED });
+
+      const fx = M + nameW + 10;
+      const fw = w - nameW - 10;
+      this.box(fx, rowTop - h, fw, h, { radius: 9 });
+      const meta = this.metaFields();
+      // Клас із підкласом — найдовше поле, тож ділимо ряд не порівну, а за вагами.
+      const wts = [1.7, 1.1, 1.1, 1.0, 1.2, 0.6];
+      const wsum = wts.reduce((a, b) => a + b, 0);
+      let bx = fx;
+      for (let i = 0; i < 6; i++) {
+        const cw = fw * wts[i] / wsum;
+        if (i > 0) this.line(bx, rowTop - 6, bx, rowTop - h + 6, HAIR, 0.4);
+        this.fitText(bx + 7, rowTop - 17, meta[i][1] || "—", cw - 14, 9, { bold: true, clip: true });
+        this.line(bx + 7, rowTop - 20, bx + cw - 7, rowTop - 20, HAIR, 0.4);
+        this.fitText(bx + 7, rowTop - 27, String(meta[i][0]).toUpperCase(), cw - 14, 5.5,
+          { bold: true, color: MUTED });
+        bx += cw;
+      }
+      return rowTop - h;
     }
 
     // --- ХАРАКТЕРИСТИКИ ----------------------------------------------------
@@ -265,13 +323,11 @@
       this.footLabel(x, y - skillsH, w, T("pdf.skills"));
     }
 
-    // Пасивні характеристики (широкий блок) + інші володіння
-    drawLeftBottom(x, w, bottom, passiveH, otherH) {
+    // Пасивні характеристики — 3 значення в один ряд
+    drawPassives(x, top, w, h) {
       const char = this.char, skills = char.skills || {};
       const pv = (nm) => { const s = skills[nm]; return s && s.value != null ? 10 + s.value : null; };
-      // Пасивні — 3 значення в один ряд
-      let py = bottom + otherH + 7 + passiveH;
-      this.box(x, py - passiveH, w, passiveH, { radius: 8, fill: PANEL });
+      this.box(x, top - h, w, h, { radius: 8, fill: PANEL });
       const pass = [
         [T("pdf.passivePerc"), char.passivePerception == null ? pv("Сприйняття") : char.passivePerception],
         [T("pdf.passiveIns"), pv("Прозорливість")],
@@ -280,22 +336,31 @@
       const pcw = w / 3;
       for (let i = 0; i < 3; i++) {
         const bx = x + i * pcw;
-        if (i > 0) this.line(bx, py - 5, bx, py - passiveH + 5, HAIR, 0.4);
-        this.text(bx + 11, py - passiveH / 2 - 3, String(pass[i][1] == null ? "—" : pass[i][1]), { size: 11, bold: true, center: true });
-        this.text(bx + 20, py - passiveH / 2 - 3, pass[i][0].toUpperCase(), { size: 5.5, bold: true, color: MUTED });
+        if (i > 0) this.line(bx, top - 5, bx, top - h + 5, HAIR, 0.4);
+        this.text(bx + 11, top - h / 2 - 3, String(pass[i][1] == null ? "—" : pass[i][1]), { size: 11, bold: true, center: true });
+        // У вузькій колонці підпис сам зменшиться, щоб не наїхати на сусідній.
+        this.fitText(bx + 20, top - h / 2 - 3, pass[i][0].toUpperCase(), pcw - 23, 5.5, { bold: true, color: MUTED });
       }
-      // Інші володіння та мови
-      this.box(x, bottom, w, otherH, { radius: 8 });
-      let ty = bottom + otherH - 8;
-      const limit = bottom + 12;
-      for (const it of (char.proficiencies_list || [])) {
+    }
+
+    // Інші володіння та мови
+    drawOtherProf(x, top, w, h) {
+      this.box(x, top - h, w, h, { radius: 8 });
+      let ty = top - 8;
+      const limit = top - h + 12;
+      for (const it of (this.char.proficiencies_list || [])) {
         for (const chunk of this.wrap("• " + it, w - 12, 8)) {
           if (ty < limit) break;
           this.text(x + 6, ty, chunk, { size: 8 });
           ty -= 11;
         }
       }
-      this.footLabel(x, bottom, w, T("pdf.otherProf"));
+      this.footLabel(x, top - h, w, T("pdf.otherProf"));
+    }
+
+    drawLeftBottom(x, w, bottom, passiveH, otherH) {
+      this.drawPassives(x, bottom + otherH + 7 + passiveH, w, passiveH);
+      this.drawOtherProf(x, bottom + otherH, w, otherH);
     }
 
     // --- ЦЕНТР: БІЙ / АТАКИ / СПОРЯДЖЕННЯ ---------------------------------
@@ -324,10 +389,12 @@
       this.text(x + w / 2, top - h * 0.66, String(val == null ? "—" : val), { size: 20, bold: true, center: true });
     }
 
-    drawCenterRegion(x, top, w, bottom) {
+    /* Бойова колонка: КБ/ініціатива/швидкість, хіти, кості здоровʼя та рятівні
+       від смерті. Повертає y під останнім блоком — далі кожна розкладка своє. */
+    drawCombatStack(x, top, w, gap) {
       const char = this.char;
       let y = top;
-      const gap = 7;
+      gap = gap == null ? 7 : gap;
 
       // Трійка: щит КБ / Ініціатива / Швидкість
       const t3 = (w - 2 * gap) / 3, trioH = 52;
@@ -364,15 +431,20 @@
       for (let i = 0; i < 3; i++) this.circle(dx + 48 + i * 8, y - 23.5, 2.6, { stroke: LINE, fill: WHITE, lineW: 0.8 });
       this.footLabel(dx, y - bH, dsW, T("pdf.deathSaves"));
       y -= bH + gap;
+      return y;
+    }
+
+    drawCenterRegion(x, top, w, bottom) {
+      const gap = 7;
+      const y = this.drawCombatStack(x, top, w, gap);
 
       // Спорядження (з монетами) — прикріплене до низу, більше місця
       const eqH = 150;
       this.drawEquipment(x, bottom + eqH, w, eqH);
 
       // Атаки — заповнюють проміжок між боєм і спорядженням
-      const atkTop = y;
-      const atkH = atkTop - (bottom + eqH + gap);
-      this.drawAttacks(x, atkTop, w, atkH);
+      const atkH = y - (bottom + eqH + gap);
+      this.drawAttacks(x, y, w, atkH);
     }
 
     drawAttacks(x, top, w, h) {
@@ -393,7 +465,7 @@
       const atks = (this.char.attacks || []).slice(0, rowsN);
       atks.forEach((a, i) => {
         const ry = ytab - i * rowH - 8.5;
-        this.fitText(x + 6, ry, a.name, nameW - 10, 7.5, { bold: true });
+        this.fitText(x + 6, ry, a.name, nameW - 10, 7.5, { bold: true, clip: true });
         this.text(sep1 + bonusW / 2, ry, fmtMod(a.atk), { size: 8, bold: true, center: true });
         this.fitText(sep2 + 4, ry, a.dmg, (x + w - sep2) - 8, 7.5, {});
       });
@@ -439,6 +511,20 @@
       return this.drawFeatures(x, y, w, y - bottom);
     }
 
+    /* Альбомна: риси характеру / ідеали / узи / вади — сіткою 2×2, щоб
+       звільнити висоту під «Риси та здібності». Повертає y під сіткою. */
+    drawRpGrid(x, top, w, gap) {
+      const titles = [T("pdf.personality"), T("pdf.ideals"), T("pdf.bonds"), T("pdf.flaws")];
+      const cw = (w - gap) / 2, bh = 56;
+      for (let i = 0; i < titles.length; i++) {
+        const bx = x + (i % 2) * (cw + gap);
+        const by = top - Math.floor(i / 2) * (bh + gap);
+        this.box(bx, by - bh, cw, bh, { radius: 8 });
+        this.footLabel(bx, by - bh, cw, titles[i]);
+      }
+      return top - 2 * bh - gap;
+    }
+
     /* Один блок «риса»: маркер, назва (з рівнем, якщо відомий) та опис.
        Малює, лише якщо влазить цілком, і повертає нове y або null. */
     featureBlock(f, x, y, w, limit) {
@@ -446,13 +532,22 @@
       const lvl = (f && typeof f === "object" && f.lvl) ? f.lvl : null;
       const lvlTxt = lvl ? T("pdf.lvlShort").replace("{n}", lvl) : "";
       const lvlW = lvlTxt ? this.sw(lvlTxt, 6, true) + 4 : 0;
-      const chunks = this.wrap(ds, w - 16, 6.5);
-      const need = 10 + (ds ? chunks.length * 8 : 0) + 3;
+      const chunks = this.wrap(ds, w - 24, 6.5);   // запас, щоб опис не торкався рамки
+      /* Довга назва (а деякі підкласові вміння — це ціле речення) переноситься
+         на другий рядок; третього не даємо — решту обрізаємо трикрапкою. */
+      const nameLines = this.wrap(nm, w - 18 - lvlW, 8, true).slice(0, 2);
+      const need = 10 + (nameLines.length - 1) * 9 + (ds ? chunks.length * 8 : 0) + 3;
       if (y - need < limit) return null;
       this.circle(x + 8, y + 2.5, 1.5, { fill: ACCENT });
-      this.fitText(x + 13, y, nm, w - 18 - lvlW, 8, { bold: true });
       if (lvlTxt) this.text(x + w - 6, y, lvlTxt, { size: 6, bold: true, color: MUTED, right: true });
-      y -= 10;
+      const nmWords = String(nm).split(/\s+/).filter(Boolean);
+      const usedWords = nameLines.join(" ").split(/\s+/).filter(Boolean).length;
+      nameLines.forEach((ln, i) => {
+        const rest = (i === nameLines.length - 1) ? nmWords.slice(usedWords).join(" ") : "";
+        this.fitText(x + 13, y - i * 9, rest ? ln + " " + rest : ln,
+          w - 18 - (i === 0 ? lvlW : 0), 8, { bold: true, clip: true, min: 8 });
+      });
+      y -= 10 + (nameLines.length - 1) * 9;
       if (ds) for (const chunk of chunks) { this.text(x + 13, y, chunk, { size: 6.5, color: MUTED }); y -= 8; }
       return y - 3;
     }
@@ -469,7 +564,7 @@
         if (ny == null) { rest.push(all[i]); continue; }
         y = ny;
       }
-      if (rest.length) this.text(x + w - 6, limit - 2, T("pdf.contNextPage"), { size: 5.5, bold: true, color: MUTED, right: true });
+      if (rest.length) this.text(x + w - 6, limit + 2, T("pdf.contNextPage"), { size: 5.5, bold: true, color: MUTED, right: true });
       this.footLabel(x, top - h, w, T("pdf.featuresTraits"));
       return rest;
     }
@@ -483,8 +578,10 @@
       const w = this.PAGE_W - 2 * M;
       const bottom = M + 6;
       const pageTop = this.PAGE_H - M;
-      const colw = (w - 16) / 2;
-      const cols = [M, M + colw + 16];
+      const nc = this.landscape ? 3 : 2;   // ширша сторінка — більше колонок
+      const colw = (w - 16 * (nc - 1)) / nc;
+      const cols = [];
+      for (let i = 0; i < nc; i++) cols.push(M + i * (colw + 16));
       let top = pageTop, ci = 0, y = pageTop;
 
       if (rest.length) {
@@ -493,7 +590,10 @@
         // Дві колонки: заповнюємо ліву, потім праву, далі — нова сторінка
         for (const f of rest) {
           let ny = this.featureBlock(f, cols[ci], y, colw, bottom);
-          if (ny == null && ci === 0) { ci = 1; y = top; ny = this.featureBlock(f, cols[ci], y, colw, bottom); }
+          while (ny == null && ci < nc - 1) {          // не влізло — наступна колонка
+            ci++; y = top;
+            ny = this.featureBlock(f, cols[ci], y, colw, bottom);
+          }
           if (ny == null) {
             d.addPage(); top = pageTop; ci = 0; y = top;
             ny = this.featureBlock(f, cols[ci], y, colw, bottom);
@@ -553,7 +653,7 @@
       if (sc.prepared != null) info.push([T("pdf.spellsPrepared"), sc.prepared]);
       if (sc.spellbook != null) info.push([T("pdf.spellbook"), sc.spellbook]);
 
-      const perRow = 3, tileH = 30, tgap = 6;
+      const perRow = Math.min(info.length, this.landscape ? 6 : 3), tileH = 30, tgap = 6;
       let y = top - 24;
       for (let i = 0; i < info.length; i++) {
         const col = i % perRow, row = Math.floor(i / perRow);
@@ -581,12 +681,13 @@
       const byLevel = {};
       slots.forEach(sl => { byLevel[sl.level] = sl; });
       const maxLvl = Math.max(sc.maxLevel || 0, ...slots.map(sl => sl.level), 0);
-      const colw = (w - 16) / 2;
-      const cols = [M, M + colw + 16];
-      const ys = [y, y];
+      const nc = this.landscape ? 3 : 2;
+      const colw = (w - 16 * (nc - 1)) / nc;
+      const cols = [], ys = [];
+      for (let i = 0; i < nc; i++) { cols.push(M + i * (colw + 16)); ys.push(y); }
       let colI = 0;
       const drawSection = (title, count, lines, pact) => {
-        const ci = colI % 2;
+        const ci = colI % nc;
         let cy = ys[ci];
         this.text(cols[ci], cy, title, { size: 9, bold: true, color: ACCENT });
         // Квадратики = кількість комірок цього рівня
@@ -610,23 +711,32 @@
         colI++;
       };
 
-      if (sc.cantrips > 0) drawSection(T("pdf.cantrips"), 0, Math.max(4, sc.cantrips + 1), false);
+      const sects = [];
+      if (sc.cantrips > 0) sects.push({ t: T("pdf.cantrips"), n: 0, lines: Math.max(4, sc.cantrips + 1), pact: false });
       const pact = slots.length && slots[0].pact;
       // Комірок ще немає (напр. паладин 1-го рівня) — рядків для заклять не малюємо
       for (let lvl = 1; lvl <= maxLvl; lvl++) {
         const sl = byLevel[lvl];
         if (pact && !sl) continue;          // чорнокнижник має комірки лише одного рівня
-        drawSection(T("pdf.levelPrefix") + lvl, sl ? sl.count : 0, 5, !!(sl && sl.pact));
+        sects.push({ t: T("pdf.levelPrefix") + lvl, n: sl ? sl.count : 0, lines: 5, pact: !!(sl && sl.pact) });
       }
+      /* Альбомна сторінка нижча, зате секції лягають у три колонки — тож рядків
+         під запис даємо стільки, скільки влазить, щоб не лишалося пустки. */
+      if (this.landscape && sects.length) {
+        const perCol = Math.ceil(sects.length / nc);
+        const fit = Math.floor(((y - M - 6) / perCol - 20) / 13);
+        for (const sec of sects) sec.lines = Math.max(sec.lines, Math.min(20, fit));
+      }
+      for (const sec of sects) drawSection(sec.t, sec.n, sec.lines, sec.pact);
     }
 
-    wrap(text, maxW, size) {
+    wrap(text, maxW, size, bold) {
       const words = String(text == null ? "" : text).split(/\s+/).filter(Boolean);
       const lines = [];
       let cur = "";
       for (const wd of words) {
         const trial = (cur + " " + wd).trim();
-        if (this.sw(trial, size, false) <= maxW) cur = trial;
+        if (this.sw(trial, size, !!bold) <= maxW) cur = trial;
         else { if (cur) lines.push(cur); cur = wd; }
       }
       if (cur) lines.push(cur);
@@ -635,6 +745,12 @@
 
     // --- Розкладка ---------------------------------------------------------
     render() {
+      if (this.landscape) return this.renderWide();
+      return this.renderTall();
+    }
+
+    /* Книжкова (A4 portrait) — три колонки, як в офіційному бланку. */
+    renderTall() {
       const M = this.MARGIN;
       const bottom = M;
       const top = this.drawHeader() - 8;
@@ -661,6 +777,52 @@
       this.drawSpellPage();
       this.drawExtrasPage(restFeatures);
     }
+
+    /* Альбомна (A4 landscape) — чотири колонки. Висоти менше, ширини більше,
+       тож блоки, які в книжковій ділили одну колонку по вертикалі, тут
+       роз'їжджаються по сусідніх:
+         A  характеристики + рятівні/навички (на всю висоту — рядки просторіші)
+         B  бій (КБ/хіти/кості/смерть) + пасивні + інші володіння
+         C  атаки згори, спорядження знизу
+         D  особистість сіткою 2×2 + риси та здібності
+       Шапка — одним рядом, тож на тіло лишається майже вся сторінка. */
+    renderWide() {
+      const M = this.MARGIN;
+      const bottom = M;
+      const top = this.drawHeaderWide() - 8;
+      const w = this.PAGE_W - 2 * M;
+      const gap = 8;
+      const inner = w - 3 * gap;
+      const AW = inner * 0.27, BW = inner * 0.22, CW = inner * 0.23;
+      const DW = inner - AW - BW - CW;
+      const ax = M, bx = ax + AW + gap, cx = bx + BW + gap, dx = cx + CW + gap;
+
+      // A — характеристики й навички на всю висоту колонки
+      const abW = 52;
+      this.drawAbilities(ax, top, abW, bottom);
+      this.drawSavesSkillsCol(ax + abW + 6, top, AW - abW - 6, bottom);
+
+      // B — бій, під ним пасивні та інші володіння
+      const bY = this.drawCombatStack(bx, top, BW, 7);
+      const passiveH = 26;
+      this.drawPassives(bx, bY, BW, passiveH);
+      const otherTop = bY - passiveH - 7;
+      this.drawOtherProf(bx, otherTop, BW, otherTop - bottom);
+
+      // C — атаки та спорядження
+      const atkH = (top - bottom) * 0.46;
+      this.drawAttacks(cx, top, CW, atkH);
+      const eqTop = top - atkH - 8;
+      this.drawEquipment(cx, eqTop, CW, eqTop - bottom);
+
+      // D — особистість і риси
+      const rpBottom = this.drawRpGrid(dx, top, DW, 8);
+      const featTop = rpBottom - 8;
+      const restFeatures = this.drawFeatures(dx, featTop, DW, featTop - bottom);
+
+      this.drawSpellPage();
+      this.drawExtrasPage(restFeatures);
+    }
   }
 
   // --- Публічний API --------------------------------------------------------
@@ -674,10 +836,14 @@
     return (parts.join("_") || "character") + ".pdf";
   }
 
-  /** Будує PDF-чарник. Повертає { doc, blob, filename }. */
-  function buildCharacterPdf(char) {
+  /** Будує PDF-чарник. opts.orientation — "portrait" (типово) або "landscape".
+      Повертає { doc, blob, filename }. */
+  function buildCharacterPdf(char, opts) {
     if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("jsPDF не завантажено");
-    const doc = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
+    const landscape = !!(opts && opts.orientation === "landscape");
+    const doc = new window.jspdf.jsPDF({
+      unit: "pt", format: "a4", orientation: landscape ? "landscape" : "portrait",
+    });
     doc.setProperties({ title: T("pdf.docTitle") + " — " + (char.name || T("pdf.noName")) });
     new Sheet(doc, char).render();
     return { doc: doc, blob: doc.output("blob"), filename: safeFilename(char) };

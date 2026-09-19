@@ -13,8 +13,8 @@
      ?v=… — версія для скидання кешу; піднімай число після кожного оновлення скриптів. -->
 <script src="vendor/jspdf.umd.min.js?v=3"></script>
 <script src="vendor/fonts.js?v=3"></script>
-<script src="i18n.js?v=4"></script>
-<script src="pdf.js?v=3"></script>
+<script src="i18n.js?v=5"></script>
+<script src="pdf.js?v=4"></script>
 <style>
   :root {
     --bg: var(--tg-theme-bg-color, #17171b);
@@ -723,6 +723,14 @@
   <div class="card"><h2 data-i18n="rv.gear">Спорядження та атаки</h2><div id="r-attacks"></div><div class="list-inline" id="r-equip" style="margin-top:8px"></div></div>
   <div class="card" id="r-spell-card"><h2 data-i18n="rv.magic">Магія</h2><div id="r-spell"></div></div>
   <div class="card"><h2 data-i18n="rv.features">Риси, здібності та черти</h2><div class="list-inline" id="r-features"></div></div>
+  <div class="card"><h2 data-i18n="or.title">Формат PDF</h2>
+    <div class="seg" id="orientSeg">
+      <button type="button" class="seg-btn" data-orient="portrait" onclick="setPdfOrient('portrait')"
+              data-i18n="or.portrait">📄 Книжковий</button>
+      <button type="button" class="seg-btn" data-orient="landscape" onclick="setPdfOrient('landscape')"
+              data-i18n="or.landscape">📃 Альбомний</button>
+    </div>
+    <div class="desc-line" id="orientHint" data-i18n="or.hint">Книжковий — як офіційний бланк. Альбомний — те саме в чотири колонки: зручніше для екрана й друку «на широке».</div></div>
   <div class="card"><button class="btn btn-ghost" onclick="showView('sheet')" style="margin-bottom:8px" data-i18n="rv.edit">✎ Редагувати / підвищити рівень</button>
     <button class="btn btn-ghost" onclick="saveFromReview()" id="rvSaveBtn" data-i18n="sv.saveBtn">💾 Зберегти чарник у застосунку</button>
     <div class="desc-line" id="rvSaveNote" data-i18n="sv.saveHint">Зʼявиться у списку на першому екрані — можна відкрити й перегенерувати PDF.</div></div>
@@ -2562,6 +2570,7 @@ function init(){
   fillSelect("alignment", ALIGNMENTS, "Істинно нейтральний");
   $("skills").addEventListener("change", onSkillChange);
   renderRaceFilter(); renderRaceList(); renderClassList();
+  loadPdfOrient();
   savedInit();
   showView("race-list");
   if(tg){ tg.ready(); tg.expand(); try{ tg.setHeaderColor("secondary_bg_color"); }catch(e){} }
@@ -4670,6 +4679,35 @@ function renderReview(ch){
    скочуємося на <a download>, а Telegram-WebView на iOS такий лінк не завантажує,
    а просто ВІДКРИВАЄ PDF у переглядачі замість апки — і виглядає це так, ніби
    «зберегти» не спрацювало. */
+/* --- орієнтація PDF ------------------------------------------------------
+   Один спільний вибір для обох шляхів генерації (огляд і «випадковий
+   персонаж»). Памʼятаємо в localStorage — Telegram CloudStorage тут зайвий:
+   це дрібна налаштовка пристрою, а не частина чарника. */
+const ORIENT_KEY = "dnd_pdf_orient";
+let PDF_ORIENT = "portrait";
+function loadPdfOrient(){
+  try { const v=localStorage.getItem(ORIENT_KEY); if(v==="landscape"||v==="portrait") PDF_ORIENT=v; }
+  catch(e){}
+  syncOrientSwitch();
+}
+function setPdfOrient(o){
+  PDF_ORIENT = (o==="landscape") ? "landscape" : "portrait";
+  try { localStorage.setItem(ORIENT_KEY, PDF_ORIENT); } catch(e){}
+  syncOrientSwitch();
+}
+// Підсвічує активну кнопку в усіх перемикачах на сторінці (огляд + модалка).
+function syncOrientSwitch(){
+  document.querySelectorAll("[data-orient]").forEach(b=>{
+    b.classList.toggle("active", b.getAttribute("data-orient")===PDF_ORIENT);
+  });
+}
+function orientSwitchHtml(){
+  return `<div class="seg" style="margin-top:10px">`+
+    `<button type="button" class="seg-btn" data-orient="portrait" onclick="setPdfOrient('portrait')">${esc(t("or.portrait"))}</button>`+
+    `<button type="button" class="seg-btn" data-orient="landscape" onclick="setPdfOrient('landscape')">${esc(t("or.landscape"))}</button>`+
+    `</div>`;
+}
+
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent||"")
   || (navigator.platform==="MacIntel" && (navigator.maxTouchPoints||0)>1);
 const IS_ANDROID = /Android/.test(navigator.userAgent||"");
@@ -4814,7 +4852,7 @@ function finish(){
   let built;
   try {
     finishStatus(t('fin.building'), false);
-    built=window.DndPdf.build(computeCharacter());
+    built=window.DndPdf.build(computeCharacter(), { orientation: PDF_ORIENT });
   } catch(err){
     console.error(err);
     finishStatus(t('fin.buildFail')+": "+(err&&err.message||err), true);
@@ -5254,9 +5292,11 @@ function renderRandomDialog(){
     `<input id="rcName" placeholder="${esc(t("rc.namePh"))}" value="${esc(RC.name)}" oninput="window._RC.name=this.value"/>`;
   body+=`<div class="conflict-note">${t("rc.statsPre")}<b>15, 14, 13, 12, 10, 8</b> `+
     `${t("rc.statsPost")}</div>`;
+  body+=`<label class="field">${t("or.title")}</label>`+orientSwitchHtml();
   body+=`<div id="rcErr" class="hidden" style="color:var(--accent);font-size:13px;margin-top:8px"></div>`;
   body+=`<div class="modal-nav"><button class="btn btn-primary" onclick="rcGenerate()">${t("rc.generate")}</button></div>`;
   openModal("🎲 "+t("dice.title"), body);
+  syncOrientSwitch();
 }
 function rcSetMode(m){ window._RC.mode=m; renderRandomDialog(); }
 function rcLevelStep(d){ const RC=window._RC; RC.level=Math.max(1, Math.min(20, RC.level+d)); renderRandomDialog(); }
