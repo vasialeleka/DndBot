@@ -214,6 +214,12 @@ window.SPELL_DESC = {
 "For the duration of the spell, you see invisible creatures and objects as if they were visible, and you can see through Ethereal. The ethereal objects and creatures appear ghostly translucent."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Доки закляття триває, ти бачиш невидимих істот і предмети так, ніби вони видимі, і зазираєш в ефірний план — тамтешні істоти й речі видаються примарно-прозорими."
+],
+"h": ""
 }
 },
 "Безмовний образ": {
@@ -237,6 +243,12 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "A veil of shadows and silence radiates from you, masking you and your companions from detection. For the duration, each creature you choose within 30 feet of you (including you) has a +10 bonus to Dexterity (Stealth) checks and can't be tracked except by magical means. A creature that receives this bonus leaves behind no tracks or other traces of its passage."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Від тебе розходиться запона тіней і тиші. Доки закляття триває, кожна обрана тобою істота за 30 фт від тебе (разом із тобою) має +10 до перевірок Спритності (Непомітність) і не піддається вистежуванню інакше як магією — така істота не лишає ні слідів, ні інших прикмет."
 ],
 "h": ""
 }
@@ -447,6 +459,15 @@ window.SPELL_DESC = {
 "Once you detect the presence of a creature in this way, you can read its thoughts for the rest of the duration as described above, even if you can't see it, but it must still be within range."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Доки закляття триває, ти читаєш думки. Чаклуючи й далі дією щоходу, зосереджуєшся на одній істоті, яку бачиш за 30 фт від себе. На істот з Інтелектом 3 і менше або без мови закляття не діє.",
+"Спершу чуєш поверхові думки — те, що в цілі зараз на умі. Дією можеш перевести увагу на іншу істоту або копнути глибше: тоді ціль проходить порятунок Мудрості. При провалі дізнаєшся про її міркування, настрій і те, що її непокоїть, тішить чи ятрить; при успіху закляття спадає.",
+"Хай там як, ціль знає, що в її голові порпаються, і може дією зробити перевірку Інтелекту проти твоєї — при успіху закляття спадає.",
+"Закляттям можна й шукати тих, кого не бачиш: чаклуючи або дією щоходу, промацуєш думки в межах 30 фт. Перешкоди не заважають, але 2 фт каменю, 2 дюйми будь-якого металу крім свинцю чи тонкий шар свинцю спиняють пошук."
+],
+"h": ""
 }
 },
 "Виявлення зла і добра": {
@@ -552,6 +573,13 @@ window.SPELL_DESC = {
 "When you move the sphere, you can direct it over barriers up to 5 feet tall and jump it across pits up to 10 feet wide. The sphere ignites flammable objects not being worn or carried, and it sheds bright light in a 20-foot radius and dim light for an additional 20 feet."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d6 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"У вільному просторі в межах дистанції зʼявляється вогняна сфера 5 фт у поперечнику. Кожна істота, яка закінчує хід за 5 фт від неї, проходить порятунок Спритності: при провалі дістає 2d6 вогняної шкоди, при успіху — половину.",
+"Бонусною дією пересуваєш сферу до 30 фт; якщо наштовхнути її на істоту, та проходить порятунок, а сфера цього ходу спиняється. Сфера перескакує барʼєри до 5 фт і ями до 10 фт завширшки, підпалює займисті речі, яких ніхто не несе, і світить яскравим світлом у радіусі 20 фт і тьмяним ще на 20 фт."
+],
+"h": "Коміркою 3-го рівня й вище шкода зростає на 1d6 за кожен рівень понад другий."
 }
 },
 "Вогняний клинок": {
@@ -562,6 +590,13 @@ window.SPELL_DESC = {
 "The flaming blade sheds bright light in a 10-foot radius and dim light for an additional 10 feet."
 ],
 "h": "When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for every two slot levels above 2nd."
+},
+"uk": {
+"d": [
+"У вільній руці спалахує вогняний клинок завбільшки зі скімітар. Якщо випустиш його, він зникне, але бонусною дією можна прикликати знову.",
+"Дією робиш ближню атаку закляттям: при влучанні ціль дістає 3d6 вогняної шкоди. Клинок світить яскравим світлом у радіусі 10 фт і тьмяним ще на 10 фт."
+],
+"h": "Коміркою 4-го рівня й вище шкода зростає на 1d6 за кожні два рівні понад другий."
 }
 },
 "Вогняний шторм": {
@@ -603,6 +638,13 @@ window.SPELL_DESC = {
 "If you cast the spell two or more times before completing your next long rest, there is a cumulative 25 percent chance for each casting after the first that you get a random reading. The GM makes this roll in secret."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Кидаєш оздоблені самоцвітами палички, драконячі кості чи розкладаєш карти — і дістаєш від потойбічної сутності знак про те, чим скінчиться задумана справа, якщо взятися за неї в найближчі 30 хвилин. Майстер обирає знак: благо, лихо, і благо, і лихо, або нічого — коли нічого особливого не станеться.",
+"Закляття не враховує змін обставин: нових заклять, втрати чи появи супутника. Якщо чаклувати його двічі й більше до наступного тривалого відпочинку, кожне наступне має накопичувальні 25% шансу дати випадкову відповідь — цей кидок майстер робить потай."
+],
+"h": ""
 }
 },
 "Воскресіння": {
@@ -635,6 +677,13 @@ window.SPELL_DESC = {
 "A target that is held shut by a mundane lock or that is stuck or barred becomes unlocked, unstuck, or unbarred. If the object has multiple locks, only one of them is unlocked.",
 "If you choose a target that is held shut with arcane lock, that spell is suppressed for 10 minutes, during which time the target can be opened and shut normally.",
 "When you cast the spell, a loud knock, audible from as far away as 300 feet, emanates from the target object."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Обери предмет, який бачиш у межах дистанції: двері, скриню, кайдани, колодку чи інше, що перекриває доступ звичайним або магічним способом. Звичайний замок відмикається, заклинене відчиняється, засув спадає; якщо замків кілька, відмикається один.",
+"Якщо ціль тримає «Магічний замок», те закляття глухне на 10 хв, і протягом цього часу предмет відчиняється й зачиняється як звичайно. Чаклуючи, ти здіймаєш гучний стук, чутний за 300 фт."
 ],
 "h": ""
 }
@@ -671,6 +720,12 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "A flame, equivalent in brightness to a torch, springs forth from an object that you touch. The effect looks like a regular flame, but it creates no heat and doesn't use oxygen. A continual flame can be covered or hidden but not smothered or quenched."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"З предмета, якого ти торкнувся, зринає полумʼя, яскраве як смолоскип. Воно схоже на звичайний вогонь, але не гріє й не споживає кисню. Його можна накрити чи сховати, але не загасити."
 ],
 "h": ""
 }
@@ -756,6 +811,14 @@ window.SPELL_DESC = {
 "A creature is unaffected by this spell if it can't see, if it relies on senses other than sight, such as blindsight, or if it can perceive illusions as false, as with truesight."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"У твоєму просторі зʼявляються три ілюзорні двійники. Вони рухаються з тобою й повторюють твої дії, міняючись місцями так, що не збагнеш, котрий справжній; дією можеш їх розвіяти.",
+"Щоразу, коли хтось цілиться в тебе атакою, кидай d20: при трьох двійниках 6 і вище переводить атаку на двійника, при двох — 8 і вище, при одному — 11 і вище. КБ двійника дорівнює 10 + твій модифікатор Спритності; влучання знищує двійника, а інша шкода й ефекти його не беруть. Коли зникнуть усі три, закляття спадає.",
+"На того, хто не бачить, покладається на інші чуття (сліпозір) або бачить ілюзії наскрізь (істинний зір), закляття не діє."
+],
+"h": ""
 }
 },
 "Дисонансний шепіт": {
@@ -792,6 +855,12 @@ window.SPELL_DESC = {
 "Your spell bolsters your allies with toughness and resolve. Choose up to three creatures within range. Each target's hit point maximum and current hit points increase by 5 for the duration."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, a target's hit points increase by an additional 5 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Закляття додає союзникам витривалості. Обери до трьох істот у межах дистанції: доки воно триває, максимум хітів і поточні хіти кожної більші на 5."
+],
+"h": "Коміркою 3-го рівня й вище — ще по 5 хітів за кожен рівень понад другий."
 }
 },
 "Драконяче дихання": {
@@ -800,6 +869,13 @@ window.SPELL_DESC = {
 "You touch one willing creature, and choose Acid, Cold, Fire, Lightning, or Poison. Until the spell ends, the target can take a Magic action to exhale a 15-foot Cone. Each creature in that area makes a Dexterity saving throw, taking 3d6 damage of the chosen type on a failed save or half as much damage on a successful one.   Using a Higher-Level Spell Slot. The damage increases by 1d6 for each spell slot level above 2."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся однієї згодної істоти й обираєш тип: кислота, холод, вогонь, блискавка чи отрута. Доки закляття триває, ціль може дією видихнути конус 15 фт.",
+"Кожна істота в зоні проходить порятунок Спритності: при провалі дістає 3d6 шкоди обраного типу, при успіху — половину."
+],
+"h": "Шкода зростає на 1d6 за кожен рівень комірки понад другий."
 }
 },
 "Дроблення": {
@@ -809,6 +885,13 @@ window.SPELL_DESC = {
 "A non-magical item that is not worn or carried also suffers damage if it is in the area of the spell."
 ],
 "h": "When you cast this spell using a 3 or higher level spell slot, the damage of the spell increases by 1d8 for each level of higher spell slot 2."
+},
+"uk": {
+"d": [
+"З вибраної точки зринає раптовий болісно гучний дзвін. Кожна істота у сфері радіусом 10 фт проходить порятунок Статури: при провалі дістає 3d8 громової шкоди, при успіху — половину. Істота з неорганічного матеріалу — каменю, кристала, металу — рятується з перешкодою.",
+"Немагічна річ у зоні, якої ніхто не несе, теж дістає шкоду."
+],
+"h": "Коміркою 3-го рівня й вище шкода зростає на 1d8 за кожен рівень понад другий."
 }
 },
 "Дружба з тваринами": {
@@ -876,6 +959,13 @@ window.SPELL_DESC = {
 "The weapon can take whatever form you choose. Clerics of deities who are associated with a particular weapon (as St. Cuthbert is known for his mace and Thor for his hammer) make this spell's effect resemble that weapon."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d8 for every two slot levels above the 2nd."
+},
+"uk": {
+"d": [
+"Створюєш у межах дистанції примарну зброю, що ширяє в повітрі; вона тримається весь час дії або доки ти не чаклуєш це закляття знову. Чаклуючи, можеш зробити нею ближню атаку закляттям по істоті за 5 фт від зброї: при влучанні ціль дістає силової шкоди 1d8 плюс модифікатор твоєї характеристики магії.",
+"Бонусною дією щоходу пересуваєш зброю до 20 фт і повторюєш атаку. Форму обираєш сам — клірики часто роблять її схожою на зброю свого божества."
+],
+"h": "Коміркою 3-го рівня й вище шкода зростає на 1d8 за кожні два рівні понад другий."
 }
 },
 "Електричний дотик": {
@@ -929,6 +1019,13 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "You weave a distracting string of words, causing creatures of your choice that you can see within range and that can hear you to make a wisdom saving throw. Any creature that can't be charmed succeeds on this saving throw automatically, and if you or your companions are fighting a creature, it has advantage on the save. On a failed save, the target has disadvantage on Wisdom (Perception) checks made to perceive any creature other than you until the spell ends or until the target can no longer hear you. The spell ends if you are incapacitated or can no longer speak."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Плетеш звабливу мову, і обрані істоти, які тебе бачать і чують, проходять порятунок Мудрості. Той, кого не можна зачарувати, проходить його автоматично; якщо ви з супутниками б'єтеся з істотою, вона має перевагу.",
+"При провалі ціль має перешкоду на перевірки Мудрості (Сприйняття), щоб помітити будь-кого, крім тебе, — доки закляття триває або доки вона тебе чує. Закляття спадає, якщо ти стаєш нездатний діяти чи говорити."
 ],
 "h": ""
 }
@@ -994,6 +1091,14 @@ window.SPELL_DESC = {
 "Alternatively, you can make a target indifferent about creatures of your choice that it is hostile toward. This indifference ends if the target is attacked or harmed by a spell or if it witnesses any of its friends being harmed. When the spell ends, the creature becomes hostile again, unless the GM rules otherwise."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Гасиш сильні почуття в юрбі. Кожен гуманоїд у сфері радіусом 20 фт навколо вибраної точки проходить порятунок Харизми (можна провалити його навмисне). При провалі обери один з двох ефектів.",
+"Перший: глушиш будь-який ефект, через який ціль зачарована або злякана. Коли закляття спадає, приглушений ефект повертається, якщо його час не вийшов.",
+"Другий: робиш ціль байдужою до обраних тобою істот, до яких вона ворожа. Байдужість зникає, якщо ціль атакують чи кривдять закляттям або якщо вона побачить, як кривдять її друзів; коли закляття спадає, ворожість повертається."
+],
+"h": ""
 }
 },
 "Захисні узи": {
@@ -1002,6 +1107,13 @@ window.SPELL_DESC = {
 "This spell wards a willing creature you touch and creates a mystic connection between you and the target until the spell ends. While the target is within 60 feet of you, it gains a +1 bonus to AC and saving throws, and it has resistance to all damage. Also, each time it takes damage, you take the same amount of damage.",
 "The spell ends if you drop to 0 hit points or if you and the target become separated by more than 60 feet.",
 "It also ends if the spell is cast again on either of the connected creatures. You can also dismiss the spell as an action."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Береш під захист згодну істоту, якої торкаєшся, і між вами виникає містичний звʼязок. Поки ціль у межах 60 фт від тебе, вона має +1 до КБ й порятунків і опір до всієї шкоди — але щоразу, коли вона дістає шкоду, стільки ж дістаєш і ти.",
+"Закляття спадає, якщо ти впадеш до 0 хітів, якщо вас розведе далі ніж на 60 фт або якщо закляття чаклують знову на когось із вас. Скасувати його можна й дією."
 ],
 "h": ""
 }
@@ -1027,6 +1139,13 @@ window.SPELL_DESC = {
 "d": [
 "You touch a creature. If it is poisoned, you neutralize the poison. If more than one poison afflicts the target, you neutralize one poison that you know is present, or you neutralize one at random.",
 "For the duration, the target has advantage on saving throws against being poisoned, and it has resistance to poison damage."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся істоти: якщо вона отруєна, отрута знешкоджується (а як отрут кілька — одна, яку ти знаєш, або випадкова).",
+"Доки закляття триває, ціль має перевагу на порятунки проти отруєння й опір до отруйної шкоди."
 ],
 "h": ""
 }
@@ -1069,6 +1188,14 @@ window.SPELL_DESC = {
 "If the target is a creature, everything it is wearing and carrying changes size with it. Any item dropped by an affected creature returns to normal size at once.",
 "***Enlarge.*** The target's size doubles in all dimensions, and its weight is multiplied by eight. This growth increases its size by one category-from Medium to Large, for example. If there isn't enough room for the target to double its size, the creature or object attains the maximum possible size in the space available. Until the spell ends, the target also has advantage on Strength checks and Strength saving throws. The target's weapons also grow to match its new size. While these weapons are enlarged, the target's attacks with them deal 1d4 extra damage.",
 "***Reduce.*** The target's size is halved in all dimensions, and its weight is reduced to one-eighth of normal. This reduction decreases its size by one category-from Medium to Small, for example. Until the spell ends, the target also has disadvantage on Strength checks and Strength saving throws. The target's weapons also shrink to match its new size. While these weapons are reduced, the target's attacks with them deal 1d4 less damage (this can't reduce the damage below 1)."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Істота або предмет, який ти бачиш у межах дистанції, більшає чи меншає. Незгодна ціль проходить порятунок Статури й при успіху лишається як є. Усе, що істота носить і несе, міняє розмір разом із нею; кинута річ відразу стає звичайною.",
+"Збільшення: розміри подвоюються, вага росте увосьмеро, категорія розміру підіймається на щабель. Ціль має перевагу на перевірки й порятунки Сили, а її зброя завдає додатково 1d4 шкоди.",
+"Зменшення: розміри вдвічі менші, вага — увосьмеро, категорія розміру падає на щабель. Ціль має перешкоду на перевірки й порятунки Сили, а її зброя завдає на 1d4 шкоди менше (але не менш як 1)."
 ],
 "h": ""
 }
@@ -1191,6 +1318,15 @@ window.SPELL_DESC = {
 "***Natural Weapons.*** You grow claws, fangs, spines, horns, or a different natural weapon of your choice. Your unarmed strikes deal 1d6 bludgeoning, piercing, or slashing damage, as appropriate to the natural weapon you chose, and you are proficient with your unarmed strikes. Finally, the natural weapon is magic and you have a +1 bonus to the attack and damage rolls you make using it."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Прибираєш іншу подобу. Обери один з ефектів; доки закляття триває, дією можеш змінити його на інший.",
+"Пристосування до води: відрощуєш зябра й перетинки між пальцями, дихаєш під водою й маєш швидкість плавання, рівну швидкості ходи.",
+"Зміна вигляду: міняєш зовнішність — зріст, вагу, риси обличчя, голос, довжину й колір волосся, особливі прикмети. Можеш видаватися представником іншої раси, але характеристики лишаються твої; розмір і будова тіла теж. Дією можна перемінити вигляд іще раз.",
+"Природна зброя: відрощуєш пазурі, ікла, шипи, роги чи інше. Беззбройні удари завдають 1d6 дробильної, колючої або рубальної шкоди — залежно від того, що ти обрав, — і ти володієш ними. Ця зброя магічна й дає +1 до кидків атаки та шкоди."
+],
+"h": ""
 }
 },
 "Зняття прокляття": {
@@ -1208,12 +1344,26 @@ window.SPELL_DESC = {
 "An affected creature is aware of the spell and can thus avoid answering questions to which it would normally respond with a lie. Such a creature can remain evasive in its answers as long as it remains within the boundaries of the truth."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Створюєш зону проти обману — сферу радіусом 15 фт навколо вибраної точки. Істота, яка вперше за хід заходить у неї або починає там хід, проходить порятунок Харизми. При провалі вона не здатна свідомо збрехати, поки в зоні. Ти знаєш, хто порятунок пройшов, а хто ні.",
+"Той, на кого подіяло, це відчуває — тож може ухилятися від відповідей, лишаючись у межах правди."
+],
+"h": ""
 }
 },
 "Зоряний вогник": {
 "en": {
 "d": [
 "You launch a mote of light at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d8 Radiant damage, and until the end of your next turn, it emits Dim Light in a 10-foot radius and can't benefit from the Invisible condition.\n  Cantrip Upgrade. The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8)."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Пускаєш у істоту чи предмет у межах дистанції цяточку світла. Зроби дальню атаку закляттям: при влучанні ціль дістає 1d8 променистої шкоди, а до кінця твого наступного ходу світиться тьмяним світлом у радіусі 10 фт і не має зиску з невидимості.",
+"Шкода зростає на 1d8 на 5-му рівні (2d8), 11-му (3d8) і 17-му (4d8)."
 ],
 "h": ""
 }
@@ -1321,6 +1471,13 @@ window.SPELL_DESC = {
 "A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 acid damage immediately and 2d4 acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage and no damage at the end of its next turn."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the damage (both initial and later) increases by 1d4 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"До цілі в межах дистанції летить мерехтлива зелена стріла й розбризкується кислотою. Зроби дальню атаку закляттям: при влучанні ціль дістає 4d4 кислотної шкоди відразу й ще 2d4 кислотної шкоди в кінці свого наступного ходу.",
+"При промаху стріла все одно хлюпає кислотою: половина початкової шкоди й нічого в кінці ходу."
+],
+"h": "Коміркою 3-го рівня й вище обидві шкоди зростають на 1d4 за кожен рівень понад другий."
 }
 },
 "Кислотні бризки": {
@@ -1396,6 +1553,12 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "You touch a willing creature. Until the spell ends, the target's skin has a rough, bark-like appearance, and the target's AC can't be less than 16, regardless of what kind of armor it is wearing."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся згодної істоти: її шкіра грубшає й нагадує кору, а КБ не може бути нижчим за 16, хай у що вона вдягнена."
 ],
 "h": ""
 }
@@ -1514,6 +1677,13 @@ window.SPELL_DESC = {
 "When the spell ends, the target floats gently to the ground if it is still aloft."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Обрана істота або предмет, який ти бачиш у межах дистанції, підіймається вертикально до 20 фт і висить так, доки закляття триває. Вага цілі — до 500 фунтів. Незгодна істота проходить порятунок Статури й при успіху лишається на місці.",
+"Ціль рухається, лише відштовхуючись від чогось нерухомого поблизу — стіни чи стелі, — ніби лізучи. Щоходу можеш змінити її висоту на 20 фт угору або вниз: якщо ціль — ти сам, це частина твого руху, інакше витрачаєш дію. Коли закляття спадає, ціль плавно опускається на землю."
+],
+"h": ""
 }
 },
 "Легенди давнини": {
@@ -1587,6 +1757,14 @@ window.SPELL_DESC = {
 "***Mask.*** You change the way the target appears to spells and magical effects that detect creature types, such as a paladin's Divine Sense or the trigger of a symbol spell. You choose a creature type and other spells and magical effects treat the target as if it were a creature of that type or of that alignment."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Накладаєш на істоту чи предмет ілюзію, через яку закляття-віщування дають про них хибні відомості. Ціллю може бути згодна істота або річ, яку ніхто не несе й не носить. Обери один або обидва ефекти; якщо чаклувати те саме на ту саму ціль щодня 30 днів, ілюзія тримається, доки її не розвіють.",
+"Хибна аура: міняєш те, яким ціль видається закляттям на кшталт «Виявлення магії». Немагічна річ може здаватися магічною, магічна — звичайною, а її аура — належною до будь-якої обраної школи.",
+"Личина: міняєш те, яким ціль видається ефектам, що розпізнають тип істоти, — від Божественного чуття паладина до пастки «Символу». Обираєш тип істоти, і ціль вважають саме такою."
+],
+"h": ""
 }
 },
 "Магічна зброя": {
@@ -1595,6 +1773,12 @@ window.SPELL_DESC = {
 "You touch a nonmagical weapon. Until the spell ends, that weapon becomes a magic weapon with a +1 bonus to attack rolls and damage rolls."
 ],
 "h": "When you cast this spell using a spell slot of 4th level or higher, the bonus increases to +2. When you use a spell slot of 6th level or higher, the bonus increases to +3."
+},
+"uk": {
+"d": [
+"Торкаєшся немагічної зброї: доки закляття триває, вона стає магічною й дає +1 до кидків атаки та шкоди."
+],
+"h": "Коміркою 4-го рівня й вище бонус стає +2, коміркою 6-го й вище — +3."
 }
 },
 "Магічна рука": {
@@ -1655,6 +1839,13 @@ window.SPELL_DESC = {
 "While affected by this spell, the object is more difficult to break or force open; the DC to break it or pick any locks on it increases by 10."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся зачинених дверей, вікна, брами, скрині чи іншого входу — і той замикається на весь час дії. Ти й ті, кого ти назвеш під час чаклування, відчиняєте його як звичайно; можна задати й пароль, який, сказаний за 5 фт, глушить закляття на 1 хв.",
+"Для решти прохід закритий, доки його не зламають або не розвіють закляття. «Відмикання» глушить магічний замок на 10 хв. Поки закляття діє, DC зламати предмет чи відімкнути на ньому замки більша на 10."
+],
+"h": ""
 }
 },
 "Магічний меч": {
@@ -1701,6 +1892,12 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "You touch a creature and can end either one disease or one condition afflicting it. The condition can be blinded, deafened, paralyzed, or poisoned."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся істоти й знімаєш із неї одну хворобу або один стан: засліплена, оглушена, паралізована чи отруєна."
 ],
 "h": ""
 }
@@ -1834,6 +2031,12 @@ window.SPELL_DESC = {
 "Up to six creatures of your choice that you can see within range each regain hit points equal to 2d8 + your spellcasting ability modifier. This spell has no effect on undead or constructs."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the healing increases by 1d8 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"До шести обраних істот, яких ти бачиш у межах дистанції, відновлюють по 2d8 хітів плюс модифікатор твоєї характеристики магії. На нежить і конструктів не діє."
+],
+"h": "Коміркою 3-го рівня й вище лікування зростає на 1d8 за кожен рівень понад другий."
 }
 },
 "Містичний вибух": {
@@ -1860,6 +2063,14 @@ window.SPELL_DESC = {
 "On each of your turns after you cast this spell, you can use an action to move the beam 60 feet in any direction."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1dl0 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"З неба б'є срібне світло: циліндр радіусом 5 фт і 40 фт заввишки з центром у вибраній точці. Доки закляття триває, його заповнює тьмяне світло.",
+"Істота, яка вперше за хід заходить у зону або починає там хід, опиняється в примарному полумʼї й проходить порятунок Статури: при провалі дістає 2d10 променистої шкоди, при успіху — половину. Перевертень рятується з перешкодою, а при провалі ще й миттєво повертається до своєї справжньої подоби й не може змінити її, доки не вийде зі світла.",
+"Щоходу дією можеш пересунути промінь на 60 фт у будь-який бік."
+],
+"h": "Коміркою 3-го рівня й вище шкода зростає на 1d10 за кожен рівень понад другий."
 }
 },
 "Мітка мисливця": {
@@ -1884,6 +2095,14 @@ window.SPELL_DESC = {
 "The target must make a wisdom saving throw. On a failed save, it pursues the course of action you described to the best of its ability. The suggested course of action can continue for the entire duration. If the suggested activity can be completed in a shorter time, the spell ends when the subject finishes what it was asked to do.",
 "You can also specify conditions that will trigger a special activity during the duration. For example, you might suggest that a knight give her warhorse to the first beggar she meets. If the condition isn't met before the spell expires, the activity isn't performed.",
 "If you or any of your companions damage the target, the spell ends."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Пропонуєш істоті, яку бачиш і яка тебе чує й розуміє, певний спосіб дій — реченням чи двома — і магічно схиляєш її до нього. Тих, кого не можна зачарувати, закляття не бере.",
+"Пропозиція має звучати розумно: наказ заколотися, кинутися на спис чи інше явно згубне спадає відразу. Ціль проходить порятунок Мудрості й при провалі робить, що ти сказав, якнайкраще.",
+"Дія може тривати весь час закляття, а якщо завдання коротше — закляття спадає, щойно ціль його виконає. Можна й обумовити подію: наприклад, щоб лицарка віддала бойового коня першому стрічному жебракові. Якщо умова не справдиться до кінця дії, нічого не станеться. Якщо ти чи твої супутники зашкодите цілі, закляття спадає."
 ],
 "h": ""
 }
@@ -1993,6 +2212,13 @@ window.SPELL_DESC = {
 "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, you can target one additional creature for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Істота, якої ти торкаєшся, стає невидима, доки закляття триває; усе, що вона носить і несе, невидиме разом із нею.",
+"Закляття спадає для тієї цілі, яка атакує або чаклує."
+],
+"h": "Коміркою 3-го рівня й вище — на одну істоту більше за кожен рівень понад другий."
 }
 },
 "Невиявність": {
@@ -2212,12 +2438,26 @@ window.SPELL_DESC = {
 "The webs are flammable. Any 5-foot cube of webs exposed to fire burns away in 1 round, dealing 2d4 fire damage to any creature that starts its turn in the fire."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Прикликаєш товсте липке павутиння, що заповнює куб 20 фт від вибраної точки. Воно є важкою місцевістю й злегка затуляє зону. Якщо павутиння нема за що зачепити — між стінами, деревами чи поверх підлоги, — воно опадає, і закляття спадає на початку твого наступного ходу; розкладене по пласкому, воно має 5 фт углиб.",
+"Істота, яка починає хід у павутинні або заходить у нього, проходить порятунок Спритності: при провалі стає обплутана, доки лишається всередині або доки не вирветься. Обплутана істота дією робить перевірку Сили проти DC твоїх заклять і при успіху звільняється.",
+"Павутиння горить: кожен куб 5 фт, підпалений вогнем, вигорає за 1 раунд і завдає 2d4 вогняної шкоди тому, хто починає хід у вогні."
+],
+"h": ""
 }
 },
 "Павуче лазіння": {
 "en": {
 "d": [
 "Until the spell ends, one willing creature you touch gains the ability to move up, down, and across vertical surfaces and upside down along ceilings, while leaving its hands free. The target also gains a climbing speed equal to its walking speed."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Доки закляття триває, згодна істота, якої ти торкнувся, ходить по вертикальних поверхнях і стелі догори ногами, лишаючи руки вільними, і має швидкість лазіння, рівну своїй швидкості ходи."
 ],
 "h": ""
 }
@@ -2259,6 +2499,12 @@ window.SPELL_DESC = {
 "Make a ranged spell attack for each ray. On a hit, the target takes 2d6 fire damage."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, you create one additional ray for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Створюєш три вогняні промені й кидаєш їх у цілі в межах дистанції — в одну або в різні. На кожен промінь зроби окрему дальню атаку закляттям: при влучанні ціль дістає 2d6 вогняної шкоди."
+],
+"h": "Коміркою 3-го рівня й вище — ще один промінь за кожен рівень понад другий."
 }
 },
 "Пастковий удар": {
@@ -2455,6 +2701,13 @@ window.SPELL_DESC = {
 "As a bonus action on each of your turns before the spell ends, you can change the direction in which the line blasts from you."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Від тебе в обраний бік бʼє смуга сильного вітру 60 фт завдовжки й 10 фт завширшки. Кожна істота, що починає хід у смузі, має пройти порятунок Сили, інакше її відкидає на 15 фт від тебе вздовж смуги. Рухаючись назустріч вітру, істота витрачає 2 фт руху за кожен 1 фт.",
+"Вітер розганяє гази й випари, гасить свічки, смолоскипи та подібне відкрите полумʼя, а захищене — ліхтарі — шалено тріпоче й гасне з імовірністю 50%. Бонусною дією щоходу можна змінити напрямок."
+],
+"h": ""
 }
 },
 "Порятунок помираючого": {
@@ -2483,6 +2736,13 @@ window.SPELL_DESC = {
 "***Owl's Wisdom.*** The target has advantage on wisdom checks."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, you can target one additional creature for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Торкаєшся істоти й даєш їй магічний хист. Обери один ефект, що триватиме до кінця закляття.",
+"Витривалість ведмедя: перевага на перевірки Статури й 2d6 тимчасових хітів. Сила бика: перевага на перевірки Сили, вантажність подвоюється. Котяча грація: перевага на перевірки Спритності, і падіння з 20 фт і менше не шкодить, якщо ціль здатна діяти. Орлина велич: перевага на перевірки Харизми. Лисяча хитрість: перевага на перевірки Інтелекту. Совина мудрість: перевага на перевірки Мудрості."
+],
+"h": "Коміркою 3-го рівня й вище — на одну істоту більше за кожен рівень понад другий."
 }
 },
 "Послання": {
@@ -2508,6 +2768,13 @@ window.SPELL_DESC = {
 "This spell merely reveals that a trap is present. You don't learn the location of each trap, but you do learn the general nature of the danger posed by a trap you sense."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Відчуваєш, чи є в межах дистанції пастка — у прямій видимості. Пасткою тут вважається все, що навмисно створене, щоб раптово зашкодити: зона «Тривоги», охоронний гліф, механічна яма. Хитка стеля чи природний провал так не знайдуться.",
+"Закляття лише каже, що пастка є, і яка приблизно від неї небезпека, — але не де саме вона."
+],
+"h": ""
 }
 },
 "Пошук предмета": {
@@ -2516,6 +2783,13 @@ window.SPELL_DESC = {
 "Describe or name an object that is familiar to you. You sense the direction to the object's location, as long as that object is within 1,000 feet of you. If the object is in motion, you know the direction of its movement.",
 "The spell can locate a specific object known to you, as long as you have seen it up close--within 30 feet--at least once. Alternatively, the spell can locate the nearest object of a particular kind, such as a certain kind of apparel, jewelry, furniture, tool, or weapon.",
 "This spell can't locate an object if any thickness of lead, even a thin sheet, blocks a direct path between you and the object."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Назви чи опиши знайомий тобі предмет. Відчуваєш напрямок до нього, поки він у межах 1000 фт; якщо предмет рухається, знаєш і куди.",
+"Так можна шукати конкретну річ, яку ти бодай раз бачив зблизька — за 30 фт, — або найближчу річ певного роду: одяг, прикрасу, меблі, інструмент, зброю. Свинець, навіть тонкий аркуш, на шляху робить пошук марним."
 ],
 "h": ""
 }
@@ -2530,12 +2804,26 @@ window.SPELL_DESC = {
 "You can't have more than one steed bonded by this spell at a time. As an action, you can release the steed from its bond at any time, causing it to disappear."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Прикликаєш духа, що прибирає подобу напрочуд розумного, сильного й відданого скакуна, і повʼязуєшся з ним надовго. Він зʼявляється у вільному просторі в межах дистанції у вибраній тобою формі: бойовий кінь, поні, верблюд, лось, мастиф. Характеристики — за формою, але тип — небожитель, фея або ісчадіє на твій вибір; якщо Інтелект скакуна був 5 чи менше, він стає 6, і скакун розуміє одну твою мову.",
+"Він служить тобі верховим і в бою, і поза ним, а звʼязок дозволяє битися злагоджено: сидячи верхи, можеш будь-яке закляття, що діє лише на тебе, поширити й на нього.",
+"На 0 хітів скакун зникає без сліду; дією можеш відпустити його будь-коли. Нове чаклування прикликає того самого скакуна з повними хітами. Поки він у межах 1 милі, ви спілкуєтеся думками. Більш як одного звʼязаного скакуна мати не можна."
+],
+"h": ""
 }
 },
 "Пошук тварин або рослин": {
 "en": {
 "d": [
 "Describe or name a specific kind of beast or plant. Concentrating on the voice of nature in your surroundings, you learn the direction and distance to the closest creature or plant of that kind within 5 miles, if any are present."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Назви чи опиши певний вид звіра або рослини. Зосередившись на голосі природи довкола, дізнаєшся напрямок і відстань до найближчої такої істоти чи рослини в межах 5 миль, якщо вона там є."
 ],
 "h": ""
 }
@@ -2725,6 +3013,15 @@ window.SPELL_DESC = {
 "You attempt to craft an illusion in the mind of a creature you can see within range. The target makes an Intelligence saving throw. On a failed save, you create a phantasmal object, creature, or other phenomenon that is no larger than a 10-foot Cube and that is perceivable only to the target for the duration. The phantasm includes sound, temperature, and other stimuli.\n  The target can take a Study action to examine the phantasm with an Intelligence (Investigation) check against your spell save DC. If the check succeeds, the target realizes that the phantasm is an illusion, and the spell ends.\n  While affected by the spell, the target treats the phantasm as if it were real and rationalizes any illogical outcomes from interacting with it. For example, if the target steps through a phantasmal bridge and survives the fall, it believes the bridge exists and something else caused it to fall.\n  An affected target can even take damage from the illusion if the phantasm represents a dangerous creature or hazard. On each of your turns, such a phantasm can deal 2d8 Psychic damage to the target if it is in the phantasm's area or within 5 feet of the phantasm. The target perceives the damage as a type appropriate to the illusion."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Намагаєшся створити ілюзію просто в розумі істоти, яку бачиш у межах дистанції. Ціль проходить порятунок Інтелекту: при провалі ти твориш примарний предмет, істоту чи явище не більше за куб 10 фт, яке відчуває лише вона — зі звуком, теплом та іншими дрібницями.",
+"Ціль може дією вивчити примару перевіркою Інтелекту (Дослідження) проти DC твоїх заклять; при успіху вона розуміє, що це ілюзія, і закляття спадає.",
+"Доки закляття діє, ціль вважає примару справжньою й сама пояснює собі всі нестиковки: пройшовши крізь примарний міст і вцілівши після падіння, вона вирішить, що міст є, а впала вона з іншої причини.",
+"Якщо примара вдає щось небезпечне, вона й шкодить: щоходу завдає цілі 2d8 психічної шкоди, якщо та в її зоні або за 5 фт від неї. Ціль сприймає цю шкоду як властиву тому, що бачить."
+],
+"h": ""
 }
 },
 "Примарний скакун": {
@@ -2817,6 +3114,13 @@ window.SPELL_DESC = {
 "d": [
 "A black beam of enervating energy springs from your finger toward a creature within range. Make a ranged spell attack against the target. On a hit, the target deals only half damage with weapon attacks that use Strength until the spell ends.",
 "At the end of each of the target's turns, it can make a constitution saving throw against the spell. On a success, the spell ends."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"З твого пальця до істоти в межах дистанції летить чорний промінь виснаження. Зроби дальню атаку закляттям: при влучанні ціль завдає лише половину шкоди атаками зброєю, що спираються на Силу.",
+"У кінці кожного свого ходу ціль проходить порятунок Статури; при успіху закляття спадає."
 ],
 "h": ""
 }
@@ -2929,6 +3233,13 @@ window.SPELL_DESC = {
 "If a creature is holding or wearing the object and takes the damage from it, the creature must succeed on a constitution saving throw or drop the object if it can. If it doesn't drop the object, it has disadvantage on attack rolls and ability checks until the start of your next turn."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d8 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Обери рукотворну металеву річ, яку бачиш у межах дистанції: зброю, середній чи важкий металевий обладунок. Вона розжарюється до червоного, і кожен, хто її торкається, відразу дістає 2d8 вогняної шкоди. Доки закляття триває, бонусною дією щоходу можеш повторювати цю шкоду.",
+"Істота, яка тримає чи носить річ і дістала шкоду, має пройти порятунок Статури, інакше кидає річ, якщо може. Якщо не кинула — має перешкоду на кидки атаки й перевірки характеристик до початку твого наступного ходу."
+],
+"h": "Коміркою 3-го рівня й вище шкода зростає на 1d8 за кожен рівень понад другий."
 }
 },
 "Розкішний особняк": {
@@ -2945,6 +3256,13 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "Your body becomes blurred, shifting and wavering to all who can see you. For the duration, any creature has disadvantage on attack rolls against you. An attacker is immune to this effect if it doesn't rely on sight, as with blindsight, or can see through illusions, as with truesight."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Твоє тіло розпливається й мерехтить для всіх, хто тебе бачить: доки закляття триває, кидки атаки по тобі мають перешкоду.",
+"На того, хто не покладається на зір (сліпозір) або бачить крізь ілюзії (істинний зір), це не діє."
 ],
 "h": ""
 }
@@ -3246,6 +3564,13 @@ window.SPELL_DESC = {
 "You can blind or deafen a foe. Choose one creature that you can see within range to make a constitution saving throw. If it fails, the target is either blinded or deafened (your choice) for the duration. At the end of each of its turns, the target can make a constitution saving throw. On a success, the spell ends."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, you can target one additional creature for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Можеш засліпити або оглушити ворога. Обрана істота, яку ти бачиш у межах дистанції, проходить порятунок Статури: при провалі стає засліплена або оглушена на твій вибір.",
+"У кінці кожного свого ходу ціль повторює порятунок Статури; при успіху закляття спадає."
+],
+"h": "Коміркою 3-го рівня й вище — на одну істоту більше за кожен рівень понад другий."
 }
 },
 "Смердюча хмара": {
@@ -3357,6 +3682,13 @@ window.SPELL_DESC = {
 "The spell also effectively extends the time limit on raising the target from the dead, since days spent under the influence of this spell don't count against the time limit of spells such as raise dead."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся трупа чи останків: доки закляття триває, вони не тліють і не можуть стати нежиттю.",
+"Дні під дією закляття не рахуються до строку, за який небіжчика ще можна підняти «Воскресінням мертвого» та подібними закляттями."
+],
+"h": ""
 }
 },
 "Створення або знищення води": {
@@ -3415,6 +3747,16 @@ window.SPELL_DESC = {
 "en": {
 "d": [
 "You exert control over the elements, creating one of the following effects within range.\n  Beckon Air. You create a breeze strong enough to ripple cloth, stir dust, rustle leaves, and close open doors and shutters, all in a 5-foot Cube. Doors and shutters being held open by someone or something aren't affected.\n  Beckon Earth. You create a thin shroud of dust or sand that covers surfaces in a 5-foot-square area, or you cause a single word to appear in your handwriting in a patch of dirt or sand.\n  Beckon Fire. You create a thin cloud of harmless embers and colored, scented smoke in a 5-foot Cube. You choose the color and scent, and the embers can light candles, torches, or lamps in that area. The smoke's scent lingers for 1 minute.\n  Beckon Water. You create a spray of cool mist that lightly dampens creatures and objects in a 5-foot Cube. Alternatively, you create 1 cup of clean water either in an open container or on a surface, and the water evaporates in 1 minute.\n  Sculpt Element. You cause dirt, sand, fire, smoke, mist, or water that can fit in a 1-foot Cube to assume a crude shape (such as that of a creature) for 1 hour."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Керуєш стихіями й твориш у межах дистанції один з ефектів.",
+"Поклик повітря: вітерець у кубі 5 фт, достатній, щоб ворухнути тканину, здійняти пил, зашелестіти листям і причинити відчинені двері чи віконниці (ті, які хтось тримає, лишаються).",
+"Поклик землі: тонка пелена пилу чи піску на площі 5 на 5 фт — або одне слово, написане твоєю рукою на землі чи піску.",
+"Поклик вогню: хмарка нешкідливих жарин і кольорового запашного диму в кубі 5 фт. Колір і запах обираєш сам; жаринами можна запалити свічки, смолоскипи чи лампи, а запах тримається 1 хв.",
+"Поклик води: холодна мряка, що злегка зволожує все в кубі 5 фт, — або чашка чистої води."
 ],
 "h": ""
 }
@@ -3521,6 +3863,12 @@ window.SPELL_DESC = {
 "The next time you hit a creature with a weapon attack before this spell ends, the weapon gleams with astral radiance as you strike. The attack deals an extra 2d6 radiant damage to the target, which becomes visible if it's invisible, and the target sheds dim light in a 5-foot radius and can't become invisible until the spell ends."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, the extra damage increases by 1d6 for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Наступного разу, коли ти влучиш зброєю до кінця дії закляття, зброя спалахне астральним сяйвом. Атака завдає додатково 2d6 променистої шкоди, ціль проявляється, якщо була невидима, світиться тьмяним світлом у радіусі 5 фт і не може стати невидимою, доки закляття триває."
+],
+"h": "Коміркою 3-го рівня й вище додаткова шкода зростає на 1d6 за кожен рівень понад другий."
 }
 },
 "Танцюючі вогники": {
@@ -3556,6 +3904,13 @@ window.SPELL_DESC = {
 "When the messenger arrives, it delivers your message to the creature that you described, replicating the sound of your voice. The messenger speaks only to a creature matching the description you gave. If the messenger doesn't reach its destination before the spell ends, the message is lost, and the beast makes its way back to where you cast this spell."
 ],
 "h": "If you cast this spell using a spell slot of 3nd level or higher, the duration of the spell increases by 48 hours for each slot level above 2nd."
+},
+"uk": {
+"d": [
+"Відправляєш звістку твариною. Обери крихітного звіра, якого бачиш у межах дистанції: білку, сойку, кажана. Назви місце, де ти бував, і отримувача за загальним описом («жінка у формі міської варти», «рудий дворф у гостроверхому капелюсі»), і промов послання до двадцяти пʼяти слів.",
+"Звір мандрує, доки закляття триває: близько 50 миль на добу, якщо літає, і 25 миль, якщо ні. Діставшись, він повторює послання твоїм голосом тому, кого ти описав. Якщо не встигне до кінця дії, послання втрачається, а звір повертається туди, де ти чаклував."
+],
+"h": "Коміркою 3-го рівня й вище тривалість довша на 48 годин за кожен рівень понад другий."
 }
 },
 "Творення": {
@@ -3632,6 +3987,12 @@ window.SPELL_DESC = {
 "You touch a willing creature to grant it the ability to see in the dark. For the duration, that creature has darkvision out to a range of 60 feet."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся згодної істоти й даєш їй змогу бачити в пітьмі: доки закляття триває, вона має темнобачення на 60 фт."
+],
+"h": ""
 }
 },
 "Темрява": {
@@ -3642,6 +4003,13 @@ window.SPELL_DESC = {
 "If any of this spell's area overlaps with an area of light created by a spell of 2nd level or lower, the spell that created the light is dispelled."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"З вибраної точки розливається магічна темрява, заповнюючи сферу радіусом 15 фт, і огинає кути. Темнобачення крізь неї не бачить, а немагічне світло її не розганяє.",
+"Якщо точка на предметі, який ти тримаєш або який ніхто не несе, темрява йде від предмета й рухається з ним; накрий джерело чимось непрозорим — і темрява зникне. Якщо зона перекриється зі світлом від закляття 2-го рівня чи нижчого, те закляття розвіюється."
+],
+"h": ""
 }
 },
 "Тиша": {
@@ -3649,6 +4017,12 @@ window.SPELL_DESC = {
 "d": [
 "For the duration, no sound can be created within or pass through a 20-foot-radius sphere centered on a point you choose within range. Any creature or object entirely inside the sphere is immune to thunder damage, and creatures are deafened while entirely inside it.",
 "Casting a spell that includes a verbal component is impossible there."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Доки закляття триває, у сфері радіусом 20 фт навколо вибраної точки не виникає й не проходить крізь неї жоден звук. Той, хто цілком усередині, має імунітет до громової шкоди й стає оглушений; чаклувати там закляття з вербальним компонентом неможливо."
 ],
 "h": ""
 }
@@ -3693,12 +4067,25 @@ window.SPELL_DESC = {
 "Anything inside the extradimensional space drops out when the spell ends."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Торкаєшся мотузки до 60 фт завдовжки: один її кінець підіймається вгору, і мотузка висить сторч. Нагорі відкривається невидимий вхід до позапросторової комірчини, куди можна залізти. Вона вміщає до вісьмох істот розміру Середній або менших; мотузку можна втягнути всередину.",
+"Атаки й закляття крізь вхід не проходять, але зсередини видно назовні, ніби крізь вікно 3 на 5 фт. Коли закляття спадає, усе, що всередині, випадає вниз."
+],
+"h": ""
 }
 },
 "Туманний крок": {
 "en": {
 "d": [
 "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Тебе на мить огортає срібляста імла, і ти телепортуєшся до 30 фт у вільний простір, який бачиш."
 ],
 "h": ""
 }
@@ -3751,6 +4138,13 @@ window.SPELL_DESC = {
 "Choose a humanoid that you can see within range. The target must succeed on a wisdom saving throw or be paralyzed for the duration. At the end of each of its turns, the target can make another wisdom saving throw. On a success, the spell ends on the target."
 ],
 "h": "When you cast this spell using a spell slot of 3rd level or higher, you can target one additional humanoid for each slot level above 2nd. The humanoids must be within 30 feet of each other when you target them."
+},
+"uk": {
+"d": [
+"Обери гуманоїда, якого бачиш у межах дистанції. Він має пройти порятунок Мудрості, інакше стає паралізований, доки закляття триває.",
+"У кінці кожного свого ходу ціль повторює порятунок Мудрості; при успіху закляття для неї спадає."
+],
+"h": "Коміркою 3-го рівня й вище — на одного гуманоїда більше за кожен рівень понад другий; вони мають бути не далі ніж за 30 фт один від одного."
 }
 },
 "Утримання чудовиська": {
@@ -3882,6 +4276,14 @@ window.SPELL_DESC = {
 "You cast sorcerous energy at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder.\n  If you roll an 8 on a d8 for this spell, you can roll another d8, and add it to the damage. When you cast this spell, the maximum number of these d8s you can add to the spell's damage equals your spellcasting ability modifier.\n  Cantrip Upgrade. The damage increases by 1d8 when you reach levels 5 (2d8), 11 (3d8), and 17 (4d8)."
 ],
 "h": ""
+},
+"uk": {
+"d": [
+"Шпурляєш у істоту чи предмет у межах дистанції чаклунську енергію. Зроби дальню атаку закляттям: при влучанні ціль дістає 1d8 шкоди обраного типу — кислота, холод, вогонь, блискавка, отрута, психіка або грім.",
+"Якщо на d8 випало 8, кидай ще один d8 і додавай до шкоди; таких додаткових кубиків може бути стільки, скільки модифікатор твоєї характеристики магії.",
+"Шкода зростає на 1d8 на 5-му рівні (2d8), 11-му (3d8) і 17-му (4d8)."
+],
+"h": ""
 }
 },
 "Чарівний вогонь": {
@@ -3921,6 +4323,14 @@ window.SPELL_DESC = {
 "When these conditions are satisfied, a magical mouth appears on the object and it articulates the message imitating your voice, the same tone used during implantation of the message. If the selected object has a mouth or something that approaches such as the mouth of a statue, the magic mouth come alive at this point, giving the illusion that the words come from the mouth of the object.",
 "When you cast this spell, you may decide that the spell ends when the message is delivered or it can persist and repeat the message whenever circumstances occur.",
 "The triggering circumstance can be as general or as detailed as you like, though it must be based on visual or audible conditions that occur within 30 feet of the object. For example, you could instruct the mouth to speak when any creature moves within 30 feet of the object or when a silver bell rings within 30 feet of it."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Вкладаєш у предмет послання, яке пролунає, коли справдиться умова. Обери річ, яку бачиш і яку ніхто не несе й не носить, промов послання до двадцяти пʼяти слів (звучати воно може до 10 хвилин) і визнач, що його запускає.",
+"Коли умова справджується, на предметі зʼявляються магічні вуста й промовляють послання твоїм голосом. Якщо в предмета є щось схоже на рот — скажімо, у статуї, — рухатиметься саме він.",
+"Умова може бути будь-якою, але спирається на те, що видно чи чути за 30 фт від предмета: «коли хтось підійде ближче як на 30 фт» або «коли поряд задзвонить срібний дзвіночок». Чаклуючи, обираєш, чи закляття спадає після першого разу, чи повторює послання щоразу."
 ],
 "h": ""
 }
@@ -3963,6 +4373,13 @@ window.SPELL_DESC = {
 "You drive a spike of psionic energy into the mind of one creature you can see within range. The target makes a Wisdom saving throw, taking 3d8 Psychic damage on a failed save or half as much damage on a successful one. On a failed save, you also always know the target's location until the spell ends, but only while the two of you are on the same plane of existence. While you have this knowledge, the target can't become hidden from you, and if it has the Invisible condition, it gains no benefit from that condition against you."
 ],
 "h": "The damage increases by 1d8 for each spell slot level above 2."
+},
+"uk": {
+"d": [
+"Вганяєш у розум істоти, яку бачиш у межах дистанції, шип псіонічної енергії. Ціль проходить порятунок Мудрості: при провалі дістає 3d8 психічної шкоди, при успіху — половину.",
+"При провалі ти ще й завжди знаєш, де ціль, доки закляття триває, поки ви на одному плані. Поки це знання при тобі, ціль не може від тебе сховатися, а невидимість проти тебе їй не допомагає."
+],
+"h": "Шкода зростає на 1d8 за кожен рівень комірки понад другий."
 }
 },
 "Шипи": {
@@ -3970,6 +4387,13 @@ window.SPELL_DESC = {
 "d": [
 "The ground in a 20-foot radius centered on a point within range twists and sprouts hard spikes and thorns. The area becomes difficult terrain for the duration. When a creature moves into or within the area, it takes 2d4 piercing damage for every 5 feet it travels.",
 "The transformation of the ground is camouflaged to look natural. Any creature that can't see the area at the time the spell is cast can make a Wisdom (Perception) check against your spell save DC to recognize the terrain as hazardous before entering it."
+],
+"h": ""
+},
+"uk": {
+"d": [
+"Земля в радіусі 20 фт навколо вибраної точки корчиться й проростає твердими шипами й тернами. Зона стає важкою місцевістю на весь час дії.",
+"Істота, яка заходить у зону або рухається в ній, дістає 2d4 колючої шкоди за кожні 5 фт шляху. Зміна землі замаскована під природну: той, хто не бачив, як чаклували, може зробити перевірку Мудрості (Сприйняття) проти DC твоїх заклять, щоб розпізнати небезпеку до того, як ступить."
 ],
 "h": ""
 }
