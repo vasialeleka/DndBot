@@ -709,24 +709,32 @@
         cy -= 6;
         ys[ci] = cy;
         colI++;
+        // Рівні тепер різної висоти (рядків — скільки комірок), тож ряд
+        // вирівнюємо по найнижчій колонці: заголовки йдуть в одну лінію.
+        if (colI % nc === 0) { const m = Math.min.apply(null, ys); for (let k = 0; k < nc; k++) ys[k] = m; }
       };
 
+      /* Рядків під запис — рівно стільки, скільки є що записати: замовлянь —
+         скільки їх знаєш, на рівні — скільки там комірок. */
       const sects = [];
-      if (sc.cantrips > 0) sects.push({ t: T("pdf.cantrips"), n: 0, lines: Math.max(4, sc.cantrips + 1), pact: false });
-      const pact = slots.length && slots[0].pact;
-      // Комірок ще немає (напр. паладин 1-го рівня) — рядків для заклять не малюємо
+      if (sc.cantrips > 0) sects.push({ t: T("pdf.cantrips"), n: 0, lines: sc.cantrips, pact: false });
+      // Рівні показуємо всі до максимального: чорнокнижник має комірки лише
+      // одного рівня, але закляття знає й нижчих — їх теж треба куди записати.
+      const lvlSects = [];
       for (let lvl = 1; lvl <= maxLvl; lvl++) {
         const sl = byLevel[lvl];
-        if (pact && !sl) continue;          // чорнокнижник має комірки лише одного рівня
-        sects.push({ t: T("pdf.levelPrefix") + lvl, n: sl ? sl.count : 0, lines: 5, pact: !!(sl && sl.pact) });
+        const sec = { t: T("pdf.levelPrefix") + lvl, n: sl ? sl.count : 0,
+                      lines: sl ? sl.count : 0, pact: !!(sl && sl.pact) };
+        sects.push(sec);
+        lvlSects.push(sec);
       }
-      /* Альбомна сторінка нижча, зате секції лягають у три колонки — тож рядків
-         під запис даємо стільки, скільки влазить, щоб не лишалося пустки. */
-      if (this.landscape && sects.length) {
-        const perCol = Math.ceil(sects.length / nc);
-        const fit = Math.floor(((y - M - 6) / perCol - 20) / 13);
-        for (const sec of sects) sec.lines = Math.max(sec.lines, Math.min(20, fit));
-      }
+      /* Відомих (чи готованих) заклять буває більше, ніж комірок — класика це
+         чорнокнижник: дві пактові комірки на десяток заклять. Різницю розкидаємо
+         по рівнях знизу вгору, щоб місця вистачило на все, що знаєш. */
+      const pool = sc.known != null ? sc.known : (sc.prepared != null ? sc.prepared : 0);
+      let extra = pool - lvlSects.reduce((a, sec) => a + sec.lines, 0);
+      for (let i = 0; extra > 0 && lvlSects.length; i++, extra--) lvlSects[i % lvlSects.length].lines++;
+
       for (const sec of sects) drawSection(sec.t, sec.n, sec.lines, sec.pact);
     }
 
