@@ -478,6 +478,7 @@
      кубики шкоди, порятунки, DC, дистанції, стани, дія/бонусна дія. Один розбір
      на двох: екран малює їх жирним у HTML, PDF — жирним накресленням шрифту. */
   var RICH = new RegExp([
+    "\\d+d\\d+(?:\\s+[а-яіїєґʼ']+ої\\s+шкоди)?",
     "\\d+d\\d+(?:\\s*[+\u2212-]\\s*\\d+)?",
     "DC\\s*\\d+",
     "(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\\s+saving\\s+throw",
@@ -486,7 +487,13 @@
     "\\b(?:advantage|disadvantage)\\b",
     "\\b(?:blinded|charmed|deafened|frightened|grappled|incapacitated|invisible|paralyzed|petrified|poisoned|prone|restrained|stunned|unconscious)\\b",
     "\\b(?:bonus action|reaction|concentration)\\b",
-    "\\b(?:temporary hit points|hit points)\\b"
+    "\\b(?:temporary hit points|hit points)\\b",
+    "порятун[а-яіїєґ]*\\s+(?:Сили|Спритності|Статури|Інтелекту|Мудрості|Харизми)",
+    "\\d+\\s?фт",
+    "(?:перевагу|перевага|перешкоду|перешкода)",
+    "(?:засліплен|зачарован|оглушен|зляканий|схоплен|знерухомлен|невидим|паралізован|отруєн|обплутан|приголомшен|непритомн)[а-яіїєґ]*",
+    "(?:концентраці[а-яіїєґ]*|бонусною дією|реакці[а-яіїєґ]*|збитий з ніг)",
+    "DC\\s?\\d+"
   ].join("|"), "gi");
   window.spellRich = function (text) {
     var s = String(text == null ? "" : text), out = [], last = 0, m;

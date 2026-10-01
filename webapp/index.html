@@ -13,10 +13,10 @@
      ?v=… — версія для скидання кешу; піднімай число після кожного оновлення скриптів. -->
 <script src="vendor/jspdf.umd.min.js?v=3"></script>
 <script src="vendor/fonts.js?v=3"></script>
-<script src="i18n.js?v=9"></script>
-<script src="pdf.js?v=7"></script>
-<script src="spells.js?v=5"></script>
-<script src="spells-desc.js?v=1"></script>
+<script src="i18n.js?v=10"></script>
+<script src="pdf.js?v=8"></script>
+<script src="spells.js?v=6"></script>
+<script src="spells-desc.js?v=3"></script>
 <style>
   :root {
     --bg: var(--tg-theme-bg-color, #17171b);
@@ -4158,6 +4158,18 @@ function deleteCustomItem(idx){
    правила — pruneSpellPick() викидає те, що стало незаконним.
    ========================================================================= */
 function spellBook(){ return window.SPELL_BY_NAME || {}; }
+/* Назва мовою інтерфейсу. Англійська вже є в даних; білоруська й російська
+   поки відкочуються на українську — поряд завжди показуємо оригінал. */
+function spellName(sp){
+  if(!sp) return "";
+  return sp[S.lang] || sp.uk;
+}
+// Оригінальна назва, якщо показана відрізняється від англійської
+function spellOrig(sp){
+  if(!sp) return "";
+  const shown = spellName(sp);
+  return shown === sp.en ? "" : sp.en;
+}
 function spellOf(name){ return spellBook()[name] || null; }
 // Скільки заклять (не замовлянь) можна мати: відомі або готовані
 function spellLimit(sc){ return sc.known != null ? sc.known : (sc.prepared != null ? sc.prepared : 0); }
@@ -4187,16 +4199,18 @@ function pruneSpellPick(sc){
   P.arcanum = arc;
 
   // Крок пропущено — у чарнику лишаємо порожні рядки, але вибір бережемо
-  if(S.spellsSkip) return { cantrips:[], spells:[], byLevel:{}, en:{}, arcanum:{} };
-  // Для чарника зручніше вже розкладене по рівнях + мапа оригінальних назв
-  const byLevel = {}, en = {};
-  const addEn = n => { const sp = spellOf(n); if(sp) en[n] = sp.en; };
-  P.cantrips.forEach(addEn); P.spells.forEach(addEn);
-  Object.keys(P.arcanum).forEach(l => addEn(P.arcanum[l]));
+  if(S.spellsSkip) return { cantrips:[], spells:[], byLevel:{}, en:{}, label:{}, arcanum:{} };
+  /* Для чарника: розкладка по рівнях, підписи мовою інтерфейсу й оригінальні
+     назви. Ключ усюди — українська назва, вона ж ідентифікатор. */
+  const byLevel = {}, en = {}, label = {};
+  const addName = n => { const sp = spellOf(n); if(!sp) return;
+    label[n] = spellName(sp); const o = spellOrig(sp); if(o) en[n] = o; };
+  P.cantrips.forEach(addName); P.spells.forEach(addName);
+  Object.keys(P.arcanum).forEach(l => addName(P.arcanum[l]));
   P.spells.forEach(n => { const l = spellOf(n).lvl; (byLevel[l] = byLevel[l] || []).push(n); });
   Object.keys(byLevel).forEach(l => byLevel[l].sort((a,b)=>a.localeCompare(b,"uk")));
   return { cantrips:P.cantrips.slice().sort((a,b)=>a.localeCompare(b,"uk")),
-           spells:P.spells.slice(), byLevel, en, arcanum:Object.assign({}, P.arcanum) };
+           spells:P.spells.slice(), byLevel, en, label, arcanum:Object.assign({}, P.arcanum) };
 }
 
 // Фільтр джерел: власний вибір користувача або типовий із spells.js
@@ -4217,7 +4231,17 @@ function spSetDescs(on){ S.spellDescs = !!on; buildSpells(); }
 
 /* Опис закляття з SRD — англійською, як у першоджерелі. Ключове (кубики,
    порятунки, дистанції, стани) виділяємо жирним через спільний spellRich(). */
-function spellDescOf(name){ return (window.SPELL_DESC || {})[name] || null; }
+/* Опис мовою інтерфейсу: обрана мова → українська → англійський оригінал.
+   Разом із текстом повертаємо мову, якою він насправді є, — щоб чесно сказати
+   в картці, коли перекладу ще немає. */
+function spellDescOf(name){
+  const rec = (window.SPELL_DESC || {})[name];
+  if(!rec) return null;
+  for(const lang of [S.lang, "uk", "en"]){
+    if(rec[lang] && rec[lang].d && rec[lang].d.length) return Object.assign({ lang }, rec[lang]);
+  }
+  return null;
+}
 function spellRichHtml(text){
   const parts = (window.spellRich ? window.spellRich(text) : [{s:text, b:false}]);
   return parts.map(p => p.b ? `<b>${esc(p.s)}</b>` : esc(p.s)).join("");
@@ -4234,7 +4258,7 @@ function spellCardsFor(chosen){
   names.forEach(n => {
     const sp = spellOf(n); if(!sp) return;
     const d = spellDescOf(n);
-    out.push({ uk:sp.uk, en:sp.en, lvl:sp.lvl, school:tr(sp.school), cast:sp.cast,
+    out.push({ uk:spellName(sp), en:spellOrig(sp), lvl:sp.lvl, school:tr(sp.school), cast:sp.cast,
                rng:sp.rng || "", dur:sp.dur || "", comp:sp.comp || "",
                ritual:!!sp.ritual, conc:!!sp.conc, src:sp.src,
                d: d ? d.d : [], h: d ? (d.h || "") : "" });
@@ -4263,13 +4287,15 @@ function spInfo(ev, name){
   if(!sp.rng) h += `<div class="desc-line">${esc(t('sp.noPassport'))}</div>`;
   const d = spellDescOf(name);
   if(d){
-    h += `<div class="desc-line" style="opacity:.55">${esc(t('sp.descSrc'))}</div>`;
+    const note = d.lang === S.lang ? t('sp.descSrc') : t('sp.descOther');
+    h += `<div class="desc-line" style="opacity:.55">${esc(note)}</div>`;
     d.d.forEach(para => { h += `<p class="feat-desc" style="font-size:13px">${spellRichHtml(para)}</p>`; });
     if(d.h) h += `<p class="feat-desc" style="font-size:13px"><b>${esc(t('sp.higher'))}</b> ${spellRichHtml(d.h)}</p>`;
   } else {
     h += `<div class="desc-line">${esc(t('sp.noDesc'))}</div>`;
   }
-  openModal(`${esc(sp.uk)} <span style="font-size:13px;opacity:.6">${esc(sp.en)}</span>`, h);
+  const orig = spellOrig(sp);
+  openModal(`${esc(spellName(sp))}${orig?` <span style="font-size:13px;opacity:.6">${esc(orig)}</span>`:""}`, h);
 }
 
 /* Список доступних заклять рівня lvl: за списком класу, крізь фільтр джерел і
@@ -4358,7 +4384,9 @@ function buildSpells(){
     const tag = `${esc(tr(s.school))}${s.ritual?" · "+esc(t('sp.ritual')):""}${s.conc?" · "+esc(t('sp.conc')):""}`;
     return `<label class="${cls}" onclick="spRowClick(event,'${q(s.uk)}',${lvl})">`+
       `<input type="checkbox" ${picked?"checked":""} ${blocked&&!picked?"disabled":""} ${fixed?"disabled":""} />`+
-      `<span class="nm">${esc(s.uk)}${fixed?` <span class="sp-fixed">${esc(t('sp.fixed'))}</span>`:""}</span>`+
+      `<span class="nm">${esc(spellName(s))}`+
+      (spellOrig(s)?` <span class="tag">${esc(spellOrig(s))}</span>`:"")+
+      `${fixed?` <span class="sp-fixed">${esc(t('sp.fixed'))}</span>`:""}</span>`+
       `<span class="tag">${tag}</span><span class="src">${esc(s.src)}</span>`+
       `<button class="info-btn ii" onclick="spInfo(event,'${q(s.uk)}')">ⓘ</button></label>`;
   };
@@ -5056,12 +5084,13 @@ function renderReview(ch){
       <div class="kv"><span class="k">${t('rv.spellAtk')}</span><span>${fmt(ch.spellcasting.attackBonus)}</span></div>`;
     spellSummaryRows(ch).forEach(r=>{ h+=`<div class="kv"><span class="k">${esc(r.k)}</span><span>${esc(r.v)}</span></div>`; });
     const pick=ch.spellcasting.chosen||{cantrips:[],byLevel:{},arcanum:{}};
-    if(pick.cantrips.length) h+=`<div class="desc-line"><b>${esc(t('sp.cantrips'))}:</b> ${esc(pick.cantrips.join(", "))}</div>`;
+    const lbl = n => (pick.label && pick.label[n]) || n;
+    if(pick.cantrips.length) h+=`<div class="desc-line"><b>${esc(t('sp.cantrips'))}:</b> ${esc(pick.cantrips.map(lbl).join(", "))}</div>`;
     Object.keys(pick.byLevel).sort((a,b)=>a-b).forEach(l=>{
-      h+=`<div class="desc-line"><b>${esc(t('sp.level').replace("{n}", l))}:</b> ${esc(pick.byLevel[l].join(", "))}</div>`;
+      h+=`<div class="desc-line"><b>${esc(t('sp.level').replace("{n}", l))}:</b> ${esc(pick.byLevel[l].map(lbl).join(", "))}</div>`;
     });
     Object.keys(pick.arcanum).sort((a,b)=>a-b).forEach(l=>{
-      h+=`<div class="desc-line"><b>${esc(t('sp.arcanum'))} ${l}:</b> ${esc(pick.arcanum[l])}</div>`;
+      h+=`<div class="desc-line"><b>${esc(t('sp.arcanum'))} ${l}:</b> ${esc(lbl(pick.arcanum[l]))}</div>`;
     });
     (ch.spellcasting.notes||[]).forEach(n=>{ h+=`<div class="desc-line">${esc(n)}</div>`; });
     $("r-spell").innerHTML=h;

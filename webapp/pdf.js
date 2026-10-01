@@ -705,11 +705,12 @@
         for (let k = 0; k < lines; k++) {
           // Обране закляття пишемо просто над лінійкою; решта рядків — порожні
           if (names && names[k]) {
-            const nm = names[k];
+            const id = names[k];
+            const nm = (sc.chosen && sc.chosen.label && sc.chosen.label[id]) || id;
             this.fitText(cols[ci] + 6, cy - 1, nm, colw - 12, 8, { clip: true, min: 6 });
             // Поряд — оригінальна назва, якщо лишилось місце: шукати закляття в
             // мережі зручніше за англійською
-            const en = (sc.chosen && sc.chosen.en) ? sc.chosen.en[nm] : null;
+            const en = (sc.chosen && sc.chosen.en) ? sc.chosen.en[id] : null;
             if (en && en !== nm) {
               const used = this.sw(nm, 8, false) + 10;
               if (this.sw(en, 6, false) <= colw - 12 - used) {
@@ -817,40 +818,40 @@
       const rich = (txt) => (window.spellRich ? window.spellRich(txt) : [{ s: txt, b: false }]);
 
       for (const c of cards) {
-        ensure(44);
-        this.fitText(cols[ci], y, c.uk, colw, 9.5, { bold: true, clip: true, min: 7 });
-        y -= 9.5;
+        ensure(58);
+        this.fitText(cols[ci], y, c.uk, colw, 11.5, { bold: true, clip: true, min: 8 });
+        y -= 11;
         if (c.en && c.en !== c.uk) {
-          this.fitText(cols[ci], y, c.en, colw, 6.5, { color: MUTED, clip: true, min: 6 });
-          y -= 8;
+          this.fitText(cols[ci], y, c.en, colw, 8, { color: MUTED, clip: true, min: 7 });
+          y -= 9.5;
         }
         const marks = [];
         if (c.ritual) marks.push(T("pdf.ritual"));
         if (c.conc) marks.push(T("pdf.conc"));
         const meta = [c.lvl === 0 ? T("pdf.cantrips") : T("pdf.levelPrefix") + c.lvl, c.school,
                       c.cast, c.rng, c.dur, c.comp].concat(marks).filter(Boolean).join(" · ");
-        for (const ln of this.wrap(meta, colw, 6.5)) {
-          ensure(9); this.text(cols[ci], y, ln, { size: 6.5, color: MUTED }); y -= 8;
+        for (const ln of this.wrap(meta, colw, 7.5)) {
+          ensure(11); this.text(cols[ci], y, ln, { size: 7.5, color: MUTED }); y -= 9.5;
         }
-        y -= 2;
+        y -= 3;
         for (const para of (c.d || [])) {
-          for (const ln of this.wrapRich(rich(para), colw, 7)) {
-            ensure(9); this.richLine(cols[ci], y, ln, 7); y -= 8.5;
+          for (const ln of this.wrapRich(rich(para), colw, 9)) {
+            ensure(12); this.richLine(cols[ci], y, ln, 9); y -= 11;
           }
-          y -= 3;
+          y -= 4;
         }
         if (c.h) {
           const parts = [{ s: T("pdf.higher") + " ", b: true }].concat(rich(c.h));
-          for (const ln of this.wrapRich(parts, colw, 7)) {
-            ensure(9); this.richLine(cols[ci], y, ln, 7, MUTED); y -= 8.5;
+          for (const ln of this.wrapRich(parts, colw, 9)) {
+            ensure(12); this.richLine(cols[ci], y, ln, 9, MUTED); y -= 11;
           }
         }
         if (!(c.d || []).length) {
-          for (const ln of this.wrap(T("pdf.noDesc"), colw, 7)) {
-            ensure(9); this.text(cols[ci], y, ln, { size: 7, color: MUTED }); y -= 8.5;
+          for (const ln of this.wrap(T("pdf.noDesc"), colw, 9)) {
+            ensure(12); this.text(cols[ci], y, ln, { size: 9, color: MUTED }); y -= 11;
           }
         }
-        y -= 7;
+        y -= 9;
       }
     }
 
