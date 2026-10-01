@@ -13,8 +13,8 @@
      ?v=… — версія для скидання кешу; піднімай число після кожного оновлення скриптів. -->
 <script src="vendor/jspdf.umd.min.js?v=3"></script>
 <script src="vendor/fonts.js?v=3"></script>
-<script src="i18n.js?v=5"></script>
-<script src="pdf.js?v=5"></script>
+<script src="i18n.js?v=6"></script>
+<script src="pdf.js?v=6"></script>
 <script src="spells.js?v=2"></script>
 <style>
   :root {
@@ -195,6 +195,23 @@
   .conflict-note { background:rgba(217,131,36,.14); border:1px solid rgba(217,131,36,.4); border-radius:10px;
     padding:9px 11px; font-size:12px; margin-top:10px; }
   .saves-info { font-size:13px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+
+  /* --- екран заклять --- */
+  .sp-search { width:100%; margin:8px 0 4px; }
+  .sp-row { display:flex; align-items:center; gap:9px; padding:7px 6px; font-size:14px;
+    border-radius:8px; cursor:pointer; }
+  .sp-row input { width:20px; height:20px; flex:none; -webkit-appearance:auto; appearance:auto;
+    accent-color:var(--accent); cursor:pointer; }
+  .sp-row.on { background:rgba(182,65,47,.12); }
+  .sp-row.off { opacity:.45; }                 /* ліміт вибрано — решту не дати позначити */
+  .sp-row .nm { flex:1; }
+  .sp-row .tag { font-size:10px; color:var(--hint); white-space:nowrap; }
+  .sp-row .src { font-size:9px; font-weight:700; border:1px solid currentColor; border-radius:5px;
+    padding:0 4px; color:var(--hint); }
+  .sp-fixed { font-size:10px; color:var(--accent); font-weight:700; }
+  .sp-arc { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .sp-arc .lv { font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap; }
+  .sp-arc select { flex:1; }
 
   .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:6px 0 12px; }
   .stat { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 6px; text-align:center; }
@@ -627,12 +644,26 @@
     <div id="spellPlan"></div>
   </div>
 
-  <div class="footer"><button class="btn btn-primary" onclick="showEquipment()" data-i18n="sh.next">Далі: Спорядження →</button></div>
+  <div class="footer"><button class="btn btn-primary" id="sheetNext" onclick="showSpells()" data-i18n="sh.next">Далі: Спорядження →</button></div>
 </div>
 
 <!-- ============ КРОК 4: СПОРЯДЖЕННЯ ============ -->
-<div id="view-equipment" class="view hidden">
+<!-- ============ ЗАКЛЯТТЯ ============ -->
+<div id="view-spells" class="view hidden">
   <div class="topbar"><button class="back" onclick="showView('sheet')">←</button>
+    <span class="topbar-title" data-i18n="sp.topbar">Закляття</span></div>
+  <p class="sub" data-i18n="sp.sub">Обери замовляння та закляття — вони підуть у чарник.</p>
+  <div class="card" id="spHead"></div>
+  <div class="filter-row" id="spSrcRow"></div>
+  <input class="sp-search" id="spSearch" data-i18n-ph="sp.search" placeholder="Пошук за назвою"
+         oninput="spSetQuery(this.value)" />
+  <div id="spBody"></div>
+  <div class="footer"><button class="btn btn-primary" onclick="showEquipment()"
+    data-i18n="sp.next">Далі: Спорядження →</button></div>
+</div>
+
+<div id="view-equipment" class="view hidden">
+  <div class="topbar"><button class="back" onclick="backFromEquipment()">←</button>
     <span class="topbar-title" data-i18n="eq.topbar">Спорядження</span></div>
 
   <div class="acbig">
@@ -2252,6 +2283,9 @@ const S = {
   asiQueue:[], asiIdx:0, asiAfter:null,
   optionalFeats:true, raceFilter:null, fightingStyle:null,
   expertise:[],                                  // навички/інструменти з подвоєним бонусом
+  spellPick:{ cantrips:[], spells:[], arcanum:{} },  // обрані закляття (українські назви)
+  spellSrc:null,                                 // перевизначення фільтра джерел; null — типовий
+  spellQuery:"",                                 // пошук на екрані заклять
   ranger:{ enemy:"", terrain:"", foe:false, deft:false },  // вибори слідопита на 1-му рівні
   customItems:[],      // свої предмети/набори в інвентарі (напр. «Набір для гриму»)
   customWeapons:[],    // своя зброя й артефакти: {key,name,cat,dmg,type,abil,magic,desc}
@@ -2516,8 +2550,9 @@ function infoBtn(title, bodyHtml){ const i = _infoStore.push({title, bodyHtml}) 
 function showInfo(i){ const d = _infoStore[i]; if(d) openModal(esc(d.title), d.bodyHtml); }
 
 /* --------------------------- роутер --------------------------- */
-const VIEWS = ["race-list","race-detail","class-list","class-detail","bg-list","bg-detail","sheet","equipment","review"];
-const STEP_OF = { "race-list":1,"race-detail":1,"class-list":2,"class-detail":2,"bg-list":3,"bg-detail":3,"sheet":3,"equipment":4,"review":5 };
+const VIEWS = ["race-list","race-detail","class-list","class-detail","bg-list","bg-detail","sheet","spells","equipment","review"];
+const STEP_OF = { "race-list":1,"race-detail":1,"class-list":2,"class-detail":2,"bg-list":3,"bg-detail":3,
+  "sheet":3,"spells":4,"equipment":5,"review":6 };
 function setPageTheme(cols){
   document.body.style.background = cols ? `${cols[0]} fixed` : "";
 }
@@ -2532,23 +2567,34 @@ function applyStepBackground(view){
     b.classList.add("has-grad");
   } else { b.style.background=""; b.classList.remove("has-grad"); }
 }
-const STEP_TITLES = { 1:"Раса",2:"Клас",3:"Характеристики",4:"Спорядження",5:"Огляд" };
+const STEP_TITLES = { 1:"Раса",2:"Клас",3:"Характеристики",4:"Закляття",5:"Спорядження",6:"Огляд" };
+/* Крок «Закляття» бачать лише заклиначі, тож у решти кроків на один менше —
+   рахуємо показані номери окремо від внутрішніх. */
+function castingClass(){
+  const c = CLASSES[S.class];
+  return !!(c && (c.spell || subclassCaster(S.class, S.subclass, S.level)));
+}
+function stepInfo(view){
+  const raw = STEP_OF[view] || 1, magic = castingClass();
+  return { raw, shown: (!magic && raw > 4) ? raw - 1 : raw, total: magic ? 6 : 5 };
+}
 function progSwatch(cols){ return `background:linear-gradient(135deg, ${cols[0]}, ${cols[1]})`; }
 function renderProgress(view){
   const prog=$("progress"); if(!prog) return;
-  const step=STEP_OF[view]||1;
+  const info=stepInfo(view), step=info.raw;
   prog.classList.remove("hidden");
-  const segs=[1,2,3,4,5].map(i=>`<div class="${i<=step?"sg f":"sg"}"></div>`).join("");
+  const segs=[];
+  for(let i=1;i<=info.total;i++) segs.push(`<div class="${i<=info.shown?"sg f":"sg"}"></div>`);
   // Назви показуємо лише коли крок уже пройдено (раса — з кроку 2, клас — з кроку 3),
   // тож на кроці 1 і після повернення назад підписи чисті.
   const showRace = step>=2 && S.race, showClass = step>=3 && S.class;
   const rSw = showRace ? `<span class="psw" style="${progSwatch(racePalette(S.race).bg)}"></span>` : "";
   const cSw = showClass ? `<span class="psw" style="${progSwatch(classPalette(S.class))}"></span>` : "";
   prog.innerHTML =
-    `<div class="slim">${segs}</div>`+
+    `<div class="slim">${segs.join("")}</div>`+
     `<div class="plegend">`+
       `<span class="pwho">${rSw}<b>${showRace?esc(tr(S.race)):""}</b></span>`+
-      `<span class="pstep">${esc(t('prog.step').replace("{n}", step))} ${esc(tr(STEP_TITLES[step]))}</span>`+
+      `<span class="pstep">${esc(t('prog.step').replace("{n}", info.shown).replace("{m}", info.total))} ${esc(tr(STEP_TITLES[step]))}</span>`+
       `<span class="pwho"><b>${showClass?esc(tr(S.class)):""}</b>${cSw}</span>`+
     `</div>`;
 }
@@ -2928,6 +2974,9 @@ function renderSummary(){
 }
 
 function buildSheet(){
+  // Заклиначів наступним кроком чекають закляття, решту — одразу спорядження
+  const nx=$("sheetNext");
+  if(nx) nx.textContent = castingClass() ? t('sh.nextSpells') : t('sh.next');
   renderSummary();
   renderBgBadge();
   onBackgroundChange();
@@ -4008,7 +4057,14 @@ function applyStandardToGear(){
   S.armor=armor; S.shield=shield; S.weapons=weapons; S.equipExtra=extra; S.equipQty=qty; S.equipAmmo=ammo; S._equipClass=S.class;
 }
 function ensureEquipment(){
-  if(S._equipClass===S.class && S.armor!==undefined) return;
+  if(S._equipClass===S.class && S.armor!==undefined){
+    /* Випадковий персонаж приходить із готовим спорядженням і позначкою
+       _equipClass, щоб його не перебивали дефолтом. Але вибори стандартного
+       набору йому ніхто не заповнював, а екран спорядження їх читає — тож
+       доливаємо саме їх, не чіпаючи вже згенеровану зброю й броню. */
+    if(!S.equipPick && CLASS_EQUIP[S.class]) equipStandardInit();
+    return;
+  }
   if(S.equipMode===undefined) S.equipMode="standard";
   // Набір змінився — «прибрані» позиції старого класу вже не мають сенсу.
   // Свою зброю та власні записи лишаємо: вони не залежать від класу.
@@ -4080,6 +4136,249 @@ function deleteCustomItem(idx){
   renderInventory(); renderEquipmentPreview();
 }
 /* ---- екран Спорядження ---- */
+/* =========================================================================
+   ВИБІР ЗАКЛЯТЬ
+
+   Джерело істини — spells.js (довідник) і spellcasting із computeCharacter()
+   (скільки чого можна). Тут лише вибір: що саме знає/готує персонаж.
+
+   Ліміти: замовлянь — скільки їх знаєш; заклять — «відомі» для бардів,
+   чаклунів, слідопитів і чорнокнижників, «готуєш» для кліриків, друїдів,
+   паладинів і чарівників. Містичний арканум чорнокнижника живе окремо: по
+   одному закляттю 6–9 рівня, поза лімітом відомих.
+
+   Коли клас, підклас чи рівень змінюються, вибір сам підрізається під нові
+   правила — pruneSpellPick() викидає те, що стало незаконним.
+   ========================================================================= */
+function spellBook(){ return window.SPELL_BY_NAME || {}; }
+function spellOf(name){ return spellBook()[name] || null; }
+// Скільки заклять (не замовлянь) можна мати: відомі або готовані
+function spellLimit(sc){ return sc.known != null ? sc.known : (sc.prepared != null ? sc.prepared : 0); }
+
+function spellLegal(sc, name, lvl){
+  const s = spellOf(name);
+  if(!s) return false;
+  if(lvl != null && s.lvl !== lvl) return false;
+  return s.cls.indexOf(sc.list) >= 0;
+}
+
+/* Викидає з вибору те, що більше не підходить (інший клас, зависокий рівень),
+   і дотягує фіксоване замовляння (Рука мага в Таємного трюкача). */
+function pruneSpellPick(sc){
+  const P = S.spellPick || (S.spellPick = { cantrips:[], spells:[], arcanum:{} });
+  P.cantrips = (P.cantrips||[]).filter(n => spellLegal(sc, n, 0)).slice(0, Math.max(0, sc.cantrips||0));
+  if(sc.fixedCantrip && P.cantrips.indexOf(sc.fixedCantrip) < 0 && spellLegal(sc, sc.fixedCantrip, 0)){
+    P.cantrips.unshift(sc.fixedCantrip);
+    P.cantrips = P.cantrips.slice(0, Math.max(0, sc.cantrips||0));
+  }
+  P.spells = (P.spells||[]).filter(n => {
+    const s = spellOf(n);
+    return s && s.lvl >= 1 && s.lvl <= sc.maxLevel && s.cls.indexOf(sc.list) >= 0;
+  }).slice(0, spellLimit(sc));
+  const arc = {};
+  (sc.arcanum||[]).forEach(l => { const n = (P.arcanum||{})[l]; if(n && spellLegal(sc, n, l)) arc[l] = n; });
+  P.arcanum = arc;
+
+  // Для чарника зручніше вже розкладене по рівнях
+  const byLevel = {};
+  P.spells.forEach(n => { const l = spellOf(n).lvl; (byLevel[l] = byLevel[l] || []).push(n); });
+  Object.keys(byLevel).forEach(l => byLevel[l].sort((a,b)=>a.localeCompare(b,"uk")));
+  return { cantrips:P.cantrips.slice().sort((a,b)=>a.localeCompare(b,"uk")),
+           spells:P.spells.slice(), byLevel, arcanum:Object.assign({}, P.arcanum) };
+}
+
+// Фільтр джерел: власний вибір користувача або типовий із spells.js
+function spellSrcFilter(){
+  if(!S.spellSrc) S.spellSrc = Object.assign({}, window.SPELL_FILTER || {});
+  return S.spellSrc;
+}
+function spToggleSrc(id){
+  const f = spellSrcFilter();
+  f[id] = !f[id];
+  buildSpells();
+}
+function spSetQuery(q){ S.spellQuery = q || ""; buildSpells(); }
+
+/* Список доступних заклять рівня lvl: за списком класу, крізь фільтр джерел і
+   пошук. Уже обране показуємо завжди — інакше воно б зникало з екрана. */
+function spellChoices(sc, lvl, picked){
+  const f = spellSrcFilter();
+  const q = (S.spellQuery||"").trim().toLowerCase();
+  return (window.SPELLS||[]).filter(s => {
+    if(s.lvl !== lvl || s.cls.indexOf(sc.list) < 0) return false;
+    if(picked.indexOf(s.uk) >= 0) return true;
+    if(!window.spellAllowed(s, f)) return false;
+    return !q || s.uk.toLowerCase().indexOf(q) >= 0 || s.en.toLowerCase().indexOf(q) >= 0;
+  });
+}
+
+function spToggle(name, lvl){
+  const sc = computeCharacter().spellcasting; if(!sc) return;
+  const P = S.spellPick;
+  const arr = lvl === 0 ? P.cantrips : P.spells;
+  const i = arr.indexOf(name);
+  if(i >= 0){
+    if(lvl === 0 && name === sc.fixedCantrip) return;    // дається автоматично
+    arr.splice(i, 1);
+  } else {
+    const lim = lvl === 0 ? (sc.cantrips||0) : spellLimit(sc);
+    if(arr.length >= lim) return;                        // ліміт вибрано
+    arr.push(name);
+  }
+  buildSpells();
+}
+function spPickArcanum(lvl, name){
+  if(!S.spellPick.arcanum) S.spellPick.arcanum = {};
+  if(name) S.spellPick.arcanum[lvl] = name; else delete S.spellPick.arcanum[lvl];
+  buildSpells();
+}
+
+function spCounter(a, b){
+  const cls = a > b ? "counter warn" : "counter";
+  return `<span class="${cls}">${esc(t('sp.chosen').replace("{a}", a).replace("{b}", b))}</span>`;
+}
+
+function buildSpells(){
+  const ch = computeCharacter(), sc = ch.spellcasting;
+  if(!sc){ $("spBody").innerHTML = ""; $("spHead").innerHTML = ""; return; }
+  const P = S.spellPick, lim = spellLimit(sc);
+
+  // --- шапка: від чого рахується магія і скільки чого лишилось ---
+  let head = `<div class="kv"><span class="k">${esc(t('rv.spellAbil'))}</span><span>${esc(tr(ABIL_UA[sc.ability]))}</span></div>`+
+    `<div class="kv"><span class="k">${esc(t('rv.spellDC'))}</span><span>${sc.saveDC}</span></div>`+
+    `<div class="kv"><span class="k">${esc(t('rv.spellAtk'))}</span><span>${esc(fmt(sc.attackBonus))}</span></div>`;
+  if(sc.cantrips > 0) head += `<div class="kv"><span class="k">${esc(t('sp.cantrips'))}</span>${spCounter(P.cantrips.length, sc.cantrips)}</div>`;
+  if(lim > 0) head += `<div class="kv"><span class="k">${esc(t('sp.spells'))}</span>${spCounter(P.spells.length, lim)}</div>`;
+  if(sc.prepared != null) head += `<div class="desc-line">${esc(t('sp.prepHint'))}</div>`;
+  if(sc.spellbook != null) head += `<div class="desc-line">${esc(t('sp.bookHint').replace("{n}", sc.spellbook))}</div>`;
+  (sc.notes||[]).forEach(n => { head += `<div class="desc-line">${esc(n)}</div>`; });
+  // Обмеження шкіл у Таємного трюкача й Лицаря-мага
+  if(sc.schools && sc.schoolMin > 0){
+    const own = P.spells.filter(n => { const s = spellOf(n); return s && sc.schools.indexOf(s.school) >= 0; }).length;
+    const txt = t('sp.schoolWarn').replace("{s}", sc.schools.map(x=>tr(x)).join(t('spell.orJoin')))
+      .replace("{n}", sc.schoolMin).replace("{a}", own);
+    head += own < sc.schoolMin ? `<div class="conflict-note">${esc(txt)}</div>`
+                               : `<div class="desc-line">${esc(txt)}</div>`;
+  }
+  $("spHead").innerHTML = head;
+
+  // --- чипси джерел ---
+  const f = spellSrcFilter();
+  $("spSrcRow").innerHTML = (window.SPELL_SOURCES||[]).map(src =>
+    `<div class="filter-chip ${f[src.id]!==false?"on":""}" onclick="spToggleSrc('${q(src.id)}')">${esc(src.uk)}</div>`
+  ).join("") + `<div class="filter-chip ${f.ed2024?"on":""}" onclick="spToggleSrc('ed2024')">${esc(t('sp.ed2024'))}</div>`;
+
+  // --- секції: замовляння, далі рівні ---
+  let html = "";
+  const row = (s, picked, blocked, lvl, fixed) => {
+    const cls = "sp-row" + (picked ? " on" : (blocked ? " off" : ""));
+    const tag = `${esc(tr(s.school))}${s.ritual?" · "+esc(t('sp.ritual')):""}${s.conc?" · "+esc(t('sp.conc')):""}`;
+    return `<label class="${cls}" onclick="spRowClick(event,'${q(s.uk)}',${lvl})">`+
+      `<input type="checkbox" ${picked?"checked":""} ${blocked&&!picked?"disabled":""} ${fixed?"disabled":""} />`+
+      `<span class="nm">${esc(s.uk)}${fixed?` <span class="sp-fixed">${esc(t('sp.fixed'))}</span>`:""}</span>`+
+      `<span class="tag">${tag}</span><span class="src">${esc(s.src)}</span></label>`;
+  };
+  if(sc.cantrips > 0){
+    const list = spellChoices(sc, 0, P.cantrips);
+    const blocked = P.cantrips.length >= sc.cantrips;
+    html += `<div class="card"><div class="skill-group-head">${esc(t('sp.cantrips'))} ${spCounter(P.cantrips.length, sc.cantrips)}</div>`+
+      (list.length ? list.map(s => row(s, P.cantrips.indexOf(s.uk)>=0, blocked, 0, s.uk===sc.fixedCantrip)).join("")
+                   : `<div class="desc-line">${esc(t('sp.empty'))}</div>`) + `</div>`;
+  }
+  const blockedLv = P.spells.length >= lim;
+  for(let lvl=1; lvl<=sc.maxLevel; lvl++){
+    const list = spellChoices(sc, lvl, P.spells);
+    if(!list.length) continue;
+    const have = P.spells.filter(n => spellOf(n).lvl === lvl).length;
+    html += `<div class="card"><div class="skill-group-head">${esc(t('sp.level').replace("{n}", lvl))}`+
+      `<span class="counter">${have}</span></div>`+
+      list.map(s => row(s, P.spells.indexOf(s.uk)>=0, blockedLv, lvl, false)).join("") + `</div>`;
+  }
+  // --- Містичний арканум: по одному закляттю 6–9 рівня ---
+  if((sc.arcanum||[]).length){
+    html += `<div class="card"><div class="skill-group-head">${esc(t('sp.arcanum'))}</div>`+
+      `<div class="desc-line">${esc(t('sp.arcanumHint'))}</div>`;
+    sc.arcanum.forEach(lvl => {
+      const opts = (window.SPELLS||[]).filter(s => s.lvl===lvl && s.cls.indexOf(sc.list)>=0
+        && (window.spellAllowed(s, f) || S.spellPick.arcanum[lvl]===s.uk));
+      const cur = S.spellPick.arcanum[lvl] || "";
+      html += `<div class="sp-arc"><span class="lv">${esc(t('sp.level').replace("{n}", lvl))}</span>`+
+        `<select onchange="spPickArcanum(${lvl}, this.value)"><option value="">—</option>`+
+        opts.map(s => `<option value="${esc(s.uk)}" ${cur===s.uk?"selected":""}>${esc(s.uk)}</option>`).join("")+
+        `</select></div>`;
+    });
+    html += `</div>`;
+  }
+  $("spBody").innerHTML = html;
+}
+/* Клік по рядку: лишаємо один обробник на весь рядок, але не даємо браузеру
+   двічі перемкнути прапорець (клік по самому input уже міняє стан). */
+function spRowClick(ev, name, lvl){
+  ev.preventDefault();
+  spToggle(name, lvl);
+}
+
+function showSpells(){
+  if(S.mode==="quick") autoFillQuick();
+  if(!validate()) return;
+  if(!castingClass()){ showEquipment(); return; }     // не заклинач — крок пропускаємо
+  buildSpells();
+  showView("spells");
+}
+function backFromEquipment(){
+  if(castingClass()){ buildSpells(); showView("spells"); } else showView("sheet");
+}
+
+/* Випадковому персонажу закляття теж треба обрати — інакше чарник виходить із
+   порожньою магією. Беремо навмання зі списку класу крізь поточний фільтр. */
+function autoPickSpells(){
+  const sc = computeCharacter().spellcasting;
+  S.spellPick = { cantrips:[], spells:[], arcanum:{} };
+  if(!sc) return;
+  const pick = (pool, n) => {
+    const a = pool.slice();
+    const out = [];
+    while(out.length < n && a.length) out.push(a.splice(Math.floor(Math.random()*a.length), 1)[0].uk);
+    return out;
+  };
+  if(sc.fixedCantrip) S.spellPick.cantrips.push(sc.fixedCantrip);
+  // Бойове замовляння класу — не на волю випадку: без нього персонаж лишається
+  // без основної атаки (чорнокнижник без Містичного вибуху — найяскравіший випадок)
+  const SIGNATURE = { "Чорнокнижник":"Містичний вибух", "Чаклун":"Вогняна стріла",
+    "Чарівник":"Вогняна стріла", "Клірик":"Священне полум'я", "Друїд":"Створення полум'я",
+    "Бард":"Злісні насмішки" };
+  const sig = SIGNATURE[S.class];
+  if(sig && (sc.cantrips||0) > S.spellPick.cantrips.length && spellLegal(sc, sig, 0)
+     && S.spellPick.cantrips.indexOf(sig) < 0) S.spellPick.cantrips.push(sig);
+  const needC = Math.max(0, (sc.cantrips||0) - S.spellPick.cantrips.length);
+  const cpool = spellChoices(sc, 0, S.spellPick.cantrips).filter(s => S.spellPick.cantrips.indexOf(s.uk) < 0);
+  S.spellPick.cantrips = S.spellPick.cantrips.concat(pick(cpool, needC));
+  let left = spellLimit(sc);
+  // Низькі рівні беремо щедріше: саме ними заклинач користується щодня
+  for(let lvl=1; lvl<=sc.maxLevel && left>0; lvl++){
+    const share = (lvl === sc.maxLevel) ? left : Math.max(1, Math.round(left / (sc.maxLevel - lvl + 2)));
+    const got = pick(spellChoices(sc, lvl, []), Math.min(share, left));
+    S.spellPick.spells = S.spellPick.spells.concat(got);
+    left -= got.length;
+  }
+  /* Трюкач і лицар-маг мусять тримати більшість заклять у своїх двох школах —
+     міняємо зайві на школьні, доки не наберемо мінімум. */
+  if(sc.schools && sc.schoolMin > 0){
+    const own = n => { const s = spellOf(n); return s && sc.schools.indexOf(s.school) >= 0; };
+    for(let i=0; i<S.spellPick.spells.length && S.spellPick.spells.filter(own).length < sc.schoolMin; i++){
+      if(own(S.spellPick.spells[i])) continue;
+      const lvl = spellOf(S.spellPick.spells[i]).lvl;
+      const repl = spellChoices(sc, lvl, []).filter(x => sc.schools.indexOf(x.school) >= 0
+        && S.spellPick.spells.indexOf(x.uk) < 0);
+      if(repl.length) S.spellPick.spells[i] = repl[Math.floor(Math.random()*repl.length)].uk;
+    }
+  }
+  (sc.arcanum||[]).forEach(lvl => {
+    const got = pick(spellChoices(sc, lvl, []), 1);
+    if(got.length) S.spellPick.arcanum[lvl] = got[0];
+  });
+}
+
 function showEquipment(){
   if(S.mode==="quick") autoFillQuick();
   if(!validate()) return;
@@ -4513,6 +4812,15 @@ function computeCharacter(){
       spells:[], slots, cantrips, known, prepared, spellbook,
       maxLevel:maxSpellLevel(S.class, level, S.subclass), notes,
       source: scfg ? tr(S.subclass) : tr(S.class) };
+    if(spellcasting){
+      // Звідки обирати: трюкач і лицар-маг беруть список чарівника
+      spellcasting.list = scfg ? "Чарівник" : S.class;
+      spellcasting.fixedCantrip = scfg ? (scfg.fixedCantrip || null) : null;
+      spellcasting.schools = scfg ? scfg.schools : null;
+      spellcasting.schoolMin = scfg ? Math.max(0, (THIRD_KNOWN[level]||0) - thirdFreePicks(level)) : 0;
+      spellcasting.arcanum = (S.class==="Чорнокнижник") ? mysticArcanum(level) : [];
+      spellcasting.chosen = pruneSpellPick(spellcasting);
+    }
   }
 
   // Риси у форматі {name, desc} — опис показується в PDF-чарнику.
@@ -4662,6 +4970,14 @@ function renderReview(ch){
       <div class="kv"><span class="k">${t('rv.spellDC')}</span><span>${ch.spellcasting.saveDC}</span></div>
       <div class="kv"><span class="k">${t('rv.spellAtk')}</span><span>${fmt(ch.spellcasting.attackBonus)}</span></div>`;
     spellSummaryRows(ch).forEach(r=>{ h+=`<div class="kv"><span class="k">${esc(r.k)}</span><span>${esc(r.v)}</span></div>`; });
+    const pick=ch.spellcasting.chosen||{cantrips:[],byLevel:{},arcanum:{}};
+    if(pick.cantrips.length) h+=`<div class="desc-line"><b>${esc(t('sp.cantrips'))}:</b> ${esc(pick.cantrips.join(", "))}</div>`;
+    Object.keys(pick.byLevel).sort((a,b)=>a-b).forEach(l=>{
+      h+=`<div class="desc-line"><b>${esc(t('sp.level').replace("{n}", l))}:</b> ${esc(pick.byLevel[l].join(", "))}</div>`;
+    });
+    Object.keys(pick.arcanum).sort((a,b)=>a-b).forEach(l=>{
+      h+=`<div class="desc-line"><b>${esc(t('sp.arcanum'))} ${l}:</b> ${esc(pick.arcanum[l])}</div>`;
+    });
     (ch.spellcasting.notes||[]).forEach(n=>{ h+=`<div class="desc-line">${esc(n)}</div>`; });
     $("r-spell").innerHTML=h;
   } else sp.classList.add("hidden");
@@ -4916,7 +5232,7 @@ function cloudCall(method, ...args){
    яким у збереженні не місце. Set-и кладемо окремо — JSON їх не вміє. */
 const SNAP_FIELDS = ["race","subrace","class","subclass","level","background",
   "mode","method","base","rollPool","raceAsiPick","slots","humanFeat",
-  "optionalFeats","fightingStyle","expertise","ranger",
+  "optionalFeats","fightingStyle","expertise","ranger","spellPick","spellSrc",
   "customItems","customWeapons","customArmors","armorWorn","shieldWorn","equipRemoved",
   "equipMode","equipPick","anyPick","armor","shield","weapons",
   "equipExtra","equipQty","equipAmmo","showAllGear"];
@@ -5274,6 +5590,7 @@ function generateRandomCharacter(){
   rcEquipment();
 
   S.mode="full"; S._ready=true;
+  autoPickSpells();
 }
 
 /* --- Діалог --- */

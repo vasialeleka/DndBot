@@ -686,7 +686,7 @@
       const cols = [], ys = [];
       for (let i = 0; i < nc; i++) { cols.push(M + i * (colw + 16)); ys.push(y); }
       let colI = 0;
-      const drawSection = (title, count, lines, pact) => {
+      const drawSection = (title, count, lines, pact, names) => {
         const ci = colI % nc;
         let cy = ys[ci];
         this.text(cols[ci], cy, title, { size: 9, bold: true, color: ACCENT });
@@ -703,6 +703,8 @@
         }
         cy -= 8;
         for (let k = 0; k < lines; k++) {
+          // Обране закляття пишемо просто над лінійкою; решта рядків — порожні
+          if (names && names[k]) this.fitText(cols[ci] + 6, cy - 1, names[k], colw - 12, 8, { clip: true, min: 6 });
           this.line(cols[ci] + 4, cy - 4, cols[ci] + colw, cy - 4, LINE, 0.5);
           cy -= 13;
         }
@@ -716,15 +718,21 @@
 
       /* Рядків під запис — рівно стільки, скільки є що записати: замовлянь —
          скільки їх знаєш, на рівні — скільки там комірок. */
+      /* Обрані закляття приходять з апки готовими: cantrips, byLevel і arcanum. */
+      const picked = sc.chosen || { cantrips: [], byLevel: {}, arcanum: {} };
       const sects = [];
-      if (sc.cantrips > 0) sects.push({ t: T("pdf.cantrips"), n: 0, lines: sc.cantrips, pact: false });
+      if (sc.cantrips > 0) sects.push({ t: T("pdf.cantrips"), n: 0,
+        lines: Math.max(sc.cantrips, (picked.cantrips || []).length),
+        pact: false, names: picked.cantrips || [] });
       // Рівні показуємо всі до максимального: чорнокнижник має комірки лише
       // одного рівня, але закляття знає й нижчих — їх теж треба куди записати.
       const lvlSects = [];
       for (let lvl = 1; lvl <= maxLvl; lvl++) {
         const sl = byLevel[lvl];
+        const names = (picked.byLevel || {})[lvl] || [];
         const sec = { t: T("pdf.levelPrefix") + lvl, n: sl ? sl.count : 0,
-                      lines: sl ? sl.count : 0, pact: !!(sl && sl.pact) };
+                      lines: Math.max(sl ? sl.count : 0, names.length),
+                      pact: !!(sl && sl.pact), names: names };
         sects.push(sec);
         lvlSects.push(sec);
       }
@@ -735,7 +743,14 @@
       let extra = pool - lvlSects.reduce((a, sec) => a + sec.lines, 0);
       for (let i = 0; extra > 0 && lvlSects.length; i++, extra--) lvlSects[i % lvlSects.length].lines++;
 
-      for (const sec of sects) drawSection(sec.t, sec.n, sec.lines, sec.pact);
+      /* Містичний арканум чорнокнижника — закляття 6–9 рівня поза комірками:
+         для кожного свій маленький блок на один рядок. */
+      Object.keys(picked.arcanum || {}).sort((a, b) => a - b).forEach(lvl => {
+        sects.push({ t: T("pdf.levelPrefix") + lvl + " · " + T("pdf.arcanum"), n: 0,
+                     lines: 1, pact: false, names: [picked.arcanum[lvl]] });
+      });
+
+      for (const sec of sects) drawSection(sec.t, sec.n, sec.lines, sec.pact, sec.names);
     }
 
     wrap(text, maxW, size, bold) {
