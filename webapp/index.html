@@ -13,9 +13,9 @@
      ?v=… — версія для скидання кешу; піднімай число після кожного оновлення скриптів. -->
 <script src="vendor/jspdf.umd.min.js?v=3"></script>
 <script src="vendor/fonts.js?v=3"></script>
-<script src="i18n.js?v=6"></script>
+<script src="i18n.js?v=7"></script>
 <script src="pdf.js?v=6"></script>
-<script src="spells.js?v=2"></script>
+<script src="spells.js?v=3"></script>
 <style>
   :root {
     --bg: var(--tg-theme-bg-color, #17171b);
@@ -653,6 +653,8 @@
   <div class="topbar"><button class="back" onclick="showView('sheet')">←</button>
     <span class="topbar-title" data-i18n="sp.topbar">Закляття</span></div>
   <p class="sub" data-i18n="sp.sub">Обери замовляння та закляття — вони підуть у чарник.</p>
+  <label class="opt-toggle"><input type="checkbox" id="spUse" checked onchange="spSetUse(this.checked)">
+    <span data-i18n="sp.use">Вписати закляття в чарник</span></label>
   <div class="card" id="spHead"></div>
   <div class="filter-row" id="spSrcRow"></div>
   <input class="sp-search" id="spSearch" data-i18n-ph="sp.search" placeholder="Пошук за назвою"
@@ -2286,6 +2288,7 @@ const S = {
   spellPick:{ cantrips:[], spells:[], arcanum:{} },  // обрані закляття (українські назви)
   spellSrc:null,                                 // перевизначення фільтра джерел; null — типовий
   spellQuery:"",                                 // пошук на екрані заклять
+  spellsSkip:false,                              // крок пропущено — у чарнику порожні рядки
   ranger:{ enemy:"", terrain:"", foe:false, deft:false },  // вибори слідопита на 1-му рівні
   customItems:[],      // свої предмети/набори в інвентарі (напр. «Набір для гриму»)
   customWeapons:[],    // своя зброя й артефакти: {key,name,cat,dmg,type,abil,magic,desc}
@@ -4179,6 +4182,8 @@ function pruneSpellPick(sc){
   (sc.arcanum||[]).forEach(l => { const n = (P.arcanum||{})[l]; if(n && spellLegal(sc, n, l)) arc[l] = n; });
   P.arcanum = arc;
 
+  // Крок пропущено — у чарнику лишаємо порожні рядки, але вибір бережемо
+  if(S.spellsSkip) return { cantrips:[], spells:[], byLevel:{}, arcanum:{} };
   // Для чарника зручніше вже розкладене по рівнях
   const byLevel = {};
   P.spells.forEach(n => { const l = spellOf(n).lvl; (byLevel[l] = byLevel[l] || []).push(n); });
@@ -4198,6 +4203,32 @@ function spToggleSrc(id){
   buildSpells();
 }
 function spSetQuery(q){ S.spellQuery = q || ""; buildSpells(); }
+/* Крок необов'язковий: можна нічого не обирати й лишити в чарнику порожні
+   рядки — вибір при цьому не стирається, його видно, щойно повернеш галочку. */
+function spSetUse(on){ S.spellsSkip = !on; buildSpells(); }
+
+/* Картка закляття: усе, що знаємо з довідника. Опис ефекту додамо далі —
+   поки що це «паспорт»: час, дистанція, тривалість, компоненти. */
+function spInfo(ev, name){
+  ev.stopPropagation(); ev.preventDefault();
+  const sp = spellOf(name); if(!sp) return;
+  const row = (k, v) => v ? `<div class="kv"><span class="k">${esc(k)}</span><span>${esc(v)}</span></div>` : "";
+  let h = row(t('sp.lvlKey'), sp.lvl === 0 ? t('sp.cantrips') : t('sp.level').replace("{n}", sp.lvl));
+  h += row(t('sp.school'), tr(sp.school));
+  h += row(t('sp.cast'), sp.cast);
+  h += row(t('sp.range'), sp.rng);
+  h += row(t('sp.dur'), sp.dur);
+  h += row(t('sp.comp'), sp.comp);
+  h += row(t('sp.classes'), sp.cls.map(x => tr(x)).join(", "));
+  h += row(t('sp.source'), sp.src);
+  const marks = [];
+  if(sp.ritual) marks.push(t('sp.ritual'));
+  if(sp.conc) marks.push(t('sp.conc'));
+  if(marks.length) h += `<div class="desc-line">${esc(marks.join(" · "))}</div>`;
+  if(!sp.rng) h += `<div class="desc-line">${esc(t('sp.noPassport'))}</div>`;
+  h += `<div class="desc-line" style="opacity:.55">${esc(sp.en)}</div>`;
+  openModal(esc(sp.uk), h);
+}
 
 /* Список доступних заклять рівня lvl: за списком класу, крізь фільтр джерел і
    пошук. Уже обране показуємо завжди — інакше воно б зникало з екрана. */
@@ -4256,7 +4287,8 @@ function buildSpells(){
   if(sc.schools && sc.schoolMin > 0){
     const own = P.spells.filter(n => { const s = spellOf(n); return s && sc.schools.indexOf(s.school) >= 0; }).length;
     const txt = t('sp.schoolWarn').replace("{s}", sc.schools.map(x=>tr(x)).join(t('spell.orJoin')))
-      .replace("{n}", sc.schoolMin).replace("{a}", own);
+      .replace("{t}", lim).replace("{n}", sc.schoolMin).replace("{a}", own)
+      .replace("{free}", Math.max(0, lim - sc.schoolMin));
     head += own < sc.schoolMin ? `<div class="conflict-note">${esc(txt)}</div>`
                                : `<div class="desc-line">${esc(txt)}</div>`;
   }
@@ -4269,6 +4301,13 @@ function buildSpells(){
   ).join("") + `<div class="filter-chip ${f.ed2024?"on":""}" onclick="spToggleSrc('ed2024')">${esc(t('sp.ed2024'))}</div>`;
 
   // --- секції: замовляння, далі рівні ---
+  const useBox = $("spUse"); if(useBox) useBox.checked = !S.spellsSkip;
+  if(S.spellsSkip){
+    $("spBody").innerHTML = `<div class="card"><p class="sub" style="margin:0">${esc(t('sp.skipNote'))}</p></div>`;
+    $("spSrcRow").innerHTML = ""; $("spSearch").classList.add("hidden");
+    return;
+  }
+  $("spSearch").classList.remove("hidden");
   let html = "";
   const row = (s, picked, blocked, lvl, fixed) => {
     const cls = "sp-row" + (picked ? " on" : (blocked ? " off" : ""));
@@ -4276,7 +4315,8 @@ function buildSpells(){
     return `<label class="${cls}" onclick="spRowClick(event,'${q(s.uk)}',${lvl})">`+
       `<input type="checkbox" ${picked?"checked":""} ${blocked&&!picked?"disabled":""} ${fixed?"disabled":""} />`+
       `<span class="nm">${esc(s.uk)}${fixed?` <span class="sp-fixed">${esc(t('sp.fixed'))}</span>`:""}</span>`+
-      `<span class="tag">${tag}</span><span class="src">${esc(s.src)}</span></label>`;
+      `<span class="tag">${tag}</span><span class="src">${esc(s.src)}</span>`+
+      `<button class="info-btn ii" onclick="spInfo(event,'${q(s.uk)}')">ⓘ</button></label>`;
   };
   if(sc.cantrips > 0){
     const list = spellChoices(sc, 0, P.cantrips);
@@ -5232,7 +5272,7 @@ function cloudCall(method, ...args){
    яким у збереженні не місце. Set-и кладемо окремо — JSON їх не вміє. */
 const SNAP_FIELDS = ["race","subrace","class","subclass","level","background",
   "mode","method","base","rollPool","raceAsiPick","slots","humanFeat",
-  "optionalFeats","fightingStyle","expertise","ranger","spellPick","spellSrc",
+  "optionalFeats","fightingStyle","expertise","ranger","spellPick","spellSrc","spellsSkip",
   "customItems","customWeapons","customArmors","armorWorn","shieldWorn","equipRemoved",
   "equipMode","equipPick","anyPick","armor","shield","weapons",
   "equipExtra","equipQty","equipAmmo","showAllGear"];
