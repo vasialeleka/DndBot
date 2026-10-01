@@ -474,6 +474,33 @@
     return f[s.src] !== false;
   };
 
+  /* Розмітка опису: ділимо текст на шматки й позначаємо ті, що варто виділити —
+     кубики шкоди, порятунки, DC, дистанції, стани, дія/бонусна дія. Один розбір
+     на двох: екран малює їх жирним у HTML, PDF — жирним накресленням шрифту. */
+  var RICH = new RegExp([
+    "\\d+d\\d+(?:\\s*[+\u2212-]\\s*\\d+)?",
+    "DC\\s*\\d+",
+    "(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\\s+saving\\s+throw",
+    "\\d+(?:[- ])(?:miles|mile|feet|foot)(?:-(?:radius|long|wide|tall|high|diameter|square|cube|cone|line))?",
+    "(?:acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\\s+damage",
+    "\\b(?:advantage|disadvantage)\\b",
+    "\\b(?:blinded|charmed|deafened|frightened|grappled|incapacitated|invisible|paralyzed|petrified|poisoned|prone|restrained|stunned|unconscious)\\b",
+    "\\b(?:bonus action|reaction|concentration)\\b",
+    "\\b(?:temporary hit points|hit points)\\b"
+  ].join("|"), "gi");
+  window.spellRich = function (text) {
+    var s = String(text == null ? "" : text), out = [], last = 0, m;
+    RICH.lastIndex = 0;
+    while ((m = RICH.exec(s)) !== null) {
+      if (m.index > last) out.push({ s: s.slice(last, m.index), b: false });
+      out.push({ s: m[0], b: true });
+      last = m.index + m[0].length;
+      if (RICH.lastIndex === m.index) RICH.lastIndex++;    // страховка від порожнього збігу
+    }
+    if (last < s.length) out.push({ s: s.slice(last), b: false });
+    return out;
+  };
+
   /* Закляття класу певного рівня (lvl === null — усі рівні), уже відфільтровані
      за джерелами. Таємний трюкач і Лицар-маг питають список Чарівника. */
   window.spellsFor = function (cls, lvl, f) {

@@ -704,7 +704,19 @@
         cy -= 8;
         for (let k = 0; k < lines; k++) {
           // Обране закляття пишемо просто над лінійкою; решта рядків — порожні
-          if (names && names[k]) this.fitText(cols[ci] + 6, cy - 1, names[k], colw - 12, 8, { clip: true, min: 6 });
+          if (names && names[k]) {
+            const nm = names[k];
+            this.fitText(cols[ci] + 6, cy - 1, nm, colw - 12, 8, { clip: true, min: 6 });
+            // Поряд — оригінальна назва, якщо лишилось місце: шукати закляття в
+            // мережі зручніше за англійською
+            const en = (sc.chosen && sc.chosen.en) ? sc.chosen.en[nm] : null;
+            if (en && en !== nm) {
+              const used = this.sw(nm, 8, false) + 10;
+              if (this.sw(en, 6, false) <= colw - 12 - used) {
+                this.text(cols[ci] + 6 + used, cy - 1, en, { size: 6, color: MUTED });
+              }
+            }
+          }
           this.line(cols[ci] + 4, cy - 4, cols[ci] + colw, cy - 4, LINE, 0.5);
           cy -= 13;
         }
@@ -753,6 +765,95 @@
       for (const sec of sects) drawSection(sec.t, sec.n, sec.lines, sec.pact, sec.names);
     }
 
+    /* Перенос тексту, у якому частину шматків треба виділити. На вході —
+       [{s, b}] від spellRich(), на виході — рядки, кожен теж список шматків. */
+    wrapRich(parts, maxW, size) {
+      const lines = [];
+      let cur = [], curW = 0;
+      for (const part of (parts || [])) {
+        for (const w of String(part.s).split(/(\s+)/)) {
+          if (!w) continue;
+          const isSpace = !/\S/.test(w);
+          if (!cur.length && isSpace) continue;              // рядок не починаємо з пробілу
+          const ww = this.sw(w, size, part.b);
+          if (!isSpace && curW + ww > maxW && cur.length) { lines.push(cur); cur = []; curW = 0; }
+          cur.push({ s: w, b: !!part.b });
+          curW += ww;
+        }
+      }
+      if (cur.length) lines.push(cur);
+      return lines;
+    }
+    // Один рядок таких шматків: жирні малюємо жирним, решту — звичайним
+    richLine(x, y, parts, size, color) {
+      let cx = x;
+      for (const p of parts) {
+        this.text(cx, y, p.s, { size, bold: p.b, color: color || INK });
+        cx += this.sw(p.s, size, p.b);
+      }
+    }
+
+    /* --- Описи обраних заклять: окремі сторінки в кінці чарника ---------
+       Текст тече колонками: закінчилась одна — переходимо в наступну, закінчились
+       усі — нова сторінка. Заголовок закляття не лишаємо самого внизу колонки. */
+    drawSpellCards(cards) {
+      if (!cards || !cards.length) return;
+      const d = this.d, M = this.MARGIN;
+      d.addPage();
+      const w = this.PAGE_W - 2 * M;
+      const bottom = M + 6, pageTop = this.PAGE_H - M;
+      const nc = this.landscape ? 3 : 2;
+      const colw = (w - 16 * (nc - 1)) / nc;
+      const cols = [];
+      for (let i = 0; i < nc; i++) cols.push(M + i * (colw + 16));
+      this.text(M, pageTop - 10, T("pdf.spellDescs"), { size: 15, bold: true, color: ACCENT });
+      let top = pageTop - 26, ci = 0, y = top;
+      const ensure = (need) => {
+        if (y - need >= bottom) return;
+        ci++;
+        if (ci >= nc) { d.addPage(); top = pageTop; ci = 0; }
+        y = top;
+      };
+      const rich = (txt) => (window.spellRich ? window.spellRich(txt) : [{ s: txt, b: false }]);
+
+      for (const c of cards) {
+        ensure(44);
+        this.fitText(cols[ci], y, c.uk, colw, 9.5, { bold: true, clip: true, min: 7 });
+        y -= 9.5;
+        if (c.en && c.en !== c.uk) {
+          this.fitText(cols[ci], y, c.en, colw, 6.5, { color: MUTED, clip: true, min: 6 });
+          y -= 8;
+        }
+        const marks = [];
+        if (c.ritual) marks.push(T("pdf.ritual"));
+        if (c.conc) marks.push(T("pdf.conc"));
+        const meta = [c.lvl === 0 ? T("pdf.cantrips") : T("pdf.levelPrefix") + c.lvl, c.school,
+                      c.cast, c.rng, c.dur, c.comp].concat(marks).filter(Boolean).join(" · ");
+        for (const ln of this.wrap(meta, colw, 6.5)) {
+          ensure(9); this.text(cols[ci], y, ln, { size: 6.5, color: MUTED }); y -= 8;
+        }
+        y -= 2;
+        for (const para of (c.d || [])) {
+          for (const ln of this.wrapRich(rich(para), colw, 7)) {
+            ensure(9); this.richLine(cols[ci], y, ln, 7); y -= 8.5;
+          }
+          y -= 3;
+        }
+        if (c.h) {
+          const parts = [{ s: T("pdf.higher") + " ", b: true }].concat(rich(c.h));
+          for (const ln of this.wrapRich(parts, colw, 7)) {
+            ensure(9); this.richLine(cols[ci], y, ln, 7, MUTED); y -= 8.5;
+          }
+        }
+        if (!(c.d || []).length) {
+          for (const ln of this.wrap(T("pdf.noDesc"), colw, 7)) {
+            ensure(9); this.text(cols[ci], y, ln, { size: 7, color: MUTED }); y -= 8.5;
+          }
+        }
+        y -= 7;
+      }
+    }
+
     wrap(text, maxW, size, bold) {
       const words = String(text == null ? "" : text).split(/\s+/).filter(Boolean);
       const lines = [];
@@ -799,6 +900,8 @@
 
       this.drawSpellPage();
       this.drawExtrasPage(restFeatures);
+      this.drawSpellCards(this.char.spellcasting && this.char.spellcasting.chosen
+        ? this.char.spellcasting.chosen.cards : null);
     }
 
     /* Альбомна (A4 landscape) — чотири колонки. Висоти менше, ширини більше,
@@ -845,6 +948,8 @@
 
       this.drawSpellPage();
       this.drawExtrasPage(restFeatures);
+      this.drawSpellCards(this.char.spellcasting && this.char.spellcasting.chosen
+        ? this.char.spellcasting.chosen.cards : null);
     }
   }
 
