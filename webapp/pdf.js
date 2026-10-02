@@ -69,12 +69,17 @@
     /* Ширина рядка. Міряємо на великому кеглі й масштабуємо: на 5–8px Chrome
        округлює метрики й повертає на ~10% менше, ніж потім ляже в PDF, — через
        це дрібні описи вилазили за рамку блоку. */
+    /* Український апостроф ʼ (U+02BC) у засабсеченому шрифті відсутній — jsPDF
+       мовчки викидає його, і виходить «зявляється». Міняємо на ’ (U+2019): він
+       у шрифті є й виглядає так само. Робимо це й при вимірюванні ширини, щоб
+       текст і розрахунок рядків бачили той самий рядок. */
+    static norm(s) { return (s == null ? "" : String(s)).replace(/\u02bc/g, "\u2019"); }
     sw(s, size, bold) {
       if (!Sheet._ctx) Sheet._ctx = document.createElement("canvas").getContext("2d");
       const ctx = Sheet._ctx;
       const BASE = 100;
       ctx.font = (bold ? "700 " : "400 ") + BASE + 'px "SheetMeasure", sans-serif';
-      return ctx.measureText(s == null ? "" : String(s)).width * (size / BASE);
+      return ctx.measureText(Sheet.norm(s)).width * (size / BASE);
     }
 
     text(x, y, s, opt) {
@@ -82,7 +87,7 @@
       const size = opt.size == null ? 9 : opt.size;
       const bold = !!opt.bold;
       const color = opt.color || INK;
-      s = s == null ? "" : String(s);
+      s = Sheet.norm(s);
       const d = this.d;
       if (opt.center) x -= this.sw(s, size, bold) / 2;
       else if (opt.right) x -= this.sw(s, size, bold);
@@ -667,14 +672,19 @@
       }
       y -= Math.ceil(info.length / perRow) * (tileH + tgap) + 8;
 
-      // Примітки: обмеження шкіл (Таємний трюкач / Лицар-маг), пакт-магія тощо
-      for (const n of (sc.notes || [])) {
+      // Примітки: обмеження шкіл (Таємний трюкач / Лицар-маг), пакт-магія тощо.
+      // Останнім рядком — підказка, що описи заклять ідуть одразу далі: без неї
+      // їх просто не шукають, бо на цій сторінці самі назви.
+      const notes = (sc.notes || []).slice();
+      if (sc.chosen && sc.chosen.cards && sc.chosen.cards.length)
+        notes.push(T("pdf.spellDescsHint"));
+      for (const n of notes) {
         for (const chunk of this.wrap("• " + n, w, 7.5)) {
           this.text(M, y, chunk, { size: 7.5, color: MUTED });
           y -= 9.5;
         }
       }
-      if ((sc.notes || []).length) y -= 4;
+      if (notes.length) y -= 4;
 
       // Комірки заклять за рівнями: заголовок + квадратики під витрати
       const slots = sc.slots || [];
@@ -900,9 +910,10 @@
       const restFeatures = this.drawRightRegion(rx, top, RW, bottom);
 
       this.drawSpellPage();
-      this.drawExtrasPage(restFeatures);
+      // Описи йдуть одразу за списком заклять — шукати їх у кінці ніхто не буде
       this.drawSpellCards(this.char.spellcasting && this.char.spellcasting.chosen
         ? this.char.spellcasting.chosen.cards : null);
+      this.drawExtrasPage(restFeatures);
     }
 
     /* Альбомна (A4 landscape) — чотири колонки. Висоти менше, ширини більше,
@@ -948,9 +959,10 @@
       const restFeatures = this.drawFeatures(dx, featTop, DW, featTop - bottom);
 
       this.drawSpellPage();
-      this.drawExtrasPage(restFeatures);
+      // Описи йдуть одразу за списком заклять — шукати їх у кінці ніхто не буде
       this.drawSpellCards(this.char.spellcasting && this.char.spellcasting.chosen
         ? this.char.spellcasting.chosen.cards : null);
+      this.drawExtrasPage(restFeatures);
     }
   }
 
